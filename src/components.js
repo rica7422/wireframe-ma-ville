@@ -351,8 +351,10 @@ export function evenementsListeBody({
         <button class="hit chip" type="button">Bientôt</button>
         <button class="hit chip" type="button">Prix du ticket</button>
       </div>
-      <div class="events-period">
+      <div class="events-month">
         <strong class="period-label">Avril 2026 ▾</strong>
+      </div>
+      <div class="events-week-filter">
         <button class="hit chip on" type="button">Cette semaine ▾</button>
       </div>
       <div class="h-scroll dates" role="listbox" aria-label="Jours">

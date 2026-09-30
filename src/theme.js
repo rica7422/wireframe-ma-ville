@@ -34,6 +34,13 @@ export function soft(hex, pct = 14) {
   return `color-mix(in srgb, ${hex} ${pct}%, #ffffff)`
 }
 
+/** Shared fiche screens inherit the last real section accent */
+let stickySection = null
+
+function isSharedFiche(id) {
+  return id === 'dir-fiche' || id === 'dir-fiche-horaires'
+}
+
 /**
  * Map a screen id → section key used for phone accents + nav dots.
  */
@@ -69,11 +76,14 @@ export function sectionFor(id) {
   if (id.startsWith('page-signalement') || id.startsWith('dir-signalement')) return 'signalement'
   if (id.startsWith('dir-patrimoine')) return 'patrimoine'
   if (id.startsWith('dir-restaurants')) return 'restaurants'
+  if (isSharedFiche(id) && stickySection) return stickySection
   return 'neutral'
 }
 
 export function themeFor(id) {
-  return sectionFor(id)
+  const key = sectionFor(id)
+  if (!isSharedFiche(id) && key !== 'neutral') stickySection = key
+  return key
 }
 
 export function colorFor(idOrSection) {

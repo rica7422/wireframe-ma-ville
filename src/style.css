@@ -2197,3 +2197,73 @@ button.tree-node:hover .tree-label {
   outline: 2px solid var(--accent, var(--c-mairie));
   outline-offset: 1px;
 }
+
+/* Director polish — themed calendar + rhythm */
+.phone[data-theme] .cal-day.on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.phone[data-theme] .event-date-block {
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--line));
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.phone[data-theme] .event-date-block .meta {
+  color: color-mix(in srgb, var(--accent) 70%, var(--muted));
+}
+
+.phone[data-theme] .linkish {
+  color: var(--accent);
+}
+
+.phone[data-theme] .toggle.on {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.events-list {
+  gap: 20px;
+}
+
+.event-card {
+  gap: 14px;
+  padding: 14px;
+}
+
+.event-card .btn.block {
+  margin-top: 2px;
+  min-height: 40px;
+}
+
+.event-title {
+  font-size: 0.98rem;
+}
+
+.event-when,
+.event-lieu {
+  font-size: 0.76rem;
+}
+
+.event-tags {
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.events-month {
+  display: flex;
+  align-items: center;
+  min-height: 28px;
+}
+
+.events-week-filter {
+  display: flex;
+  align-items: center;
+  padding: 0 0 4px;
+}
+
+.events-week-filter .chip {
+  min-height: 34px;
+}
