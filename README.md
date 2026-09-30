@@ -19,9 +19,9 @@ Ouvre [http://127.0.0.1:4317](http://127.0.0.1:4317) dans Chrome.
 
 ## Contenu
 
-- **Côté utilisateur** : entrée (choix de ville), accueil Kapan, Santé (modèle annuaire), Ma mairie, social/contenus, Vie locale (hub + Tourisme/Cinémas structurés), états UI
+- **Côté utilisateur** : entrée (choix de ville), accueil Kapan, Santé (modèle annuaire), Ma mairie, social/contenus, Vie locale (hub + rubriques), **Météo** (accueil synthèse + Maintenant / Aujourd’hui / Demain / 7 jours), états UI
 - **Côté administrateur** : coquilles (home, liste contenus, édition) — workflows non inventés
-- ~70 écrans navigables (structure only)
+- Écrans navigables (structure only) ; valeurs météo illustratives ou **Indisponible**
 
 ## Qui peut voir le wireframe ?
 
