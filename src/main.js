@@ -52,10 +52,14 @@ function handleSim(kind) {
     suivre: 'Suivi simulé',
     participation: 'Participation mise à jour (simulé)',
     rdv: 'Rendez-vous — suite À préciser (simulé)',
+    'rdv-annuler': 'Annulation RDV (simulé — À préciser)',
     position: 'Partage de position (simulé)',
     upload: 'Upload photo (simulé)',
     sauver: 'Enregistrement admin (simulé)',
+    'publier-admin': 'Publication admin (simulé — À préciser)',
     'filtre-admin': 'Filtres admin — À préciser',
+    enregistrer: 'Ajout aux enregistrements (simulé)',
+    signalement: 'Signalement envoyé (simulé — À préciser)',
   }
   toast(map[action] || `Action simulée : ${kind}`)
 }

@@ -171,3 +171,12 @@ export function tbd(label = 'À préciser') {
 export function emptyState(msg = 'Aucun contenu pour le moment') {
   return `<div class="empty">${msg}</div>`
 }
+
+export function loadingState(msg = 'Chargement…') {
+  return `<div class="state-box loading"><div class="spinner"></div><p>${msg}</p></div>`
+}
+
+export function errorState(msg = 'Une erreur est survenue') {
+  return `<div class="state-box error"><strong>Erreur</strong><p>${msg}</p>
+    <button class="hit btn" data-back>Réessayer</button></div>`
+}

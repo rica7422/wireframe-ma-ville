@@ -10,6 +10,9 @@ import {
   postCard,
   modalShell,
   tbd,
+  emptyState,
+  loadingState,
+  errorState,
 } from './components.js'
 
 /** Screen registry: id → { title, group, render(state) } */
@@ -171,7 +174,7 @@ function accueilKapan() {
     <div class="grid-2">
       ${[
         ['Ma mairie', 'mairie-accueil'],
-        ['Infos citoyen', 'infos-feed'],
+        ['Infos citoyen', 'infos-citoyen'],
         ['Événements', 'evenements-liste'],
         ['Petites annonces', 'annonces-liste'],
         ['Offres d’emploi', 'emplois-liste'],
@@ -436,7 +439,34 @@ function santeHopitaux() {
   )
 }
 
-function santeHopitalDetails() {
+function santeHopitalDetails(tab = 'infos') {
+  const tabs = `
+    <div class="tabs">
+      <button class="hit tab ${tab === 'infos' ? 'on' : ''}" data-go="sante-hopital-details">Informations</button>
+      <button class="hit tab ${tab === 'horaires' ? 'on' : ''}" data-go="sante-hopital-horaires">Horaires</button>
+    </div>`
+  const infos = `
+    <h2 class="sec">Contact</h2>
+    ${text('Coordonnées…')}
+    <h2 class="sec">Adresse</h2>
+    ${photo('Carte…', 'map')}
+    <h2 class="sec">À propos</h2>
+    ${text('Description…')}
+  `
+  const horaires = `
+    <h2 class="sec">Horaires</h2>
+    ${['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche']
+      .map(
+        (d) => `
+      <div class="row-link static">
+        <span>${d}</span>
+        <span class="meta">${d === 'Dimanche' ? 'À préciser' : 'Ouvert…'}</span>
+      </div>`
+      )
+      .join('')}
+    ${tbd('Horaires manquants éventuels — À préciser')}
+    <button class="hit btn block" data-go="etat-horaires-manquants">Voir état « horaires manquants »</button>
+  `
   return wrap(
     `
     ${photo('Photo hôpital…', 'hero')}
@@ -449,16 +479,8 @@ function santeHopitalDetails() {
       <button class="hit btn" data-sim="itineraire">Itinéraire</button>
       <button class="hit btn primary" data-sim="appeler">Appeler</button>
     </div>
-    <div class="tabs">
-      <button class="hit tab on" type="button">Informations</button>
-      <button class="hit tab" type="button">Horaires</button>
-    </div>
-    <h2 class="sec">Contact</h2>
-    ${text('Coordonnées…')}
-    <h2 class="sec">Adresse</h2>
-    ${photo('Carte…', 'map')}
-    <h2 class="sec">À propos</h2>
-    ${text('Description…')}
+    ${tabs}
+    ${tab === 'infos' ? infos : horaires}
     `,
     {
       header: phoneHeader({ title: 'Détails', backTo: 'sante-hopitaux' }),
@@ -587,10 +609,32 @@ function mairieRdv() {
         .map((t) => `<button class="hit chip" type="button">${t}</button>`)
         .join('')}
     </div>
-    <button class="hit btn primary block" data-sim="rdv">Continuer (simulé)</button>
+    <button class="hit btn primary block" data-go="mairie-rdv-suite">Continuer</button>
     `,
     {
       header: phoneHeader({ title: 'Prendre rendez-vous', backTo: 'mairie-accueil', showCity: true }),
+      footer: phoneFooter('mairie'),
+    }
+  )
+}
+
+function mairieRdvSuite() {
+  return wrap(
+    `
+    <h2 class="sec">Confirmation RDV</h2>
+    <article class="card">
+      <strong>Récapitulatif</strong>
+      ${text('Motif · date · créneau sélectionnés…')}
+    </article>
+    ${tbd('Confirmer / Annuler RDV — workflow À préciser')}
+    <div class="row-actions">
+      <button class="hit btn" data-back>Retour</button>
+      <button class="hit btn primary" data-sim="rdv">Confirmer (simulé)</button>
+    </div>
+    <button class="hit btn block" data-sim="rdv-annuler">Annuler un RDV (simulé — À préciser)</button>
+    `,
+    {
+      header: phoneHeader({ title: 'Confirmer le RDV', backTo: 'mairie-rdv' }),
       footer: phoneFooter('mairie'),
     }
   )
@@ -632,8 +676,22 @@ function mairieStub(title, note) {
     `
     <h2 class="sec">${title}</h2>
     ${tbd(note || 'Contenu — À préciser')}
+    ${photo('Photo / document…', 'wide')}
     ${text('Texte…')}
-    ${photo('Photo / document…')}
+    <article class="card post-card">
+      <header class="post-head">
+        <span class="avatar"></span>
+        <div><strong>Mairie de Kapan</strong><div class="meta">Publication · …</div></div>
+      </header>
+      ${text('Contenu type publication…')}
+      ${photo('Photo…', 'wide')}
+      <div class="post-actions">
+        <button class="hit btn" data-go="infos-reactions">♡ J’aime</button>
+        <button class="hit btn" data-go="infos-commentaires">💬 Commenter</button>
+        <button class="hit btn" data-go="infos-partage">↗ Partager</button>
+      </div>
+    </article>
+    <button class="hit row-link" data-go="mairie-accueil"><span>Retour Ma mairie</span><span>›</span></button>
     `,
     {
       header: phoneHeader({ title, backTo: 'mairie-accueil' }),
@@ -643,6 +701,23 @@ function mairieStub(title, note) {
 }
 
 /* ——— Social / contenus ——— */
+
+function infosCitoyen() {
+  return wrap(
+    `
+    <h2 class="sec">Infos citoyen</h2>
+    ${tbd('Lien Infos citoyen ↔ Infos Feed — à clarifier')}
+    ${text('Point d’entrée citoyen (structure)…')}
+    <button class="hit btn primary block" data-go="infos-feed">Ouvrir Infos Feed</button>
+    <button class="hit row-link" data-go="evenements-liste"><span>Événements liés</span><span>›</span></button>
+    <button class="hit row-link" data-go="mairie-infos"><span>Infos Mairie</span><span>›</span></button>
+    `,
+    {
+      header: phoneHeader({ title: 'Infos citoyen', backTo: 'accueil-kapan' }),
+      footer: phoneFooter('infos'),
+    }
+  )
+}
 
 function infosFeed() {
   return wrap(
@@ -1026,24 +1101,35 @@ function urgenceNumeros() {
   return wrap(
     `
     <div class="alert-box">
-      <strong>Numéros d’urgence</strong>
-      ${text('À utiliser en cas d’urgence…')}
+      <strong>En cas d’urgence</strong>
+      ${text('Appelez immédiatement…')}
+      ${photo('Illustration…')}
     </div>
+    <h2 class="sec">Numéros principaux</h2>
     ${[
-      ['Police', '102'],
-      ['Ambulance / SAMU', '103'],
-      ['Pompiers', '101'],
-      ['Urgences européennes', '112'],
+      ['Ambulance / SAMU', 'Aide médicale urgente', '103'],
+      ['Police', 'Pour toute situation d’urgence', '102'],
+      ['Pompiers', 'Incendies, accidents, secours', '101'],
+      ['Urgences européennes', 'Numéro unique UE', '112'],
     ]
       .map(
-        ([l, n]) => `
-      <article class="card">
-        <strong>${l}</strong>
-        <div class="big-num">${n}</div>
-        <button class="hit btn primary block" data-sim="appeler:${n}">Appeler</button>
+        ([l, d, n]) => `
+      <article class="card rowish">
+        <span class="ico-box"></span>
+        <div class="grow">
+          <strong>${l}</strong>
+          <p class="meta">${d}</p>
+        </div>
+        <button class="hit btn primary" data-sim="appeler:${n}">${n}</button>
       </article>`
       )
       .join('')}
+    ${tbd('Autres numéros locaux éventuels — À préciser')}
+    <div class="notice">
+      <strong>Restez en sécurité</strong>
+      ${text('N’utilisez ces numéros qu’en cas de réelle urgence.')}
+    </div>
+    <button class="hit row-link" data-go="sante-urgences"><span>Urgences Santé (détail)</span><span>›</span></button>
     `,
     {
       header: phoneHeader({ title: 'N° Urgence', backTo: 'accueil-kapan' }),
@@ -1052,15 +1138,19 @@ function urgenceNumeros() {
   )
 }
 
-function messages() {
+function messages(tab = 'miasin') {
+  const isMiasin = tab === 'miasin'
+  const list = isMiasin
+    ? ['Conversation MIASIN', 'Support plateforme', 'Contact global']
+    : ['Conversation mairie', 'Groupe événement', 'Annonce — message']
   return wrap(
     `
     <div class="tabs">
-      <button class="hit tab on" type="button">MIASIN</button>
-      <button class="hit tab" type="button">Ma Ville</button>
+      <button class="hit tab ${isMiasin ? 'on' : ''}" data-go="messages">MIASIN</button>
+      <button class="hit tab ${!isMiasin ? 'on' : ''}" data-go="messages-maville">Ma Ville</button>
     </div>
     ${search('Rechercher une conversation…')}
-    ${['Conversation mairie', 'Groupe événement', 'Support Ma Ville']
+    ${list
       .map(
         (t) => `
       <button class="hit row-link" data-go="messages-thread">
@@ -1070,6 +1160,7 @@ function messages() {
       </button>`
       )
       .join('')}
+    ${emptyState('État vide possible si aucune conversation')}
     ${tbd('Emplacement définitif Messages — À préciser (footer provisoire)')}
     `,
     {
@@ -1102,13 +1193,31 @@ function messagesThread() {
 function enregistrements() {
   return wrap(
     `
-    <h2 class="sec">Enregistrements</h2>
-    ${tbd('Emplacement à fixer avant de figer le footer')}
-    ${text('Liste d’éléments enregistrés (structure)…')}
-    <div class="empty-ish">
-      ${photo('Aperçu…')}
-      <p class="meta">Aucun enregistrement — état vide</p>
+    <div class="tabs">
+      <button class="hit tab on" type="button">Tout</button>
+      <button class="hit tab" type="button">Annonces</button>
+      <button class="hit tab" type="button">Lieux</button>
+      <button class="hit tab" type="button">À préciser</button>
     </div>
+    ${tbd('Emplacement Enregistrements à fixer avant de figer le footer')}
+    <h2 class="sec">Enregistrés (structure)</h2>
+    ${listCard({
+      title: 'Annonce enregistrée…',
+      meta: 'Petites annonces · …',
+      badge: 'Sauvé',
+      actions: [{ label: 'Ouvrir', go: 'annonce-details', primary: true }],
+    })}
+    ${listCard({
+      title: 'Lieu enregistré…',
+      meta: 'Annuaire · …',
+      badge: 'Sauvé',
+      actions: [{ label: 'Ouvrir', go: 'dir-fiche', primary: true }],
+    })}
+    <h2 class="sec">État vide</h2>
+    ${emptyState('Aucun enregistrement pour le moment')}
+    <button class="hit row-link" data-go="etat-vide"><span>Démo état vide</span><span>›</span></button>
+    <button class="hit row-link" data-go="etat-chargement"><span>Démo chargement</span><span>›</span></button>
+    <button class="hit row-link" data-go="etat-erreur"><span>Démo erreur</span><span>›</span></button>
     `,
     {
       header: phoneHeader({ title: 'Enregistrements', backTo: 'accueil-kapan' }),
@@ -1122,13 +1231,17 @@ function menuPlus() {
     `
     <h2 class="sec">Menu (provisoire)</h2>
     ${[
+      ['Vie locale (hub)', 'vie-locale-hub'],
       ['Vie locale — Santé', 'sante-accueil'],
+      ['Tourisme', 'dir-tourisme'],
+      ['Cinémas & Théâtres', 'dir-cinemas'],
       ['Événements', 'evenements-liste'],
       ['Petites annonces', 'annonces-liste'],
       ['Offres d’emploi', 'emplois-liste'],
       ['N° Urgence', 'urgence-numeros'],
       ['Messages', 'messages'],
       ['Enregistrements', 'enregistrements'],
+      ['États UI (démo)', 'etats-hub'],
     ]
       .map(
         ([l, g]) =>
@@ -1144,10 +1257,54 @@ function menuPlus() {
   )
 }
 
-/* ——— Vie locale directory stubs ——— */
+/* ——— Vie locale directory ——— */
 
-function directoryHome(title, subs, back = 'accueil-kapan') {
-  const known = subs.filter(Boolean)
+function vieLocaleHub() {
+  const cats = [
+    ['Santé', 'sante-accueil'],
+    ['Tourisme', 'dir-tourisme'],
+    ['Cinémas & Théâtres', 'dir-cinemas'],
+    ['Éducation', 'dir-education'],
+    ['Économie', 'dir-economie'],
+    ['Patrimoine', 'dir-patrimoine'],
+    ['Aide sociale', 'dir-aide-sociale'],
+    ['Associations', 'dir-associations'],
+    ['Restaurants', 'dir-restaurants'],
+    ['Transports', 'dir-transports'],
+    ['Bibliothèques', 'dir-bibliotheques'],
+    ['Sécurité', 'dir-securite'],
+    ['Météo', 'page-meteo'],
+    ['Signalement', 'page-signalement'],
+    ['N° Urgence', 'urgence-numeros'],
+  ]
+  return wrap(
+    `
+    <h2 class="sec">Vie locale</h2>
+    ${text('Famille annuaire — même modèle que Santé')}
+    <div class="grid-3">
+      ${cats
+        .map(
+          ([l, g]) => `
+        <button class="hit icon-tile" data-go="${g}">
+          <span class="ico-box"></span>
+          <span>${l}</span>
+        </button>`
+        )
+        .join('')}
+    </div>
+    ${tbd('Catégories / 4e sous-catégories manquantes — À préciser')}
+    `,
+    {
+      header: phoneHeader({ title: 'Vie locale', backTo: 'accueil-kapan' }),
+      footer: phoneFooter('menu'),
+    }
+  )
+}
+
+function directoryHome(title, subs, { back = 'vie-locale-hub', useful = [], filters = null } = {}) {
+  const known = subs.filter((s) => s && !s.tbd)
+  const unknown = subs.filter((s) => s && s.tbd)
+  const filterChips = filters || ['Tous', 'Ouverts', 'À proximité']
   return wrap(
     `
     <div class="banner-box">
@@ -1155,20 +1312,29 @@ function directoryHome(title, subs, back = 'accueil-kapan') {
       <strong>${title}</strong>
       ${text('Texte d’intro…')}
     </div>
+    ${
+      known.length
+        ? `<div class="grid-4">
+      ${known
+        .map(
+          (s) => `
+        <button class="hit icon-tile" data-go="${s.go || 'dir-liste'}">
+          <span class="ico-box round"></span>
+          <span>${s.label}</span>
+        </button>`
+        )
+        .join('')}
+    </div>`
+        : ''
+    }
     ${search(`Rechercher dans ${title}…`)}
-    ${chips(['Tous', ...known.slice(0, 3).map((s) => s.label)])}
-    <h2 class="sec">Sous-catégories</h2>
-    ${known
-      .map(
-        (s) => `
-      <button class="hit row-link" data-go="${s.go || 'dir-fiche'}">
-        <span>${s.label}</span><span>›</span>
-      </button>`
-      )
-      .join('')}
-    ${subs.some((s) => !s || s.tbd)
-      ? tbd('Sous-catégories manquantes — À préciser')
-      : ''}
+    ${chips(filterChips)}
+    ${
+      unknown.length
+        ? `<h2 class="sec">Sous-catégories</h2>
+      ${unknown.map(() => `<div class="row-link static"><span>Sous-catégorie</span>${tbd('À préciser')}</div>`).join('')}`
+        : ''
+    }
     <h2 class="sec">Autour de vous</h2>
     ${listCard({
       title: `Fiche exemple — ${title}`,
@@ -1179,6 +1345,30 @@ function directoryHome(title, subs, back = 'accueil-kapan') {
         { label: 'Appeler', sim: 'appeler' },
       ],
     })}
+    ${listCard({
+      title: `Autre fiche — ${title}`,
+      meta: 'Adresse · …',
+      badge: 'À préciser',
+      actions: [
+        { label: 'Détails', go: 'dir-fiche', primary: true },
+        { label: 'Appeler', sim: 'appeler' },
+      ],
+    })}
+    ${
+      useful.length
+        ? `<h2 class="sec">Informations utiles</h2>
+      ${useful
+        .map(
+          (u) => `
+        <button class="hit row-link" data-go="${u.go}">
+          <span class="ico-box"></span>
+          <span><strong>${u.label}</strong><br/><span class="meta">${u.meta || 'Texte…'}</span></span>
+          <span>›</span>
+        </button>`
+        )
+        .join('')}`
+        : ''
+    }
     `,
     {
       header: phoneHeader({ title, backTo: back }),
@@ -1187,7 +1377,40 @@ function directoryHome(title, subs, back = 'accueil-kapan') {
   )
 }
 
-function dirFiche() {
+function dirListe() {
+  return wrap(
+    `
+    ${search('Rechercher…')}
+    ${chips(['Tous', 'Ouverts', 'À proximité'])}
+    <h2 class="sec">Liste (sous-catégorie)</h2>
+    ${listCard({
+      title: 'Établissement A…',
+      meta: 'Adresse · distance…',
+      badge: 'Ouvert',
+      actions: [
+        { label: 'Détails', go: 'dir-fiche', primary: true },
+        { label: 'Appeler', sim: 'appeler' },
+      ],
+    })}
+    ${listCard({
+      title: 'Établissement B…',
+      meta: 'Adresse · …',
+      badge: 'Fermé',
+      actions: [
+        { label: 'Détails', go: 'dir-fiche', primary: true },
+        { label: 'Appeler', sim: 'appeler' },
+      ],
+    })}
+    ${emptyState('Aucun résultat (état vide)')}
+    `,
+    {
+      header: phoneHeader({ title: 'Liste', backTo: 'vie-locale-hub' }),
+      footer: phoneFooter('menu'),
+    }
+  )
+}
+
+function dirFiche(tab = 'infos') {
   return wrap(
     `
     ${photo('Photo…', 'hero')}
@@ -1199,31 +1422,151 @@ function dirFiche() {
     <div class="row-actions">
       <button class="hit btn" data-sim="itineraire">Itinéraire</button>
       <button class="hit btn primary" data-sim="appeler">Appeler</button>
+      <button class="hit btn" data-sim="enregistrer">Enregistrer</button>
     </div>
     <div class="tabs">
-      <button class="hit tab on" type="button">Informations</button>
-      <button class="hit tab" type="button">Horaires</button>
+      <button class="hit tab ${tab === 'infos' ? 'on' : ''}" data-go="dir-fiche">Informations</button>
+      <button class="hit tab ${tab === 'horaires' ? 'on' : ''}" data-go="dir-fiche-horaires">Horaires</button>
     </div>
-    ${text('Contact / adresse / à propos…')}
-    ${photo('Carte…', 'map')}
-    ${tbd('Champs spécifiques catégorie — À préciser')}
+    ${
+      tab === 'infos'
+        ? `${text('Contact / adresse / à propos…')}${photo('Carte…', 'map')}${tbd('Champs spécifiques catégorie — À préciser')}`
+        : `${['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche']
+            .map(
+              (d) => `
+          <div class="row-link static">
+            <span>${d}</span>
+            <span class="meta">Horaires… / À préciser</span>
+          </div>`
+            )
+            .join('')}
+          <button class="hit btn block" data-go="etat-horaires-manquants">État horaires manquants</button>`
+    }
     `,
     {
-      header: phoneHeader({ title: 'Fiche', backTo: 'accueil-kapan' }),
+      header: phoneHeader({ title: 'Fiche', backTo: 'vie-locale-hub' }),
       footer: phoneFooter('menu'),
     }
   )
 }
 
-function pageSimple(title, note) {
+function pageMeteo() {
   return wrap(
     `
-    <h2 class="sec">${title}</h2>
-    ${tbd(note)}
-    ${text('Contenu…')}
+    <div class="banner-box">
+      <strong>Météo — Kapan</strong>
+      <div class="big-num">22°C</div>
+      ${text('Ensoleillé · conditions…')}
+    </div>
+    <h2 class="sec">Prévisions (structure)</h2>
+    <div class="h-scroll">
+      ${['Lun', 'Mar', 'Mer', 'Jeu', 'Ven']
+        .map(
+          (d) => `
+        <div class="tile static" style="min-width:64px;flex-direction:column">
+          <span>${d}</span>
+          <span class="ico-box"></span>
+          <span class="meta">…°</span>
+        </div>`
+        )
+        .join('')}
+    </div>
+    ${tbd('Source météo / détails — À préciser')}
     `,
     {
-      header: phoneHeader({ title, backTo: 'accueil-kapan' }),
+      header: phoneHeader({ title: 'Météo', backTo: 'vie-locale-hub' }),
+      footer: phoneFooter('menu'),
+    }
+  )
+}
+
+function pageSignalement() {
+  return wrap(
+    `
+    <h2 class="sec">Signalement</h2>
+    ${tbd('Contenu signalement — À préciser plus tard')}
+    <label class="field"><span>Type</span>
+      <select><option>À préciser</option></select>
+    </label>
+    <label class="field"><span>Description</span><textarea rows="3" placeholder="Texte…"></textarea></label>
+    <div class="field">
+      <span>Photo</span>
+      ${photo('Slot photo…')}
+      <button class="hit btn" data-sim="upload">Ajouter photo (simulé)</button>
+    </div>
+    <label class="field"><span>Localisation</span>
+      <button class="hit btn block" data-sim="position">Partager position (simulé)</button>
+    </label>
+    <button class="hit btn primary block" data-sim="signalement">Envoyer (simulé — À préciser)</button>
+    `,
+    {
+      header: phoneHeader({ title: 'Signalement', backTo: 'vie-locale-hub' }),
+      footer: phoneFooter('menu'),
+    }
+  )
+}
+
+function pageAPreciser() {
+  return wrap(
+    `
+    <h2 class="sec">À préciser</h2>
+    ${tbd('Destination / contenu non défini — ne pas inventer')}
+    <button class="hit btn block" data-back>Retour</button>
+    `,
+    {
+      header: phoneHeader({ title: 'À préciser', backTo: 'accueil-kapan' }),
+      footer: phoneFooter('menu'),
+    }
+  )
+}
+
+function etatsHub() {
+  return wrap(
+    `
+    <h2 class="sec">États UI (démo structure)</h2>
+    <button class="hit row-link" data-go="etat-vide"><span>Vide</span><span>›</span></button>
+    <button class="hit row-link" data-go="etat-chargement"><span>Chargement</span><span>›</span></button>
+    <button class="hit row-link" data-go="etat-erreur"><span>Erreur</span><span>›</span></button>
+    <button class="hit row-link" data-go="etat-horaires-manquants"><span>Horaires manquants</span><span>›</span></button>
+    `,
+    {
+      header: phoneHeader({ title: 'États UI', backTo: 'menu-plus' }),
+      footer: phoneFooter('menu'),
+    }
+  )
+}
+
+function etatVide() {
+  return wrap(`${emptyState('Aucun contenu pour le moment')}<button class="hit btn block" data-back>Retour</button>`, {
+    header: phoneHeader({ title: 'État vide', backTo: 'etats-hub' }),
+    footer: phoneFooter('menu'),
+  })
+}
+
+function etatChargement() {
+  return wrap(`${loadingState('Chargement des fiches…')}<button class="hit btn block" data-back>Retour</button>`, {
+    header: phoneHeader({ title: 'Chargement', backTo: 'etats-hub' }),
+    footer: phoneFooter('menu'),
+  })
+}
+
+function etatErreur() {
+  return wrap(`${errorState('Impossible de charger — structure')}`, {
+    header: phoneHeader({ title: 'Erreur', backTo: 'etats-hub' }),
+    footer: phoneFooter('menu'),
+  })
+}
+
+function etatHorairesManquants() {
+  return wrap(
+    `
+    <h2 class="sec">Horaires</h2>
+    ${tbd('Horaires non renseignés — À préciser')}
+    ${emptyState('Aucun horaire disponible pour cet établissement')}
+    <button class="hit btn block" data-back>Retour</button>
+    `,
+    {
+      header: phoneHeader({ title: 'Horaires manquants', backTo: 'etats-hub' }),
       footer: phoneFooter('menu'),
     }
   )
@@ -1234,8 +1577,14 @@ function communautesStub(title) {
     `
     <h2 class="sec">${title}</h2>
     ${tbd('Fil de publications / détail — structure minimale')}
+    <div class="compose">
+      <span class="avatar"></span>
+      <button class="hit compose-input" data-sim="publier">Commencer une publication</button>
+    </div>
     ${postCard({ author: 'Membre…', role: title, body: 'Publication…' })}
+    ${postCard({ author: 'Autre membre…', role: title, body: 'Publication…', multi: true })}
     <button class="hit btn primary block" data-sim="publier">Créer une publication (simulé)</button>
+    <button class="hit row-link" data-go="etat-vide"><span>État vide du fil</span><span>›</span></button>
     `,
     {
       header: phoneHeader({ title, backTo: 'accueil-kapan' }),
@@ -1252,15 +1601,19 @@ function adminHome() {
     <h2 class="sec">Espace administrateur</h2>
     ${tbd('Rôles & permissions — À préciser')}
     <button class="hit row-link" data-go="admin-contenus">
-      <span>Gestion contenus / fiches</span><span>›</span>
+      <span><strong>Gestion contenus / fiches</strong><br/><span class="meta">Liste + édition (coquille)</span></span>
+      <span>›</span>
     </button>
     <button class="hit row-link" data-go="admin-moderation">
-      <span>Modération</span><span>›</span>
+      <span><strong>Modération</strong><br/><span class="meta">À préciser</span></span>
+      <span>›</span>
     </button>
     <button class="hit row-link" data-go="admin-stats">
-      <span>Statistiques</span><span>›</span>
+      <span><strong>Statistiques</strong><br/><span class="meta">À préciser</span></span>
+      <span>›</span>
     </button>
     ${tbd('Autres workflows back-office — À préciser (ne pas inventer)')}
+    <button class="hit btn block" data-go="accueil-kapan">Basculer vue utilisateur</button>
     `,
     {
       header: phoneHeader({
@@ -1290,6 +1643,8 @@ function adminContenus() {
       </button>`
       )
       .join('')}
+    <h2 class="sec">État vide</h2>
+    ${emptyState('Aucun contenu à gérer')}
     ${tbd('Colonnes / workflow publication — À préciser')}
     `,
     {
@@ -1306,6 +1661,9 @@ function adminFicheEdit() {
     <label class="field"><span>Catégorie</span>
       <select><option>Santé / Pharmacies</option><option>À préciser</option></select>
     </label>
+    <label class="field"><span>Statut</span>
+      <select><option>Brouillon</option><option>Publié</option><option>À préciser</option></select>
+    </label>
     <label class="field"><span>Description</span><textarea rows="3" placeholder="Texte…"></textarea></label>
     <div class="field">
       <span>Photo</span>
@@ -1318,6 +1676,7 @@ function adminFicheEdit() {
       <button class="hit btn" data-back>Annuler</button>
       <button class="hit btn primary" data-sim="sauver">Enregistrer (simulé)</button>
     </div>
+    <button class="hit btn block" data-sim="publier-admin">Publier (simulé — À préciser)</button>
     `,
     {
       header: phoneHeader({ title: 'Éditer fiche', backTo: 'admin-contenus' }),
@@ -1330,6 +1689,9 @@ function adminStub(title) {
     `
     <h2 class="sec">${title}</h2>
     ${tbd('Workflow non défini — À préciser')}
+    ${text('Pas de parcours inventé. Structure minimale uniquement.')}
+    ${emptyState('Aucun élément')}
+    <button class="hit btn block" data-go="admin-home">Retour admin</button>
     `,
     {
       header: phoneHeader({ title, backTo: 'admin-home' }),
@@ -1359,11 +1721,28 @@ export const SCREENS = {
     render: () => pharmacieDetails('horaires'),
   },
   'sante-hopitaux': { title: 'Hôpitaux', side: 'user', group: 'Santé', render: santeHopitaux },
-  'sante-hopital-details': { title: 'Hôpital — Détails', side: 'user', group: 'Santé', render: santeHopitalDetails },
+  'sante-hopital-details': {
+    title: 'Hôpital — Informations',
+    side: 'user',
+    group: 'Santé',
+    render: () => santeHopitalDetails('infos'),
+  },
+  'sante-hopital-horaires': {
+    title: 'Hôpital — Horaires',
+    side: 'user',
+    group: 'Santé',
+    render: () => santeHopitalDetails('horaires'),
+  },
   'sante-ambulances': { title: 'Ambulances', side: 'user', group: 'Santé', render: santeAmbulances },
 
   'mairie-accueil': { title: 'Accueil Ma mairie', side: 'user', group: 'Ma mairie', render: mairieAccueil },
   'mairie-rdv': { title: 'Prendre rendez-vous', side: 'user', group: 'Ma mairie', render: mairieRdv },
+  'mairie-rdv-suite': {
+    title: 'RDV — Confirmation',
+    side: 'user',
+    group: 'Ma mairie',
+    render: mairieRdvSuite,
+  },
   'mairie-presentation': {
     title: 'Présentation de la ville',
     side: 'user',
@@ -1389,6 +1768,7 @@ export const SCREENS = {
     render: () => mairieStub('Plan de la ville', 'Carte interactive — À préciser'),
   },
 
+  'infos-citoyen': { title: 'Infos citoyen', side: 'user', group: 'Social / contenus', render: infosCitoyen },
   'infos-feed': { title: 'Infos Feed', side: 'user', group: 'Social / contenus', render: infosFeed },
   'infos-reactions': { title: 'Réactions (overlay)', side: 'user', group: 'Social / contenus', render: infosReactions },
   'infos-commentaires': {
@@ -1437,7 +1817,18 @@ export const SCREENS = {
     render: emploiDetails,
   },
   'urgence-numeros': { title: 'N° Urgence', side: 'user', group: 'Social / contenus', render: urgenceNumeros },
-  messages: { title: 'Messages', side: 'user', group: 'Social / contenus', render: messages },
+  messages: {
+    title: 'Messages — MIASIN',
+    side: 'user',
+    group: 'Social / contenus',
+    render: () => messages('miasin'),
+  },
+  'messages-maville': {
+    title: 'Messages — Ma Ville',
+    side: 'user',
+    group: 'Social / contenus',
+    render: () => messages('maville'),
+  },
   'messages-thread': {
     title: 'Messages — Conversation',
     side: 'user',
@@ -1446,14 +1837,26 @@ export const SCREENS = {
   },
   enregistrements: { title: 'Enregistrements', side: 'user', group: 'Social / contenus', render: enregistrements },
   'menu-plus': { title: 'Menu (+)', side: 'user', group: 'Social / contenus', render: menuPlus },
+  'etats-hub': { title: 'États UI (démo)', side: 'user', group: 'Social / contenus', render: etatsHub },
+  'etat-vide': { title: 'État vide', side: 'user', group: 'Social / contenus', render: etatVide },
+  'etat-chargement': { title: 'État chargement', side: 'user', group: 'Social / contenus', render: etatChargement },
+  'etat-erreur': { title: 'État erreur', side: 'user', group: 'Social / contenus', render: etatErreur },
+  'etat-horaires-manquants': {
+    title: 'Horaires manquants',
+    side: 'user',
+    group: 'Social / contenus',
+    render: etatHorairesManquants,
+  },
+  'a-preciser': { title: 'À préciser', side: 'user', group: 'Social / contenus', render: pageAPreciser },
 
+  'vie-locale-hub': { title: 'Vie locale — Hub', side: 'user', group: 'Vie locale', render: vieLocaleHub },
   'dir-education': {
     title: 'Éducation',
     side: 'user',
     group: 'Vie locale',
     render: () =>
       directoryHome('Éducation', [
-        { label: 'Écoles', go: 'dir-fiche' },
+        { label: 'Écoles', go: 'dir-liste' },
         { label: 'À préciser', tbd: true },
       ]),
   },
@@ -1465,6 +1868,8 @@ export const SCREENS = {
       directoryHome('Économie', [
         { label: 'À préciser', tbd: true },
         { label: 'À préciser', tbd: true },
+        { label: 'À préciser', tbd: true },
+        { label: 'À préciser', tbd: true },
       ]),
   },
   'dir-cinemas': {
@@ -1472,20 +1877,44 @@ export const SCREENS = {
     side: 'user',
     group: 'Vie locale',
     render: () =>
-      directoryHome('Cinémas & Théâtres', [
-        { label: 'Cinémas', go: 'dir-fiche' },
-        { label: 'Théâtres', go: 'dir-fiche' },
-      ]),
+      directoryHome(
+        'Cinémas & Théâtres',
+        [
+          { label: 'Cinémas', go: 'dir-liste' },
+          { label: 'Théâtres', go: 'dir-liste' },
+          { label: 'Programmes', go: 'dir-liste' },
+          { label: 'Spectacles', go: 'dir-liste' },
+        ],
+        {
+          filters: ['Tous', 'Cinémas', 'Théâtres', 'Salles'],
+          useful: [
+            { label: 'Programme de la semaine', meta: 'Texte…', go: 'a-preciser' },
+            { label: 'Événements à venir', meta: 'Lien événements', go: 'evenements-liste' },
+          ],
+        }
+      ),
   },
   'dir-tourisme': {
     title: 'Tourisme',
     side: 'user',
     group: 'Vie locale',
     render: () =>
-      directoryHome('Tourisme', [
-        { label: 'Sites', go: 'dir-fiche' },
-        { label: 'À préciser', tbd: true },
-      ]),
+      directoryHome(
+        'Tourisme',
+        [
+          { label: 'Patrimoine', go: 'dir-liste' },
+          { label: 'Nature', go: 'dir-liste' },
+          { label: 'Culture', go: 'dir-liste' },
+          { label: 'Activités', go: 'dir-liste' },
+        ],
+        {
+          filters: ['Tous', 'Ouverts', 'Randonnées', 'À proximité'],
+          useful: [
+            { label: 'Plan touristique', meta: 'Texte…', go: 'a-preciser' },
+            { label: 'Patrimoine (rubrique)', meta: 'Vie locale', go: 'dir-patrimoine' },
+          ],
+        }
+      ),
   },
   'dir-patrimoine': {
     title: 'Patrimoine',
@@ -1521,7 +1950,7 @@ export const SCREENS = {
     title: 'Bibliothèques',
     side: 'user',
     group: 'Vie locale',
-    render: () => directoryHome('Bibliothèques', [{ label: 'Liste', go: 'dir-fiche' }]),
+    render: () => directoryHome('Bibliothèques', [{ label: 'Liste', go: 'dir-liste' }]),
   },
   'dir-securite': {
     title: 'Sécurité',
@@ -1529,19 +1958,21 @@ export const SCREENS = {
     group: 'Vie locale',
     render: () => directoryHome('Sécurité', [{ label: 'À préciser', tbd: true }]),
   },
-  'dir-fiche': { title: 'Fiche annuaire (modèle)', side: 'user', group: 'Vie locale', render: dirFiche },
-  'page-meteo': {
-    title: 'Météo',
+  'dir-liste': { title: 'Liste annuaire', side: 'user', group: 'Vie locale', render: dirListe },
+  'dir-fiche': {
+    title: 'Fiche — Informations',
     side: 'user',
     group: 'Vie locale',
-    render: () => pageSimple('Météo', 'Page unique — contenu À préciser'),
+    render: () => dirFiche('infos'),
   },
-  'page-signalement': {
-    title: 'Signalement',
+  'dir-fiche-horaires': {
+    title: 'Fiche — Horaires',
     side: 'user',
     group: 'Vie locale',
-    render: () => pageSimple('Signalement', 'Contenu signalement — À préciser plus tard'),
+    render: () => dirFiche('horaires'),
   },
+  'page-meteo': { title: 'Météo', side: 'user', group: 'Vie locale', render: pageMeteo },
+  'page-signalement': { title: 'Signalement', side: 'user', group: 'Vie locale', render: pageSignalement },
   'communautes-groupes': {
     title: 'Groupes',
     side: 'user',
@@ -1607,6 +2038,7 @@ export const NAV = [
           'sante-pharmacie-horaires',
           'sante-hopitaux',
           'sante-hopital-details',
+          'sante-hopital-horaires',
           'sante-ambulances',
         ],
       },
@@ -1615,6 +2047,7 @@ export const NAV = [
         ids: [
           'mairie-accueil',
           'mairie-rdv',
+          'mairie-rdv-suite',
           'mairie-presentation',
           'mairie-conseil',
           'mairie-infos',
@@ -1624,6 +2057,7 @@ export const NAV = [
       {
         name: 'Social / contenus',
         ids: [
+          'infos-citoyen',
           'infos-feed',
           'infos-reactions',
           'infos-commentaires',
@@ -1638,14 +2072,22 @@ export const NAV = [
           'emploi-details',
           'urgence-numeros',
           'messages',
+          'messages-maville',
           'messages-thread',
           'enregistrements',
           'menu-plus',
+          'etats-hub',
+          'etat-vide',
+          'etat-chargement',
+          'etat-erreur',
+          'etat-horaires-manquants',
+          'a-preciser',
         ],
       },
       {
         name: 'Vie locale',
         ids: [
+          'vie-locale-hub',
           'dir-education',
           'dir-economie',
           'dir-cinemas',
@@ -1657,7 +2099,9 @@ export const NAV = [
           'dir-transports',
           'dir-bibliotheques',
           'dir-securite',
+          'dir-liste',
           'dir-fiche',
+          'dir-fiche-horaires',
           'page-meteo',
           'page-signalement',
           'communautes-groupes',
