@@ -4,6 +4,8 @@ import { SCREENS, NAV_TREE, navIdsForSide } from './screens.js'
 const historyStack = []
 let currentId = 'ville-bienvenue'
 let navTab = 'user' // 'user' | 'admin'
+/** Preserve left-panel scroll across phone-only re-renders when possible */
+let savedNavScroll = 0
 
 const ADMIN_IDS = new Set(navIdsForSide('admin'))
 
@@ -28,7 +30,7 @@ function go(id, { push = true } = {}) {
   if (location.hash.slice(1) !== id) {
     history.replaceState(null, '', `#${id}`)
   }
-  render()
+  render({ focusActive: true })
 }
 
 function back() {
@@ -36,7 +38,7 @@ function back() {
   if (prev) {
     currentId = prev
     navTab = ADMIN_IDS.has(prev) ? 'admin' : 'user'
-    render()
+    render({ focusActive: true })
   } else {
     go('ville-bienvenue', { push: false })
   }
@@ -108,7 +110,7 @@ function renderTreeNodes(nodes, activeId, ancestorsHaveMore = []) {
         .join(' ')
 
       const labelHtml = node.id
-        ? `<button type="button" class="${rowClass}" data-nav="${node.id}"><span class="tree-guides" aria-hidden="true">${prefix}${branch}</span><span class="tree-label">${label}</span></button>`
+        ? `<button type="button" class="${rowClass}" data-nav="${node.id}" title="${label}"><span class="tree-guides" aria-hidden="true">${prefix}${branch}</span><span class="tree-label">${label}</span></button>`
         : `<div class="${rowClass}"><span class="tree-guides" aria-hidden="true">${prefix}${branch}</span><span class="tree-label">${label}</span></div>`
 
       const kids = node.children
@@ -119,26 +121,37 @@ function renderTreeNodes(nodes, activeId, ancestorsHaveMore = []) {
     .join('')
 }
 
-function buildNav(activeId, tab) {
-  const side = NAV_TREE[tab]
-  const tabs = ['user', 'admin']
+function buildTabs(tab) {
+  return ['user', 'admin']
     .map((key) => {
-      const on = key === tab ? 'on' : ''
-      return `<button type="button" class="nav-tab ${on}" data-nav-tab="${key}">${NAV_TREE[key].tab}</button>`
+      const on = key === tab
+      return `<button type="button" class="nav-tab ${on ? 'on' : ''}" role="tab" aria-selected="${on}" data-nav-tab="${key}">${NAV_TREE[key].tab}</button>`
     })
     .join('')
+}
 
+function buildTree(activeId, tab) {
+  const side = NAV_TREE[tab]
   return `
-    <div class="nav-tabs" role="tablist" aria-label="Côté prototype">
-      ${tabs}
-    </div>
     <div class="nav-tree" role="tree" aria-label="Arbre ${side.tab}">
       ${renderTreeNodes(side.roots, activeId, [])}
     </div>
   `
 }
 
-function render() {
+function scrollActiveIntoNavPanel() {
+  const scroll = document.querySelector('.proto-scroll')
+  const active = document.querySelector('.nav-tree .tree-row.active')
+  if (!scroll || !active) return
+  const sRect = scroll.getBoundingClientRect()
+  const aRect = active.getBoundingClientRect()
+  scroll.scrollTop += aRect.top - sRect.top - sRect.height / 2 + aRect.height / 2
+}
+
+function render({ focusActive = false, resetNavScroll = false } = {}) {
+  const prevScroll = document.querySelector('.proto-scroll')
+  if (prevScroll && !resetNavScroll) savedNavScroll = prevScroll.scrollTop
+
   const screen = SCREENS[currentId]
   const theme = themeFor(currentId)
   const app = document.getElementById('app')
@@ -150,7 +163,10 @@ function render() {
           <span class="proto-tag">Wireframe structure</span>
         </header>
         <p class="proto-hint">Navigation du prototype (≠ nav dans le téléphone)</p>
-        <div class="proto-scroll">${buildNav(currentId, navTab)}</div>
+        <div class="nav-tabs" role="tablist" aria-label="Côté prototype">
+          ${buildTabs(navTab)}
+        </div>
+        <div class="proto-scroll">${buildTree(currentId, navTab)}</div>
         <footer class="proto-meta">
           <span>${Object.keys(SCREENS).length} écrans</span>
           <span>390 px</span>
@@ -171,21 +187,12 @@ function render() {
     </div>
   `
 
-  app.querySelectorAll('[data-nav-tab]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      navTab = btn.dataset.navTab
-      render()
-    })
-  })
-
-  app.querySelectorAll('[data-nav]').forEach((btn) => {
-    btn.addEventListener('click', () => go(btn.dataset.nav, { push: false }))
-  })
-
-  const activeRow = app.querySelector('.tree-row.active')
-  if (activeRow) {
-    activeRow.scrollIntoView({ block: 'center', inline: 'nearest' })
+  const scroll = document.querySelector('.proto-scroll')
+  if (scroll) {
+    if (resetNavScroll) scroll.scrollTop = 0
+    else scroll.scrollTop = savedNavScroll
   }
+  if (focusActive) scrollActiveIntoNavPanel()
 
   const phone = document.getElementById('phone-inner')
   phone.addEventListener('click', (e) => {
@@ -204,6 +211,24 @@ function render() {
     else if (t.dataset.sim) handleSim(t.dataset.sim)
   })
 }
+
+/* Event delegation — survives full re-renders via re-bind on app (document-level). */
+document.getElementById('app').addEventListener('click', (e) => {
+  const tab = e.target.closest('[data-nav-tab]')
+  if (tab) {
+    e.preventDefault()
+    const next = tab.dataset.navTab
+    if (next === navTab) return
+    navTab = next
+    render({ resetNavScroll: true })
+    return
+  }
+  const nav = e.target.closest('[data-nav]')
+  if (nav && nav.closest('.proto-nav')) {
+    e.preventDefault()
+    go(nav.dataset.nav, { push: false })
+  }
+})
 
 const startId = location.hash.slice(1)
 go(SCREENS[startId] ? startId : 'ville-bienvenue', { push: false })

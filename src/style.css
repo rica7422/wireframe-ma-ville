@@ -133,20 +133,13 @@ h2,
   color: var(--muted);
 }
 
-.proto-scroll {
-  overflow: auto;
-  padding: 0 12px 24px;
-  flex: 1;
-}
-
-/* User | Admin — horizontal tabs */
+/* User | Admin — horizontal tabs (fixed above scrollable tree) */
 .nav-tabs {
   display: flex;
   gap: 0;
-  margin: 0 0 12px;
+  margin: 0 12px 8px;
   border-bottom: 1px solid var(--line);
-  position: sticky;
-  top: 0;
+  flex-shrink: 0;
   background: #fff;
   z-index: 2;
 }
@@ -155,7 +148,7 @@ h2,
   flex: 1;
   border: none;
   background: transparent;
-  padding: 10px 8px;
+  padding: 12px 8px;
   cursor: pointer;
   font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
   font-weight: 600;
@@ -167,11 +160,19 @@ h2,
 
 .nav-tab:hover {
   color: var(--ink);
+  background: #f7f7f7;
 }
 
 .nav-tab.on {
   color: var(--ink);
   border-bottom-color: var(--ink);
+}
+
+.proto-scroll {
+  overflow: auto;
+  padding: 0 12px 24px;
+  flex: 1;
+  min-height: 0;
 }
 
 /* Hierarchical tree with connector guides (├─ └─ │) */
@@ -186,11 +187,12 @@ h2,
   display: flex;
   align-items: baseline;
   gap: 0;
-  width: 100%;
+  width: fit-content;
+  max-width: 100%;
   text-align: left;
   border: none;
   background: transparent;
-  padding: 1px 4px;
+  padding: 2px 6px 2px 2px;
   margin: 0;
   border-radius: 3px;
   color: inherit;
