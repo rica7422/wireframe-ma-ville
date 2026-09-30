@@ -344,48 +344,53 @@ export function evenementsListeBody({
   detailsGo = 'evenement-details',
 } = {}) {
   return `
-    <div class="chips filter-chips">
-      <button class="hit chip on" type="button">Populaires</button>
-      <button class="hit chip" type="button">Près de moi ▾</button>
-      <button class="hit chip" type="button">Bientôt</button>
-      <button class="hit chip" type="button">Prix du ticket</button>
+    <div class="events-toolbar">
+      <div class="chips filter-chips">
+        <button class="hit chip on" type="button">Populaires</button>
+        <button class="hit chip" type="button">Près de moi ▾</button>
+        <button class="hit chip" type="button">Bientôt</button>
+        <button class="hit chip" type="button">Prix du ticket</button>
+      </div>
+      <div class="events-period">
+        <strong class="period-label">Avril 2026 ▾</strong>
+        <button class="hit chip on" type="button">Cette semaine ▾</button>
+      </div>
+      <div class="h-scroll dates" role="listbox" aria-label="Jours">
+        ${[21, 22, 23, 24, 25, 26, 27]
+          .map(
+            (d) =>
+              `<button class="hit cal-day ${d === 26 ? 'on' : ''}" type="button">${d}</button>`
+          )
+          .join('')}
+      </div>
     </div>
-    <div class="row-link static">
-      <strong>Avril 2026 ▾</strong>
-      <button class="hit chip on" type="button">Cette semaine ▾</button>
-    </div>
-    <div class="h-scroll dates">
-      ${[21, 22, 23, 24, 25, 26, 27]
+    <div class="events-list">
+      ${events
         .map(
-          (d) =>
-            `<button class="hit cal-day ${d === 26 ? 'on' : ''}" type="button">${d}</button>`
+          (ev) => `
+        <article class="card event-card">
+          <div class="event-photo-wrap">
+            ${photo('Photo événement…', 'wide')}
+            <span class="badge event-places">Places limitées</span>
+          </div>
+          <div class="event-card-body">
+            <div class="event-date-block">
+              <span class="meta">${ev.when.split(' ')[0]}</span>
+              <strong>${ev.when.split(' ')[1] || ''}</strong>
+            </div>
+            <div class="event-card-main">
+              <strong class="event-title">${ev.title}</strong>
+              <p class="meta event-when">${ev.time} · ${ev.countdown}</p>
+              <p class="meta event-lieu">📍 ${ev.lieu}</p>
+              <div class="chips event-tags">
+                ${(ev.tags || []).map((t) => `<span class="badge">${t}</span>`).join('')}
+              </div>
+            </div>
+          </div>
+          <button class="hit btn primary block" data-go="${detailsGo}">Voir les détails</button>
+        </article>`
         )
         .join('')}
     </div>
-    ${events
-      .map(
-        (ev) => `
-      <article class="card event-card">
-        <div class="event-photo-wrap">
-          ${photo('Photo événement…', 'wide')}
-          <span class="badge event-places">Places limitées</span>
-        </div>
-        <div class="event-card-body">
-          <div class="event-date-block"><span class="meta">${ev.when.split(' ')[0]}</span><strong>${
-            ev.when.split(' ')[1] || ''
-          }</strong></div>
-          <div class="grow">
-            <strong>${ev.title}</strong>
-            <p class="meta">${ev.time} · ${ev.countdown}</p>
-            <p class="meta">📍 ${ev.lieu}</p>
-            <div class="chips">
-              ${(ev.tags || []).map((t) => `<span class="badge">${t}</span>`).join('')}
-            </div>
-            <button class="hit btn primary" data-go="${detailsGo}">Voir les détails</button>
-          </div>
-        </div>
-      </article>`
-      )
-      .join('')}
   `
 }

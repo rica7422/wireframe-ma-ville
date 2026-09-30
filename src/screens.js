@@ -1407,56 +1407,60 @@ function evenementsListe() {
 function evenementDetails() {
   return wrap(
     `
-    <div class="event-photo-wrap">
-      ${photo('Photo événement…', 'hero')}
-      <span class="badge event-places">Places limitées</span>
-    </div>
-    <strong class="block-title">Atelier créatif</strong>
-    <p class="meta">📍 Centre culturel · Kapan</p>
-    <div class="meta-grid meta-grid-4">
-      <div><span class="meta">Date</span><br/>Ven. 16 juin 2026</div>
-      <div><span class="meta">Heure</span><br/>15:30</div>
-      <div><span class="meta">Catégorie</span><br/>Artistique</div>
-      <div><span class="meta">Prix</span><br/>20 €</div>
-    </div>
-    ${text('Description de l’atelier créatif…')}
-    <div class="stats-row">
-      <span><strong>12</strong><br/><span class="meta">Participants</span></span>
-      <span><strong>10</strong><br/><span class="meta">Billets restants</span></span>
-      <span><strong>5</strong><br/><span class="meta">Jours restants</span></span>
-    </div>
-    <p class="meta">Nombre de places · 20</p>
-    <button class="hit btn primary block" data-sim="participation">Participer</button>
-    ${socialActions()}
-    <h2 class="sec">Hobbies concernés</h2>
-    <div class="h-scroll hobbies">
-      ${['Beatboxing', 'Chant', 'Saxophone', 'Violon', 'Piano']
+    <div class="event-detail">
+      <div class="event-photo-wrap">
+        ${photo('Photo événement…', 'hero')}
+        <span class="badge event-places">Places limitées</span>
+      </div>
+      <div class="event-detail-head">
+        <strong class="block-title">Atelier créatif</strong>
+        <p class="meta event-lieu">📍 Centre culturel · Kapan</p>
+      </div>
+      <div class="meta-grid meta-grid-4">
+        <div class="meta-cell"><span class="meta">Date</span><strong>Ven. 16 juin 2026</strong></div>
+        <div class="meta-cell"><span class="meta">Heure</span><strong>15:30</strong></div>
+        <div class="meta-cell"><span class="meta">Catégorie</span><strong>Artistique</strong></div>
+        <div class="meta-cell"><span class="meta">Prix</span><strong>20 €</strong></div>
+      </div>
+      ${text('Description de l’atelier créatif…')}
+      <div class="stats-row">
+        <span class="stat-cell"><strong>12</strong><span class="meta">Participants</span></span>
+        <span class="stat-cell"><strong>10</strong><span class="meta">Billets restants</span></span>
+        <span class="stat-cell"><strong>5</strong><span class="meta">Jours restants</span></span>
+      </div>
+      <p class="meta places-note">Nombre de places · 20</p>
+      <button class="hit btn primary block" data-sim="participation">Participer</button>
+      ${socialActions()}
+      <h2 class="sec">Hobbies concernés</h2>
+      <div class="h-scroll hobbies">
+        ${['Beatboxing', 'Chant', 'Saxophone', 'Violon', 'Piano']
+          .map(
+            (h) => `
+          <div class="hobby-chip"><span class="avatar"></span><span class="meta">${h}</span></div>`
+          )
+          .join('')}
+      </div>
+      <button class="hit row-link" data-go="messages"><span>Centre de Messagerie</span><span>›</span></button>
+      <h2 class="sec">Organisateurs</h2>
+      ${['Lilit Ameni · Administrateur', 'Rouben Sirunyan · Créateur', 'Aris Margaryan · Organisateur']
         .map(
-          (h) => `
-        <div class="hobby-chip"><span class="avatar"></span><span class="meta">${h}</span></div>`
+          (n) => `
+        <div class="row-link static orga-row">
+          <span class="avatar"></span>
+          <span class="grow truncate">${n}</span>
+          <button class="hit icon-btn" data-sim="message" title="Message">💬</button>
+          <button class="hit icon-btn" data-sim="appeler" title="Appeler">☎</button>
+        </div>`
         )
         .join('')}
+      <h2 class="sec">Plus d’informations</h2>
+      <button class="hit row-link" data-go="evenement-participants">
+        <span>Participants · 12</span><span>›</span>
+      </button>
+      <button class="hit row-link" type="button"><span>Validations des participants · 2</span><span>›</span></button>
+      <button class="hit row-link" type="button"><span>Critères de participation</span><span>›</span></button>
+      <button class="hit row-link" type="button"><span>Conditions de participation</span><span>›</span></button>
     </div>
-    <button class="hit row-link" data-go="messages"><span>Centre de Messagerie</span><span>›</span></button>
-    <h2 class="sec">Organisateurs</h2>
-    ${['Lilit Ameni · Administrateur', 'Rouben Sirunyan · Créateur', 'Aris Margaryan · Organisateur']
-      .map(
-        (n) => `
-      <div class="row-link static">
-        <span class="avatar"></span>
-        <span>${n}</span>
-        <button class="hit icon-btn" data-sim="message">💬</button>
-        <button class="hit icon-btn" data-sim="appeler">☎</button>
-      </div>`
-      )
-      .join('')}
-    <h2 class="sec">Plus d’informations</h2>
-    <button class="hit row-link" data-go="evenement-participants">
-      <span>Participants · 12</span><span>›</span>
-    </button>
-    <button class="hit row-link" type="button"><span>Validations des participants · 2</span><span>›</span></button>
-    <button class="hit row-link" type="button"><span>Critères de participation</span><span>›</span></button>
-    <button class="hit row-link" type="button"><span>Conditions de participation</span><span>›</span></button>
     `,
     {
       header: phoneHeader({ title: 'Détails', backTo: 'evenements-liste' }),
