@@ -531,25 +531,13 @@ function mairieShellTop() {
 }
 
 function mairieAccesGrid() {
-  return `
-    <div class="grid-2 mairie-acces">
-      ${[
-        ['Présentation de la ville', 'mairie-presentation'],
-        ['Maire & Conseil municipal', 'mairie-conseil'],
-        ['Infos Mairie', 'mairie-infos'],
-        ['Plan de la ville', 'mairie-plan'],
-      ]
-        .map(
-          ([l, g]) => `
-        <button class="hit icon-tile mairie-tile" data-go="${g}" title="${l}">
-          <span class="ico-box"></span>
-          <span class="grow">${l}</span>
-          <span class="meta">›</span>
-        </button>`
-        )
-        .join('')}
-    </div>
-  `
+  /* Same sous-catégorie cards as Vie locale / Santé (rubriqueAccueil) */
+  return sousCatGrid([
+    { label: 'Présentation de la ville', go: 'mairie-presentation' },
+    { label: 'Maire & Conseil municipal', go: 'mairie-conseil' },
+    { label: 'Infos Mairie', go: 'mairie-infos' },
+    { label: 'Plan de la ville', go: 'mairie-plan' },
+  ])
 }
 
 function mairieTabs(active = 'publications') {
@@ -1527,6 +1515,30 @@ function menuPlus() {
 
 /* ——— Vie locale directory (modèle Santé / maquettes validées) ——— */
 
+/** Shared sous-catégorie cards — Santé / Vie locale / Ma mairie accès */
+function sousCatGrid(cats, { proposition = false } = {}) {
+  const n = cats.length
+  const gridClass = n === 3 ? 'grid-3' : n >= 4 ? 'grid-4' : 'grid-2'
+  return `
+    <div class="${gridClass}">
+      ${cats
+        .map(
+          (c) => `
+        <button class="hit icon-tile" data-go="${c.go}" title="${c.label}"${
+            c.section ? ` style="--section:${colorFor(c.section)}"` : ''
+          }>
+          <span class="ico-box round"${
+            c.section ? ` style="--section:${colorFor(c.section)}"` : ''
+          }></span>
+          <span>${c.label}</span>
+          ${proposition ? '<span class="meta">À valider</span>' : ''}
+        </button>`
+        )
+        .join('')}
+    </div>
+  `
+}
+
 /** Accueil rubrique: banner + N cat blocks + search/filters + Autour de vous (+ useful if shown) */
 function rubriqueAccueil({
   title,
@@ -1542,8 +1554,6 @@ function rubriqueAccueil({
   aroundActions = null,
 } = {}) {
   const blocks = [...cats]
-  const n = blocks.length
-  const gridClass = n === 3 ? 'grid-3' : 'grid-4'
   const filterChips = filters || ['Tous', 'Ouverts', 'À proximité']
   const mixed =
     around ||
@@ -1569,18 +1579,7 @@ function rubriqueAccueil({
       <strong>${bannerTitle || title}</strong>
       ${text(bannerText)}
     </div>
-    <div class="${gridClass}">
-      ${blocks
-        .map(
-          (c) => `
-        <button class="hit icon-tile" data-go="${c.go}" title="${c.label}">
-          <span class="ico-box round"></span>
-          <span>${c.label}</span>
-          ${proposition ? '<span class="meta">À valider</span>' : ''}
-        </button>`
-        )
-        .join('')}
-    </div>
+    ${sousCatGrid(blocks, { proposition })}
     ${search(searchPh || `Rechercher dans ${title}…`)}
     ${chips(filterChips)}
     <h2 class="sec">Autour de vous</h2>
