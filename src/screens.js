@@ -1038,7 +1038,7 @@ function mairiePlan() {
     <p class="meta">Repères municipaux · structure</p>
     `,
     {
-      header: phoneHeader({ title: 'Plan de la ville', backTo: 'mairie-accueil' }),
+      header: mairieHeader('Ma mairie', 'mairie-accueil'),
       footer: phoneFooter('mairie'),
     }
   )
