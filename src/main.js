@@ -1,8 +1,11 @@
 import './style.css'
-import { SCREENS, NAV } from './screens.js'
+import { SCREENS, NAV_TREE, navIdsForSide } from './screens.js'
 
 const historyStack = []
 let currentId = 'ville-bienvenue'
+let navTab = 'user' // 'user' | 'admin'
+
+const ADMIN_IDS = new Set(navIdsForSide('admin'))
 
 function toast(msg) {
   const el = document.getElementById('toast')
@@ -21,6 +24,7 @@ function go(id, { push = true } = {}) {
   }
   if (push && currentId && currentId !== id) historyStack.push(currentId)
   currentId = id
+  navTab = ADMIN_IDS.has(id) ? 'admin' : 'user'
   if (location.hash.slice(1) !== id) {
     history.replaceState(null, '', `#${id}`)
   }
@@ -31,6 +35,7 @@ function back() {
   const prev = historyStack.pop()
   if (prev) {
     currentId = prev
+    navTab = ADMIN_IDS.has(prev) ? 'admin' : 'user'
     render()
   } else {
     go('ville-bienvenue', { push: false })
@@ -82,29 +87,55 @@ function themeFor(id) {
   return 'neutral'
 }
 
-function buildNav(activeId) {
-  const columns = NAV.map((side) => {
-    const groups = side.groups
-      .map((g) => {
-        const items = g.ids
-          .map((id) => {
-            const s = SCREENS[id]
-            if (!s) return ''
-            return `<button class="nav-item ${id === activeId ? 'active' : ''}" data-nav="${id}">
-              <span class="nav-dot"></span>${s.title}
-            </button>`
-          })
-          .join('')
-        return `<div class="nav-group"><div class="nav-group-title">${g.name}</div>${items}</div>`
-      })
-      .join('')
-    return `
-      <section class="nav-side">
-        <h2 class="nav-side-title">${side.label}</h2>
-        ${groups}
-      </section>`
-  }).join('')
-  return `<div class="nav-columns">${columns}</div>`
+/** Render one tree level with box-drawing connectors (├─ └─ │). */
+function renderTreeNodes(nodes, activeId, ancestorsHaveMore = []) {
+  if (!nodes?.length) return ''
+  return nodes
+    .map((node, i) => {
+      const isLast = i === nodes.length - 1
+      const prefix = ancestorsHaveMore
+        .map((more) => (more ? '│  ' : '   '))
+        .join('')
+      const branch = ancestorsHaveMore.length === 0 ? '' : isLast ? '└─ ' : '├─ '
+      const label = node.label
+      const isActive = node.id && node.id === activeId
+      const rowClass = [
+        'tree-row',
+        node.id ? 'tree-link' : 'tree-note',
+        isActive ? 'active' : '',
+      ]
+        .filter(Boolean)
+        .join(' ')
+
+      const labelHtml = node.id
+        ? `<button type="button" class="${rowClass}" data-nav="${node.id}"><span class="tree-guides" aria-hidden="true">${prefix}${branch}</span><span class="tree-label">${label}</span></button>`
+        : `<div class="${rowClass}"><span class="tree-guides" aria-hidden="true">${prefix}${branch}</span><span class="tree-label">${label}</span></div>`
+
+      const kids = node.children
+        ? renderTreeNodes(node.children, activeId, [...ancestorsHaveMore, !isLast])
+        : ''
+      return `${labelHtml}${kids}`
+    })
+    .join('')
+}
+
+function buildNav(activeId, tab) {
+  const side = NAV_TREE[tab]
+  const tabs = ['user', 'admin']
+    .map((key) => {
+      const on = key === tab ? 'on' : ''
+      return `<button type="button" class="nav-tab ${on}" data-nav-tab="${key}">${NAV_TREE[key].tab}</button>`
+    })
+    .join('')
+
+  return `
+    <div class="nav-tabs" role="tablist" aria-label="Côté prototype">
+      ${tabs}
+    </div>
+    <div class="nav-tree" role="tree" aria-label="Arbre ${side.tab}">
+      ${renderTreeNodes(side.roots, activeId, [])}
+    </div>
+  `
 }
 
 function render() {
@@ -119,7 +150,7 @@ function render() {
           <span class="proto-tag">Wireframe structure</span>
         </header>
         <p class="proto-hint">Navigation du prototype (≠ nav dans le téléphone)</p>
-        <div class="proto-scroll">${buildNav(currentId)}</div>
+        <div class="proto-scroll">${buildNav(currentId, navTab)}</div>
         <footer class="proto-meta">
           <span>${Object.keys(SCREENS).length} écrans</span>
           <span>390 px</span>
@@ -139,6 +170,13 @@ function render() {
       </main>
     </div>
   `
+
+  app.querySelectorAll('[data-nav-tab]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      navTab = btn.dataset.navTab
+      render()
+    })
+  })
 
   app.querySelectorAll('[data-nav]').forEach((btn) => {
     btn.addEventListener('click', () => go(btn.dataset.nav, { push: false }))

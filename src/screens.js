@@ -3081,111 +3081,200 @@ export const SCREENS = {
 
 
 
-export const NAV = [
-  {
-    side: 'user',
-    label: 'Côté utilisateur',
-    groups: [
+/**
+ * Left-panel prototype nav — hierarchical tree (tabs User | Admin).
+ * Node: { id?, label, children? } — id = clickable screen; no id = label only.
+ */
+export const NAV_TREE = {
+  user: {
+    tab: 'User',
+    roots: [
+      { id: 'ville-bienvenue', label: 'Bienvenue' },
+      { id: 'ville-modale-choisir', label: 'Choisir une ville' },
+      { id: 'ville-modale-confirmer', label: 'Confirmer la ville' },
       {
-        name: 'Entrée',
-        ids: ['ville-bienvenue', 'ville-modale-choisir', 'ville-modale-confirmer', 'accueil-kapan'],
-      },
-      {
-        name: 'Santé (annuaire modèle)',
-        ids: [
-          'sante-accueil',
-          'sante-urgences',
-          'sante-pharmacies',
-          'sante-pharmacie-infos',
-          'sante-pharmacie-horaires',
-          'sante-hopitaux',
-          'sante-hopital-details',
-          'sante-hopital-horaires',
-          'sante-ambulances',
-        ],
-      },
-      {
-        name: 'Ma mairie',
-        ids: [
-          'mairie-accueil',
-          'mairie-rdv',
-          'mairie-rdv-suite',
-          'mairie-presentation',
-          'mairie-conseil',
-          'mairie-infos',
-          'mairie-plan',
-        ],
-      },
-      {
-        name: 'Social / contenus',
-        ids: [
-          'infos-citoyen',
-          'infos-feed',
-          'infos-reactions',
-          'infos-commentaires',
-          'infos-partage',
-          'evenements-liste',
-          'evenement-details',
-          'evenement-participants',
-          'annonces-liste',
-          'annonce-details',
-          'annonces-filtres',
-          'emplois-liste',
-          'emploi-details',
-          'urgence-numeros',
-          'messages',
-          'messages-maville',
-          'messages-thread',
-          'enregistrements',
-          'menu-plus',
-          'etats-hub',
-          'etat-vide',
-          'etat-chargement',
-          'etat-erreur',
-          'etat-horaires-manquants',
-          'a-preciser',
-        ],
-      },
-      {
-        name: 'Vie locale',
-        ids: [
-          'vie-locale-hub',
-          'dir-tourisme',
-          'dir-education',
-          'dir-cinemas',
-          'dir-economie',
-          'dir-aide-sociale',
-          'dir-associations',
-          'dir-banques',
-          'dir-transports',
-          'dir-bibliotheques',
-          'dir-permanences',
-          'dir-securite',
-          'page-signalement',
-          'page-meteo',
-          'meteo-maintenant',
-          'meteo-aujourdhui',
-          'meteo-demain',
-          'meteo-7jours',
-          'meteo-jour',
-          'dir-restaurants',
-          'dir-patrimoine',
-          'communautes-groupes',
-          'communautes-clubs',
-          'communautes-rencontres',
+        id: 'accueil-kapan',
+        label: 'Accueil Ma Ville',
+        children: [
+          {
+            id: 'sante-accueil',
+            label: 'Santé',
+            children: [
+              { id: 'sante-urgences', label: 'Urgences' },
+              {
+                id: 'sante-pharmacies',
+                label: 'Pharmacies',
+                children: [
+                  { id: 'sante-pharmacie-infos', label: 'Informations' },
+                  { id: 'sante-pharmacie-horaires', label: 'Horaires' },
+                ],
+              },
+              {
+                id: 'sante-hopitaux',
+                label: 'Hôpitaux',
+                children: [
+                  { id: 'sante-hopital-details', label: 'Informations' },
+                  { id: 'sante-hopital-horaires', label: 'Horaires' },
+                ],
+              },
+              { id: 'sante-ambulances', label: 'Ambulances' },
+            ],
+          },
+          {
+            id: 'mairie-accueil',
+            label: 'Ma mairie',
+            children: [
+              { id: 'mairie-rdv', label: 'Prendre rendez-vous', children: [{ id: 'mairie-rdv-suite', label: 'Confirmation' }] },
+              { id: 'mairie-presentation', label: 'Présentation de la ville' },
+              { id: 'mairie-conseil', label: 'Maire & Conseil' },
+              { id: 'mairie-infos', label: 'Infos Mairie' },
+              { id: 'mairie-plan', label: 'Plan de la ville' },
+            ],
+          },
+          { id: 'infos-citoyen', label: 'Infos citoyen' },
+          {
+            id: 'infos-feed',
+            label: 'Infos Feed',
+            children: [
+              { id: 'infos-reactions', label: 'Réactions' },
+              { id: 'infos-commentaires', label: 'Commentaires' },
+              { id: 'infos-partage', label: 'Partage' },
+            ],
+          },
+          {
+            id: 'evenements-liste',
+            label: 'Événements',
+            children: [
+              {
+                id: 'evenement-details',
+                label: 'Détails',
+                children: [{ id: 'evenement-participants', label: 'Participants' }],
+              },
+            ],
+          },
+          {
+            id: 'annonces-liste',
+            label: 'Petites annonces',
+            children: [
+              { id: 'annonce-details', label: 'Détails' },
+              { id: 'annonces-filtres', label: 'Filtres' },
+            ],
+          },
+          {
+            id: 'emplois-liste',
+            label: 'Offres d’emploi',
+            children: [{ id: 'emploi-details', label: 'Détail offre' }],
+          },
+          { id: 'urgence-numeros', label: 'N° Urgence' },
+          {
+            id: 'messages',
+            label: 'Messages',
+            children: [
+              { id: 'messages-maville', label: 'Ma Ville' },
+              { id: 'messages-thread', label: 'Conversation' },
+            ],
+          },
+          { id: 'enregistrements', label: 'Enregistrements' },
+          {
+            id: 'menu-plus',
+            label: 'Menu',
+            children: [
+              {
+                id: 'etats-hub',
+                label: 'États UI',
+                children: [
+                  { id: 'etat-vide', label: 'Vide' },
+                  { id: 'etat-chargement', label: 'Chargement' },
+                  { id: 'etat-erreur', label: 'Erreur' },
+                  { id: 'etat-horaires-manquants', label: 'Horaires manquants' },
+                ],
+              },
+              { id: 'a-preciser', label: 'À préciser' },
+            ],
+          },
+          {
+            id: 'vie-locale-hub',
+            label: 'Vie locale',
+            children: [
+              { id: 'dir-tourisme', label: 'Tourisme' },
+              { id: 'dir-education', label: 'Éducation' },
+              { id: 'dir-cinemas', label: 'Cinémas' },
+              { id: 'dir-economie', label: 'Économie' },
+              { id: 'dir-aide-sociale', label: 'Aide sociale' },
+              { id: 'dir-associations', label: 'Associations' },
+              { id: 'dir-banques', label: 'Banques' },
+              { id: 'dir-transports', label: 'Transports' },
+              { id: 'dir-bibliotheques', label: 'Bibliothèques' },
+              { id: 'dir-permanences', label: 'Permanences' },
+              { id: 'dir-securite', label: 'Sécurité' },
+              { id: 'page-signalement', label: 'Signalement' },
+              {
+                id: 'page-meteo',
+                label: 'Météo',
+                children: [
+                  {
+                    id: 'meteo-maintenant',
+                    label: 'Maintenant',
+                    children: [{ label: 'Conditions actuelles détaillées' }],
+                  },
+                  {
+                    id: 'meteo-aujourdhui',
+                    label: 'Aujourd’hui',
+                    children: [{ label: 'Prévisions horaires + filtres de période' }],
+                  },
+                  {
+                    id: 'meteo-demain',
+                    label: 'Demain',
+                    children: [{ label: 'Prévisions horaires + filtres de période' }],
+                  },
+                  {
+                    id: 'meteo-7jours',
+                    label: '7 jours',
+                    children: [{ id: 'meteo-jour', label: 'Jour choisi' }],
+                  },
+                ],
+              },
+              { id: 'dir-restaurants', label: 'Restaurants' },
+              { id: 'dir-patrimoine', label: 'Patrimoine' },
+              { id: 'communautes-groupes', label: 'Groupes' },
+              { id: 'communautes-clubs', label: 'Clubs' },
+              { id: 'communautes-rencontres', label: 'Rencontres' },
+            ],
+          },
         ],
       },
     ],
   },
-  {
-    side: 'admin',
-    label: 'Côté administrateur',
-    groups: [
+  admin: {
+    tab: 'Admin',
+    roots: [
       {
-        name: 'Admin',
-        ids: ['admin-home', 'admin-contenus', 'admin-fiche-edit', 'admin-moderation', 'admin-stats'],
+        id: 'admin-home',
+        label: 'Accueil admin',
+        children: [
+          {
+            id: 'admin-contenus',
+            label: 'Gestion contenus',
+            children: [{ id: 'admin-fiche-edit', label: 'Éditer fiche' }],
+          },
+          { id: 'admin-moderation', label: 'Modération' },
+          { id: 'admin-stats', label: 'Statistiques' },
+        ],
       },
     ],
   },
-]
+}
+
+/** Flat list of screen ids per side (for tab auto-select). */
+export function navIdsForSide(side) {
+  const ids = []
+  const walk = (nodes) => {
+    for (const n of nodes || []) {
+      if (n.id) ids.push(n.id)
+      if (n.children) walk(n.children)
+    }
+  }
+  walk(NAV_TREE[side]?.roots)
+  return ids
+}
 
