@@ -21,7 +21,7 @@ function toast(msg) {
 }
 
 function go(id, { push = true } = {}) {
-  if (id === 'infos-citoyen') id = 'infos-feed'
+  id = resolveScreenId(id)
   if (!SCREENS[id]) {
     toast(`Écran inconnu : ${id}`)
     return
@@ -250,10 +250,15 @@ document.getElementById('app').addEventListener('click', (e) => {
   }
 })
 
-const startId = location.hash.slice(1)
+function resolveScreenId(id) {
+  if (id === 'infos-citoyen') return 'infos-feed'
+  return id
+}
+
+const startId = resolveScreenId(location.hash.slice(1))
 go(SCREENS[startId] ? startId : 'ville-bienvenue', { push: false })
 
 window.addEventListener('hashchange', () => {
-  const id = location.hash.slice(1)
+  const id = resolveScreenId(location.hash.slice(1))
   if (SCREENS[id] && id !== currentId) go(id, { push: false })
 })
