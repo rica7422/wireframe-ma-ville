@@ -71,6 +71,8 @@ function handleSim(kind) {
     quitter: 'Quitter Ma Mairie (simulé — À préciser)',
     supprimer: 'Suppression (simulée — À préciser)',
     media: 'Ajout média (simulé)',
+    ajouter: 'Ajout (simulé)',
+    agrandir: 'Agrandir la carte (simulé)',
   }
   toast(map[action] || `Action simulée : ${kind}`)
 }
@@ -140,7 +142,7 @@ function render({ focusActive = false, resetNavScroll = false } = {}) {
       <aside class="proto-nav">
         <header class="proto-brand">
           <strong>Ma Ville</strong>
-          <span class="proto-tag">Wireframe · build 0930-f · sous-cat</span>
+          <span class="proto-tag">Wireframe · build 0930-g · mockups</span>
         </header>
         <p class="proto-hint">Navigation du prototype (≠ nav dans le téléphone)</p>
         <div class="nav-tabs" role="tablist" aria-label="Côté prototype">

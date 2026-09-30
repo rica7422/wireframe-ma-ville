@@ -1070,6 +1070,116 @@ button.tree-node:hover .tree-label {
   margin-top: 8px;
 }
 
+.rdv-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.section-sep {
+  border: none;
+  border-top: 1px solid var(--line);
+  margin: 8px 0 4px;
+}
+
+.members-hit {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: none;
+  background: transparent;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.sec-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.sec-row .sec {
+  margin: 0;
+}
+
+.centerish {
+  flex-direction: column;
+  text-align: center;
+}
+
+.upload-box {
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+  padding: 12px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  background: #fff;
+}
+
+.event-card-body {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.event-date-block {
+  min-width: 48px;
+  text-align: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 6px 4px;
+  background: var(--accent-soft, #eef0f4);
+}
+
+.event-photo-wrap {
+  position: relative;
+}
+
+.event-places {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  margin: 0;
+}
+
+.meta-grid-4 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  text-align: center;
+  padding: 8px 0;
+}
+
+.hobbies {
+  gap: 12px;
+  padding-bottom: 4px;
+}
+
+.hobby-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 56px;
+}
+
+.plan-search-row {
+  align-items: center;
+}
+
+.plan-search-row .search {
+  flex: 1;
+}
+
 .motif-row .chev {
   color: var(--accent, var(--ink));
   font-size: 1.15rem;

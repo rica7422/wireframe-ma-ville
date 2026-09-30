@@ -147,6 +147,37 @@ export function socialActions({
   `
 }
 
+/** Infos Mairie feed card — photo + category + title + author + excerpt + social */
+export function infoFeedCard({
+  title = 'Titre…',
+  cat = 'Catégorie',
+  author = 'Admin Kapan',
+  excerpt = 'Extrait…',
+  detailGo = 'mairie-infos-detail',
+  optionsGo = 'mairie-infos-apropos',
+} = {}) {
+  return `
+    <article class="card info-feed-card">
+      <button class="hit info-feed-top" data-go="${detailGo}" type="button">
+        <div class="slot-photo thumb with-badge">
+          <span>Photo…</span>
+          <span class="badge abs">${cat}</span>
+        </div>
+        <div class="grow">
+          <strong>${title}</strong>
+          <p class="meta accent-text">${author}</p>
+          ${text(excerpt)}
+        </div>
+      </button>
+      <div class="pub-title-row">
+        <span class="meta">⋯</span>
+        <button class="hit icon-btn" data-go="${optionsGo}" title="À propos" aria-label="À propos">⋯</button>
+      </div>
+      ${socialActions()}
+    </article>
+  `
+}
+
 export function sheetOption(label, { go, sim, toggle = false, on = false } = {}) {
   const attrs = go ? `data-go="${go}"` : sim ? `data-sim="${sim}"` : 'type="button"'
   return `
@@ -248,39 +279,77 @@ export function errorState(msg = 'Une erreur est survenue') {
     <button class="hit btn" data-back>Réessayer</button></div>`
 }
 
-/** Shared event list block — Événements section + Ma mairie Événements */
+/** Shared event list — dedicated Événements + Ma mairie Événements tab */
 export function evenementsListeBody({
-  titles = ['Atelier Créatif de Kapan', 'Festival de Musique de Kapan', 'Randonnée Montagne Syunik'],
+  events = [
+    {
+      title: 'Atelier Créatif',
+      when: 'JUIN 26',
+      time: '15:30',
+      countdown: '12 jours restants',
+      lieu: 'Centre culturel · Kapan',
+      tags: ['Artistique / Créatif', 'Gratuit'],
+    },
+    {
+      title: 'Soirée dansante',
+      when: 'JUIN 28',
+      time: '20:00',
+      countdown: '14 jours restants',
+      lieu: 'Salle municipale · Kapan',
+      tags: ['Social / Lifestyle', 'Gratuit'],
+    },
+    {
+      title: 'Conseil municipal (public)',
+      when: 'JUIL 02',
+      time: '18:30',
+      countdown: '18 jours restants',
+      lieu: 'Hôtel de ville · Kapan',
+      tags: ['Institutionnel', 'Gratuit'],
+    },
+  ],
   detailsGo = 'evenement-details',
 } = {}) {
   return `
-    ${search('Rechercher un événement…')}
-    ${chips(['Tous', 'Populaire', 'Près de moi', 'Les plus proches'])}
+    <div class="chips filter-chips">
+      <button class="hit chip on" type="button">Populaires</button>
+      <button class="hit chip" type="button">Près de moi ▾</button>
+      <button class="hit chip" type="button">Bientôt</button>
+      <button class="hit chip" type="button">Prix du ticket</button>
+    </div>
     <div class="row-link static">
-      <strong>Juin 2026</strong>
-      <div class="chips">
-        <button class="hit chip" type="button">Toute période</button>
-        <button class="hit chip on" type="button">Cette semaine</button>
-      </div>
+      <strong>Avril 2026 ▾</strong>
+      <button class="hit chip on" type="button">Cette semaine ▾</button>
     </div>
     <div class="h-scroll dates">
-      ${[22, 23, 24, 25, 26, 27, 28]
+      ${[21, 22, 23, 24, 25, 26, 27]
         .map(
           (d) =>
             `<button class="hit cal-day ${d === 26 ? 'on' : ''}" type="button">${d}</button>`
         )
         .join('')}
     </div>
-    <h2 class="sec">Jeudi 26 Juin <span class="badge">${titles.length} événements</span></h2>
-    ${titles
+    ${events
       .map(
-        (title) => `
-      <article class="card">
-        ${photo('Photo événement…', 'wide')}
-        <span class="badge">Catégorie…</span>
-        <strong>${title}</strong>
-        <p class="meta">16:30 – 18:30 · Lieu… · places restantes…</p>
-        <button class="hit btn primary" data-go="${detailsGo}">Voir les détails</button>
+        (ev) => `
+      <article class="card event-card">
+        <div class="event-photo-wrap">
+          ${photo('Photo événement…', 'wide')}
+          <span class="badge event-places">Places limitées</span>
+        </div>
+        <div class="event-card-body">
+          <div class="event-date-block"><span class="meta">${ev.when.split(' ')[0]}</span><strong>${
+            ev.when.split(' ')[1] || ''
+          }</strong></div>
+          <div class="grow">
+            <strong>${ev.title}</strong>
+            <p class="meta">${ev.time} · ${ev.countdown}</p>
+            <p class="meta">📍 ${ev.lieu}</p>
+            <div class="chips">
+              ${(ev.tags || []).map((t) => `<span class="badge">${t}</span>`).join('')}
+            </div>
+            <button class="hit btn primary" data-go="${detailsGo}">Voir les détails</button>
+          </div>
+        </div>
       </article>`
       )
       .join('')}
