@@ -143,9 +143,11 @@ function accueilKapan() {
     { label: 'Patrimoine', go: 'dir-patrimoine' },
     { label: 'Aide sociale', go: 'dir-aide-sociale' },
     { label: 'Associations', go: 'dir-associations' },
+    { label: 'Banques & Assurances', go: 'dir-banques' },
     { label: 'Restaurants', go: 'dir-restaurants' },
     { label: 'Transports', go: 'dir-transports' },
-    { label: 'Bibliothèques', go: 'dir-bibliotheques' },
+    { label: 'Bibliothèque', go: 'dir-bibliotheques' },
+    { label: 'Permanences', go: 'dir-permanences' },
     { label: 'Santé', go: 'sante-accueil' },
     { label: 'Sécurité', go: 'dir-securite' },
     { label: 'Tourisme', go: 'dir-tourisme' },
@@ -1224,6 +1226,9 @@ function menuPlus() {
       ['Vie locale — Santé', 'sante-accueil'],
       ['Tourisme', 'dir-tourisme'],
       ['Cinémas & Théâtres', 'dir-cinemas'],
+      ['Économie', 'dir-economie'],
+      ['Banques & Assurances', 'dir-banques'],
+      ['Permanences', 'dir-permanences'],
       ['Événements', 'evenements-liste'],
       ['Petites annonces', 'annonces-liste'],
       ['Offres d’emploi', 'emplois-liste'],
@@ -1248,7 +1253,7 @@ function menuPlus() {
 
 /* ——— Vie locale directory (modèle Santé / maquettes validées) ——— */
 
-/** Accueil rubrique: banner + N cat blocks (3 or 4 as validated) + search/filters + Autour de vous (+ useful if shown) */
+/** Accueil rubrique: banner + N cat blocks + search/filters + Autour de vous (+ useful if shown) */
 function rubriqueAccueil({
   title,
   bannerTitle,
@@ -1259,6 +1264,8 @@ function rubriqueAccueil({
   around = null,
   useful = [],
   back = 'vie-locale-hub',
+  proposition = false,
+  aroundActions = null,
 } = {}) {
   const blocks = [...cats]
   const n = blocks.length
@@ -1272,9 +1279,17 @@ function rubriqueAccueil({
       badge: i === 0 ? 'Ouvert' : '…',
       ficheGo: c.ficheGo || 'dir-fiche',
     }))
+  const defaultActions = (item) =>
+    aroundActions
+      ? aroundActions(item)
+      : [
+          { label: 'Détails', go: item.ficheGo || 'dir-fiche', primary: true },
+          { label: 'Appeler', sim: 'appeler' },
+        ]
 
   return wrap(
     `
+    ${proposition ? tbd('Proposition — À valider') : ''}
     <div class="banner-box">
       ${photo('Bannière…')}
       <strong>${bannerTitle || title}</strong>
@@ -1287,6 +1302,7 @@ function rubriqueAccueil({
         <button class="hit icon-tile" data-go="${c.go}" title="${c.label}">
           <span class="ico-box round"></span>
           <span>${c.label}</span>
+          ${proposition ? '<span class="meta">À valider</span>' : ''}
         </button>`
         )
         .join('')}
@@ -1302,10 +1318,7 @@ function rubriqueAccueil({
             title: item.title,
             meta: item.meta,
             badge: item.badge || 'Ouvert',
-            actions: [
-              { label: 'Détails', go: item.ficheGo || 'dir-fiche', primary: true },
-              { label: 'Appeler', sim: 'appeler' },
-            ],
+            actions: defaultActions(item),
           })
       )
       .join('')}
@@ -1333,28 +1346,30 @@ function rubriqueAccueil({
 }
 
 /** Sous-page: no banner, no cat blocks — search, filters, cards → fiche */
-function rubriqueListe(title, parentId, { ficheGo = 'dir-fiche', filters = null } = {}) {
+function rubriqueListe(title, parentId, { ficheGo = 'dir-fiche', filters = null, proposition = false, cardActions = null } = {}) {
+  const actions = (go) =>
+    cardActions
+      ? cardActions(go)
+      : [
+          { label: 'Détails', go, primary: true },
+          { label: 'Appeler', sim: 'appeler' },
+        ]
   return wrap(
     `
+    ${proposition ? tbd('Sous-page proposition — À valider') : ''}
     ${search(`Rechercher dans ${title}…`)}
-    ${chips(filters || ['Tous', 'Ouverts', 'À proximité'])}
+    ${chips(filters || ['Tous', 'Ouverts', 'À proximité', 'Enregistrés'])}
     ${listCard({
-      title: `${title} — lieu A…`,
+      title: `${title} — fiche A…`,
       meta: 'Adresse · distance…',
-      badge: 'Ouvert',
-      actions: [
-        { label: 'Détails', go: ficheGo, primary: true },
-        { label: 'Appeler', sim: 'appeler' },
-      ],
+      badge: '…',
+      actions: actions(ficheGo),
     })}
     ${listCard({
-      title: `${title} — lieu B…`,
+      title: `${title} — fiche B…`,
       meta: 'Adresse · …',
       badge: '…',
-      actions: [
-        { label: 'Détails', go: ficheGo, primary: true },
-        { label: 'Appeler', sim: 'appeler' },
-      ],
+      actions: actions(ficheGo),
     })}
     `,
     {
@@ -1387,22 +1402,24 @@ function vieLocaleHub() {
     ['Santé', 'sante-accueil'],
     ['Tourisme', 'dir-tourisme'],
     ['Éducation', 'dir-education'],
-    ['Économie', 'dir-economie'],
     ['Cinémas & Théâtres', 'dir-cinemas'],
   ]
-  const pending = [
+  const propositions = [
+    ['Économie', 'dir-economie'],
     ['Aide sociale', 'dir-aide-sociale'],
     ['Associations', 'dir-associations'],
-    ['Restaurants', 'dir-restaurants'],
+    ['Banques & Assurances', 'dir-banques'],
     ['Transports', 'dir-transports'],
-    ['Bibliothèques', 'dir-bibliotheques'],
+    ['Bibliothèque', 'dir-bibliotheques'],
+    ['Permanences', 'dir-permanences'],
     ['Sécurité', 'dir-securite'],
-    ['Patrimoine (rubrique)', 'dir-patrimoine'],
-  ]
-  const unique = [
-    ['Météo', 'page-meteo'],
     ['Signalement', 'page-signalement'],
+    ['Météo', 'page-meteo'],
+  ]
+  const other = [
     ['N° Urgence', 'urgence-numeros'],
+    ['Restaurants', 'dir-restaurants'],
+    ['Patrimoine (rubrique)', 'dir-patrimoine'],
   ]
   return wrap(
     `
@@ -1418,21 +1435,22 @@ function vieLocaleHub() {
         )
         .join('')}
     </div>
-    <h2 class="sec">En attente de maquette</h2>
+    <h2 class="sec">Propositions — À valider</h2>
     <div class="grid-3">
-      ${pending
+      ${propositions
         .map(
           ([l, g]) => `
         <button class="hit icon-tile" data-go="${g}">
           <span class="ico-box"></span>
           <span>${l}</span>
+          <span class="meta">À valider</span>
         </button>`
         )
         .join('')}
     </div>
-    <h2 class="sec">Pages uniques</h2>
+    <h2 class="sec">Autres</h2>
     <div class="grid-3">
-      ${unique
+      ${other
         .map(
           ([l, g]) => `
         <button class="hit icon-tile" data-go="${g}">
@@ -1518,56 +1536,94 @@ function pageUtile(title, note, backTo) {
 }
 
 function pageMeteo() {
+  return rubriqueAccueil({
+    title: 'Météo',
+    bannerTitle: 'Météo — Kapan',
+    bannerText: 'Conditions et prévisions (structure)',
+    searchPh: 'Rechercher…',
+    filters: ['Tout', 'Température', 'Pluie', 'Vent'],
+    proposition: true,
+    cats: [
+      { label: 'Maintenant', go: 'meteo-maintenant' },
+      { label: 'Aujourd’hui', go: 'meteo-aujourdhui' },
+      { label: 'Demain', go: 'meteo-demain' },
+      { label: '7 jours', go: 'meteo-7jours' },
+    ],
+    around: [
+      { title: 'Aperçu Maintenant…', meta: 'Température · …', badge: '…', ficheGo: 'meteo-maintenant' },
+      { title: 'Aperçu Aujourd’hui…', meta: 'Pluie · …', badge: '…', ficheGo: 'meteo-aujourdhui' },
+    ],
+    aroundActions: (item) => [{ label: 'Voir', go: item.ficheGo, primary: true }],
+  })
+}
+
+function meteoContenu(title, parent = 'page-meteo') {
   return wrap(
     `
+    ${tbd('Proposition météo — À valider')}
     <div class="banner-box">
-      <strong>Météo — Kapan</strong>
-      <div class="big-num">22°C</div>
-      ${text('Ensoleillé · conditions…')}
+      <strong>${title}</strong>
+      <div class="big-num">…°</div>
+      ${text('Conditions… · vent… · pluie…')}
     </div>
-    <h2 class="sec">Prévisions (structure)</h2>
-    <div class="h-scroll">
-      ${['Lun', 'Mar', 'Mer', 'Jeu', 'Ven']
-        .map(
-          (d) => `
-        <div class="tile static" style="min-width:64px;flex-direction:column">
-          <span>${d}</span>
-          <span class="ico-box"></span>
-          <span class="meta">…°</span>
-        </div>`
-        )
-        .join('')}
-    </div>
-    ${tbd('Source météo / détails — À préciser')}
+    <h2 class="sec">Détail (placeholder)</h2>
+    ${text('Température…')}
+    ${text('Précipitations…')}
+    ${text('Vent…')}
+    <p class="meta">Pas d’actions Appeler / Itinéraire (contenu météo, pas une fiche lieu)</p>
     `,
     {
-      header: phoneHeader({ title: 'Météo', backTo: 'vie-locale-hub' }),
+      header: phoneHeader({ title, backTo: parent }),
       footer: phoneFooter('menu'),
     }
   )
 }
 
 function pageSignalement() {
+  return rubriqueAccueil({
+    title: 'Signalement',
+    bannerTitle: 'Signalement',
+    bannerText: 'Annuaire de services / contacts (pas un formulaire de ticket)',
+    searchPh: 'Rechercher un service…',
+    filters: ['Tous', 'Ouverts', 'À proximité', 'Enregistrés'],
+    proposition: true,
+    cats: [
+      { label: 'Voirie', go: 'dir-signalement-voirie', ficheGo: 'dir-fiche' },
+      { label: 'Éclairage', go: 'dir-signalement-eclairage', ficheGo: 'dir-fiche' },
+      { label: 'Propreté', go: 'dir-signalement-proprete', ficheGo: 'dir-fiche' },
+      { label: 'Équipements', go: 'dir-signalement-equipements', ficheGo: 'dir-fiche' },
+    ],
+  })
+}
+
+/** Distributeur ATM — horaires = accessibilité ; Appeler seulement si contact */
+function ficheDistributeur(tab = 'infos') {
   return wrap(
     `
-    <h2 class="sec">Signalement</h2>
-    ${tbd('Contenu signalement — À préciser plus tard')}
-    <label class="field"><span>Type</span>
-      <select><option>À préciser</option></select>
-    </label>
-    <label class="field"><span>Description</span><textarea rows="3" placeholder="Texte…"></textarea></label>
-    <div class="field">
-      <span>Photo</span>
-      ${photo('Slot photo…')}
-      <button class="hit btn" data-sim="upload">Ajouter photo (simulé)</button>
+    ${tbd('Proposition Banques — À valider')}
+    ${photo('Photo distributeur…', 'hero')}
+    <div class="detail-head">
+      <strong>Distributeur…</strong>
+      <p class="meta">Distributeurs · distance…</p>
     </div>
-    <label class="field"><span>Localisation</span>
-      <button class="hit btn block" data-sim="position">Partager position (simulé)</button>
-    </label>
-    <button class="hit btn primary block" data-sim="signalement">Envoyer (simulé — À préciser)</button>
+    <div class="notice"><strong>Accessibilité</strong>${text('Horaires d’accès au lieu… (≠ horaires banque)')}</div>
+    <div class="row-actions">
+      <button class="hit btn" data-sim="itineraire">Itinéraire</button>
+      <button class="hit btn" type="button" title="Uniquement si contact renseigné">Appeler (si contact)</button>
+    </div>
+    ${tbd('Contact assistance — afficher Appeler seulement s’il est renseigné')}
+    <div class="tabs">
+      <button class="hit tab ${tab === 'infos' ? 'on' : ''}" data-go="dir-banques-distributeur-infos">Informations</button>
+      <button class="hit tab ${tab === 'horaires' ? 'on' : ''}" data-go="dir-banques-distributeur-horaires">Accessibilité</button>
+    </div>
+    ${
+      tab === 'infos'
+        ? `${text('Adresse / organisme…')}${photo('Carte…', 'map')}`
+        : `<h2 class="sec">Accessibilité</h2>${text('Disponible… · accès PMR… · À préciser')}`
+    }
     `,
     {
-      header: phoneHeader({ title: 'Signalement', backTo: 'vie-locale-hub' }),
+      header: phoneHeader({ title: 'Détails', backTo: 'dir-banques-distributeurs' }),
       footer: phoneFooter('menu'),
     }
   )
@@ -2123,60 +2179,6 @@ export const SCREENS = {
     render: () => pageUtile('Calendrier scolaire', 'Dates — À préciser', 'dir-education'),
   },
 
-  /* —— Économie (validé — 3 blocs, pas de 4e) —— */
-  'dir-economie': {
-    title: 'Économie',
-    side: 'user',
-    group: 'Vie locale',
-    render: () =>
-      rubriqueAccueil({
-        title: 'Économie',
-        bannerTitle: 'L’économie près de chez vous',
-        bannerText: 'Commerces, entreprises et services locaux',
-        searchPh: 'Rechercher un acteur local…',
-        filters: ['Tous', 'Ouverts', 'À proximité'],
-        cats: [
-          { label: 'Commerces', go: 'dir-economie-commerces' },
-          { label: 'Entreprises', go: 'dir-economie-entreprises' },
-          { label: 'Services', go: 'dir-economie-services' },
-        ],
-        useful: [
-          { label: 'Actualités économiques', meta: 'Vie économique de la ville…', go: 'dir-economie-actus' },
-          { label: 'Marchés locaux', meta: 'Jours et lieux des marchés…', go: 'dir-economie-marches' },
-        ],
-      }),
-  },
-  'dir-economie-commerces': {
-    title: 'Commerces',
-    side: 'user',
-    group: 'Vie locale',
-    render: () => rubriqueListe('Commerces', 'dir-economie'),
-  },
-  'dir-economie-entreprises': {
-    title: 'Entreprises',
-    side: 'user',
-    group: 'Vie locale',
-    render: () => rubriqueListe('Entreprises', 'dir-economie'),
-  },
-  'dir-economie-services': {
-    title: 'Services',
-    side: 'user',
-    group: 'Vie locale',
-    render: () => rubriqueListe('Services', 'dir-economie'),
-  },
-  'dir-economie-actus': {
-    title: 'Actualités économiques',
-    side: 'user',
-    group: 'Vie locale',
-    render: () => pageUtile('Actualités économiques', 'Contenu — À préciser', 'dir-economie'),
-  },
-  'dir-economie-marches': {
-    title: 'Marchés locaux',
-    side: 'user',
-    group: 'Vie locale',
-    render: () => pageUtile('Marchés locaux', 'Contenu — À préciser', 'dir-economie'),
-  },
-
   /* —— Cinémas & Théâtres (validé) —— */
   'dir-cinemas': {
     title: 'Cinémas & Théâtres',
@@ -2232,42 +2234,626 @@ export const SCREENS = {
     render: () => pageUtile('Programme de la semaine', 'Contenu — À préciser', 'dir-cinemas'),
   },
 
-  /* —— Non validées (pas d’invention de sous-cats) —— */
+  /* —— Économie (proposition : + Artisans) —— */
+  'dir-economie': {
+    title: 'Économie — À valider',
+    side: 'user',
+    group: 'Vie locale',
+    render: () =>
+      rubriqueAccueil({
+        title: 'Économie',
+        bannerTitle: 'L’économie près de chez vous',
+        bannerText: 'Commerces, entreprises, artisans et services',
+        searchPh: 'Rechercher un acteur local…',
+        filters: ['Tous', 'Ouverts', 'À proximité', 'Enregistrés'],
+        proposition: true,
+        cats: [
+          { label: 'Commerces', go: 'dir-economie-commerces' },
+          { label: 'Entreprises', go: 'dir-economie-entreprises' },
+          { label: 'Artisans', go: 'dir-economie-artisans' },
+          { label: 'Services', go: 'dir-economie-services' }
+        ],
+        useful: [
+          { label: 'Actualités économiques', meta: 'Vie économique…', go: 'dir-economie-actus' },
+          { label: 'Marchés locaux', meta: 'Jours et lieux…', go: 'dir-economie-marches' },
+        ],
+      }),
+  },
+  'dir-economie-commerces': {
+    title: 'Commerces — À valider',
+    side: 'user',
+    group: 'Vie locale',
+    render: () =>
+      rubriqueListe('Commerces', 'dir-economie', {
+        ficheGo: 'dir-fiche',
+        filters: ['Tous', 'Ouverts', 'À proximité', 'Enregistrés'],
+        proposition: true,
+      }),
+  },
+  'dir-economie-entreprises': {
+    title: 'Entreprises — À valider',
+    side: 'user',
+    group: 'Vie locale',
+    render: () =>
+      rubriqueListe('Entreprises', 'dir-economie', {
+        ficheGo: 'dir-fiche',
+        filters: ['Tous', 'Ouverts', 'À proximité', 'Enregistrés'],
+        proposition: true,
+      }),
+  },
+  'dir-economie-artisans': {
+    title: 'Artisans — À valider',
+    side: 'user',
+    group: 'Vie locale',
+    render: () =>
+      rubriqueListe('Artisans', 'dir-economie', {
+        ficheGo: 'dir-fiche',
+        filters: ['Tous', 'Ouverts', 'À proximité', 'Enregistrés'],
+        proposition: true,
+      }),
+  },
+  'dir-economie-services': {
+    title: 'Services — À valider',
+    side: 'user',
+    group: 'Vie locale',
+    render: () =>
+      rubriqueListe('Services', 'dir-economie', {
+        ficheGo: 'dir-fiche',
+        filters: ['Tous', 'Ouverts', 'À proximité', 'Enregistrés'],
+        proposition: true,
+      }),
+  },
+  'dir-economie-actus': {
+    title: 'Actualités économiques',
+    side: 'user',
+    group: 'Vie locale',
+    render: () => pageUtile('Actualités économiques', 'Contenu — À préciser', 'dir-economie'),
+  },
+  'dir-economie-marches': {
+    title: 'Marchés locaux',
+    side: 'user',
+    group: 'Vie locale',
+    render: () => pageUtile('Marchés locaux', 'Contenu — À préciser', 'dir-economie'),
+  },
+
+  /* —— Aide sociale —— */
   'dir-aide-sociale': {
-    title: 'Aide sociale',
+    title: 'Aide sociale — À valider',
     side: 'user',
     group: 'Vie locale',
-    render: () => rubriqueNonValidee('Aide sociale'),
+    render: () =>
+      rubriqueAccueil({
+        title: 'Aide sociale',
+        bannerTitle: 'Aide sociale',
+        bannerText: 'Familles, seniors, handicap, accompagnement',
+        searchPh: 'Rechercher…',
+        filters: ['Tous', 'Ouverts', 'À proximité', 'Enregistrés'],
+        proposition: true,
+        cats: [
+          { label: 'Familles', go: 'dir-aide-familles' },
+          { label: 'Seniors', go: 'dir-aide-seniors' },
+          { label: 'Handicap', go: 'dir-aide-handicap' },
+          { label: 'Accompagnement', go: 'dir-aide-accompagnement' }
+        ],
+      }),
   },
+  'dir-aide-familles': {
+    title: 'Familles — À valider',
+    side: 'user',
+    group: 'Vie locale',
+    render: () =>
+      rubriqueListe('Familles', 'dir-aide-sociale', {
+        ficheGo: 'dir-fiche',
+        filters: ['Tous', 'Ouverts', 'À proximité', 'Enregistrés'],
+        proposition: true,
+      }),
+  },
+  'dir-aide-seniors': {
+    title: 'Seniors — À valider',
+    side: 'user',
+    group: 'Vie locale',
+    render: () =>
+      rubriqueListe('Seniors', 'dir-aide-sociale', {
+        ficheGo: 'dir-fiche',
+        filters: ['Tous', 'Ouverts', 'À proximité', 'Enregistrés'],
+        proposition: true,
+      }),
+  },
+  'dir-aide-handicap': {
+    title: 'Handicap — À valider',
+    side: 'user',
+    group: 'Vie locale',
+    render: () =>
+      rubriqueListe('Handicap', 'dir-aide-sociale', {
+        ficheGo: 'dir-fiche',
+        filters: ['Tous', 'Ouverts', 'À proximité', 'Enregistrés'],
+        proposition: true,
+      }),
+  },
+  'dir-aide-accompagnement': {
+    title: 'Accompagnement — À valider',
+    side: 'user',
+    group: 'Vie locale',
+    render: () =>
+      rubriqueListe('Accompagnement', 'dir-aide-sociale', {
+        ficheGo: 'dir-fiche',
+        filters: ['Tous', 'Ouverts', 'À proximité', 'Enregistrés'],
+        proposition: true,
+      }),
+  },
+
+  /* —— Associations —— */
   'dir-associations': {
-    title: 'Associations',
+    title: 'Associations — À valider',
     side: 'user',
     group: 'Vie locale',
-    render: () => rubriqueNonValidee('Associations'),
+    render: () =>
+      rubriqueAccueil({
+        title: 'Associations',
+        bannerTitle: 'Associations',
+        bannerText: 'Solidarité, culture, sport, environnement (≠ Clubs MIASIN)',
+        searchPh: 'Rechercher une association…',
+        filters: ['Tous', 'À proximité', 'Enregistrés'],
+        proposition: true,
+        cats: [
+          { label: 'Solidarité', go: 'dir-associations-solidarite' },
+          { label: 'Culture', go: 'dir-associations-culture' },
+          { label: 'Sport', go: 'dir-associations-sport' },
+          { label: 'Environnement', go: 'dir-associations-environnement' }
+        ],
+      }),
   },
+  'dir-associations-solidarite': {
+    title: 'Solidarité — À valider',
+    side: 'user',
+    group: 'Vie locale',
+    render: () =>
+      rubriqueListe('Solidarité', 'dir-associations', {
+        ficheGo: 'dir-fiche',
+        filters: ['Tous', 'À proximité', 'Enregistrés'],
+        proposition: true,
+      }),
+  },
+  'dir-associations-culture': {
+    title: 'Culture — À valider',
+    side: 'user',
+    group: 'Vie locale',
+    render: () =>
+      rubriqueListe('Culture', 'dir-associations', {
+        ficheGo: 'dir-fiche',
+        filters: ['Tous', 'À proximité', 'Enregistrés'],
+        proposition: true,
+      }),
+  },
+  'dir-associations-sport': {
+    title: 'Sport — À valider',
+    side: 'user',
+    group: 'Vie locale',
+    render: () =>
+      rubriqueListe('Sport', 'dir-associations', {
+        ficheGo: 'dir-fiche',
+        filters: ['Tous', 'À proximité', 'Enregistrés'],
+        proposition: true,
+      }),
+  },
+  'dir-associations-environnement': {
+    title: 'Environnement — À valider',
+    side: 'user',
+    group: 'Vie locale',
+    render: () =>
+      rubriqueListe('Environnement', 'dir-associations', {
+        ficheGo: 'dir-fiche',
+        filters: ['Tous', 'À proximité', 'Enregistrés'],
+        proposition: true,
+      }),
+  },
+
+  /* —— Banques & Assurances —— */
+  'dir-banques': {
+    title: 'Banques & Assurances — À valider',
+    side: 'user',
+    group: 'Vie locale',
+    render: () =>
+      rubriqueAccueil({
+        title: 'Banques & Assurances',
+        bannerTitle: 'Banques & Assurances',
+        bannerText: 'Banques, assurances, distributeurs, change',
+        searchPh: 'Rechercher…',
+        filters: ['Tous', 'Ouverts', 'À proximité', 'Enregistrés'],
+        proposition: true,
+        cats: [
+          { label: 'Banques', go: 'dir-banques-banques' },
+          { label: 'Assurances', go: 'dir-banques-assurances' },
+          { label: 'Distributeurs', go: 'dir-banques-distributeurs' },
+          { label: 'Change', go: 'dir-banques-change' }
+        ],
+      }),
+  },
+  'dir-banques-banques': {
+    title: 'Banques — À valider',
+    side: 'user',
+    group: 'Vie locale',
+    render: () => rubriqueListe('Banques', 'dir-banques', { filters: ['Tous', 'Ouverts', 'À proximité', 'Enregistrés'], proposition: true }),
+  },
+  'dir-banques-assurances': {
+    title: 'Assurances — À valider',
+    side: 'user',
+    group: 'Vie locale',
+    render: () => rubriqueListe('Assurances', 'dir-banques', { filters: ['Tous', 'Ouverts', 'À proximité', 'Enregistrés'], proposition: true }),
+  },
+  'dir-banques-distributeurs': {
+    title: 'Distributeurs — À valider',
+    side: 'user',
+    group: 'Vie locale',
+    render: () =>
+      rubriqueListe('Distributeurs', 'dir-banques', {
+        ficheGo: 'dir-banques-distributeur-infos',
+        filters: ['Tous', 'Ouverts', 'À proximité', 'Enregistrés'],
+        proposition: true,
+      }),
+  },
+  'dir-banques-change': {
+    title: 'Change — À valider',
+    side: 'user',
+    group: 'Vie locale',
+    render: () => rubriqueListe('Change', 'dir-banques', { filters: ['Tous', 'Ouverts', 'À proximité', 'Enregistrés'], proposition: true }),
+  },
+  'dir-banques-distributeur-infos': {
+    title: 'Distributeur — Infos',
+    side: 'user',
+    group: 'Vie locale',
+    render: () => ficheDistributeur('infos'),
+  },
+  'dir-banques-distributeur-horaires': {
+    title: 'Distributeur — Accessibilité',
+    side: 'user',
+    group: 'Vie locale',
+    render: () => ficheDistributeur('horaires'),
+  },
+
+  /* —— Transports —— */
+  'dir-transports': {
+    title: 'Transports — À valider',
+    side: 'user',
+    group: 'Vie locale',
+    render: () =>
+      rubriqueAccueil({
+        title: 'Transports',
+        bannerTitle: 'Transports',
+        bannerText: 'Bus, taxis, gares, location — fiche lieu/service (pas horaires de départ)',
+        searchPh: 'Rechercher…',
+        filters: ['Tous', 'Ouverts', 'À proximité', 'Enregistrés'],
+        proposition: true,
+        cats: [
+          { label: 'Bus', go: 'dir-transports-bus' },
+          { label: 'Taxis', go: 'dir-transports-taxis' },
+          { label: 'Gares', go: 'dir-transports-gares' },
+          { label: 'Location', go: 'dir-transports-location' }
+        ],
+      }),
+  },
+  'dir-transports-bus': {
+    title: 'Bus — À valider',
+    side: 'user',
+    group: 'Vie locale',
+    render: () =>
+      rubriqueListe('Bus', 'dir-transports', {
+        ficheGo: 'dir-fiche',
+        filters: ['Tous', 'Ouverts', 'À proximité', 'Enregistrés'],
+        proposition: true,
+      }),
+  },
+  'dir-transports-taxis': {
+    title: 'Taxis — À valider',
+    side: 'user',
+    group: 'Vie locale',
+    render: () =>
+      rubriqueListe('Taxis', 'dir-transports', {
+        ficheGo: 'dir-fiche',
+        filters: ['Tous', 'Ouverts', 'À proximité', 'Enregistrés'],
+        proposition: true,
+      }),
+  },
+  'dir-transports-gares': {
+    title: 'Gares — À valider',
+    side: 'user',
+    group: 'Vie locale',
+    render: () =>
+      rubriqueListe('Gares', 'dir-transports', {
+        ficheGo: 'dir-fiche',
+        filters: ['Tous', 'Ouverts', 'À proximité', 'Enregistrés'],
+        proposition: true,
+      }),
+  },
+  'dir-transports-location': {
+    title: 'Location — À valider',
+    side: 'user',
+    group: 'Vie locale',
+    render: () =>
+      rubriqueListe('Location', 'dir-transports', {
+        ficheGo: 'dir-fiche',
+        filters: ['Tous', 'Ouverts', 'À proximité', 'Enregistrés'],
+        proposition: true,
+      }),
+  },
+
+  /* —— Bibliothèque —— */
+  'dir-bibliotheques': {
+    title: 'Bibliothèque — À valider',
+    side: 'user',
+    group: 'Vie locale',
+    render: () =>
+      rubriqueAccueil({
+        title: 'Bibliothèque',
+        bannerTitle: 'Bibliothèque',
+        bannerText: 'Bibliothèques, médiathèques, universitaires, salles de lecture (pas de catalogue)',
+        searchPh: 'Rechercher un lieu…',
+        filters: ['Toutes', 'Ouvertes', 'À proximité', 'Enregistrées'],
+        proposition: true,
+        cats: [
+          { label: 'Bibliothèques', go: 'dir-bibliotheques-bibliotheques' },
+          { label: 'Médiathèques', go: 'dir-bibliotheques-mediatheques' },
+          { label: 'Universitaires', go: 'dir-bibliotheques-universitaires' },
+          { label: 'Salles de lecture', go: 'dir-bibliotheques-salles-de-lecture' }
+        ],
+      }),
+  },
+  'dir-bibliotheques-bibliotheques': {
+    title: 'Bibliothèques — À valider',
+    side: 'user',
+    group: 'Vie locale',
+    render: () =>
+      rubriqueListe('Bibliothèques', 'dir-bibliotheques', {
+        ficheGo: 'dir-fiche',
+        filters: ['Toutes', 'Ouvertes', 'À proximité', 'Enregistrées'],
+        proposition: true,
+      }),
+  },
+  'dir-bibliotheques-mediatheques': {
+    title: 'Médiathèques — À valider',
+    side: 'user',
+    group: 'Vie locale',
+    render: () =>
+      rubriqueListe('Médiathèques', 'dir-bibliotheques', {
+        ficheGo: 'dir-fiche',
+        filters: ['Toutes', 'Ouvertes', 'À proximité', 'Enregistrées'],
+        proposition: true,
+      }),
+  },
+  'dir-bibliotheques-universitaires': {
+    title: 'Universitaires — À valider',
+    side: 'user',
+    group: 'Vie locale',
+    render: () =>
+      rubriqueListe('Universitaires', 'dir-bibliotheques', {
+        ficheGo: 'dir-fiche',
+        filters: ['Toutes', 'Ouvertes', 'À proximité', 'Enregistrées'],
+        proposition: true,
+      }),
+  },
+  'dir-bibliotheques-salles-de-lecture': {
+    title: 'Salles de lecture — À valider',
+    side: 'user',
+    group: 'Vie locale',
+    render: () =>
+      rubriqueListe('Salles de lecture', 'dir-bibliotheques', {
+        ficheGo: 'dir-fiche',
+        filters: ['Toutes', 'Ouvertes', 'À proximité', 'Enregistrées'],
+        proposition: true,
+      }),
+  },
+
+  /* —— Permanences —— */
+  'dir-permanences': {
+    title: 'Permanences — À valider',
+    side: 'user',
+    group: 'Vie locale',
+    render: () =>
+      rubriqueAccueil({
+        title: 'Permanences',
+        bannerTitle: 'Permanences',
+        bannerText: 'Administratives, sociales, juridiques, médicales',
+        searchPh: 'Rechercher une permanence…',
+        filters: ['Toutes', 'Aujourd’hui', 'Cette semaine', 'À proximité'],
+        proposition: true,
+        cats: [
+          { label: 'Administratives', go: 'dir-permanences-administratives' },
+          { label: 'Sociales', go: 'dir-permanences-sociales' },
+          { label: 'Juridiques', go: 'dir-permanences-juridiques' },
+          { label: 'Médicales', go: 'dir-permanences-medicales' }
+        ],
+      }),
+  },
+  'dir-permanences-administratives': {
+    title: 'Administratives — À valider',
+    side: 'user',
+    group: 'Vie locale',
+    render: () =>
+      rubriqueListe('Administratives', 'dir-permanences', {
+        ficheGo: 'dir-fiche',
+        filters: ['Toutes', 'Aujourd’hui', 'Cette semaine', 'À proximité'],
+        proposition: true,
+      }),
+  },
+  'dir-permanences-sociales': {
+    title: 'Sociales — À valider',
+    side: 'user',
+    group: 'Vie locale',
+    render: () =>
+      rubriqueListe('Sociales', 'dir-permanences', {
+        ficheGo: 'dir-fiche',
+        filters: ['Toutes', 'Aujourd’hui', 'Cette semaine', 'À proximité'],
+        proposition: true,
+      }),
+  },
+  'dir-permanences-juridiques': {
+    title: 'Juridiques — À valider',
+    side: 'user',
+    group: 'Vie locale',
+    render: () =>
+      rubriqueListe('Juridiques', 'dir-permanences', {
+        ficheGo: 'dir-fiche',
+        filters: ['Toutes', 'Aujourd’hui', 'Cette semaine', 'À proximité'],
+        proposition: true,
+      }),
+  },
+  'dir-permanences-medicales': {
+    title: 'Médicales — À valider',
+    side: 'user',
+    group: 'Vie locale',
+    render: () =>
+      rubriqueListe('Médicales', 'dir-permanences', {
+        ficheGo: 'dir-fiche',
+        filters: ['Toutes', 'Aujourd’hui', 'Cette semaine', 'À proximité'],
+        proposition: true,
+      }),
+  },
+
+  /* —— Sécurité —— */
+  'dir-securite': {
+    title: 'Sécurité — À valider',
+    side: 'user',
+    group: 'Vie locale',
+    render: () =>
+      rubriqueAccueil({
+        title: 'Sécurité',
+        bannerTitle: 'Sécurité',
+        bannerText: 'Police, secours, prévention, assistance (≠ N° Urgence ≠ Signalement)',
+        searchPh: 'Rechercher…',
+        filters: ['Tous', 'Ouverts', 'À proximité', 'Enregistrés'],
+        proposition: true,
+        cats: [
+          { label: 'Police', go: 'dir-securite-police' },
+          { label: 'Secours', go: 'dir-securite-secours' },
+          { label: 'Prévention', go: 'dir-securite-prevention' },
+          { label: 'Assistance', go: 'dir-securite-assistance' }
+        ],
+      }),
+  },
+  'dir-securite-police': {
+    title: 'Police — À valider',
+    side: 'user',
+    group: 'Vie locale',
+    render: () =>
+      rubriqueListe('Police', 'dir-securite', {
+        ficheGo: 'dir-fiche',
+        filters: ['Tous', 'Ouverts', 'À proximité', 'Enregistrés'],
+        proposition: true,
+      }),
+  },
+  'dir-securite-secours': {
+    title: 'Secours — À valider',
+    side: 'user',
+    group: 'Vie locale',
+    render: () =>
+      rubriqueListe('Secours', 'dir-securite', {
+        ficheGo: 'dir-fiche',
+        filters: ['Tous', 'Ouverts', 'À proximité', 'Enregistrés'],
+        proposition: true,
+      }),
+  },
+  'dir-securite-prevention': {
+    title: 'Prévention — À valider',
+    side: 'user',
+    group: 'Vie locale',
+    render: () =>
+      rubriqueListe('Prévention', 'dir-securite', {
+        ficheGo: 'dir-fiche',
+        filters: ['Tous', 'Ouverts', 'À proximité', 'Enregistrés'],
+        proposition: true,
+      }),
+  },
+  'dir-securite-assistance': {
+    title: 'Assistance — À valider',
+    side: 'user',
+    group: 'Vie locale',
+    render: () =>
+      rubriqueListe('Assistance', 'dir-securite', {
+        ficheGo: 'dir-fiche',
+        filters: ['Tous', 'Ouverts', 'À proximité', 'Enregistrés'],
+        proposition: true,
+      }),
+  },
+
+  /* —— Signalement (annuaire) —— */
+  'page-signalement': { title: 'Signalement — À valider', side: 'user', group: 'Vie locale', render: pageSignalement },
+  'dir-signalement-voirie': {
+    title: 'Voirie — À valider',
+    side: 'user',
+    group: 'Vie locale',
+    render: () =>
+      rubriqueListe('Voirie', 'page-signalement', {
+        ficheGo: 'dir-fiche',
+        filters: ['Tous', 'Ouverts', 'À proximité', 'Enregistrés'],
+        proposition: true,
+      }),
+  },
+  'dir-signalement-eclairage': {
+    title: 'Éclairage — À valider',
+    side: 'user',
+    group: 'Vie locale',
+    render: () =>
+      rubriqueListe('Éclairage', 'page-signalement', {
+        ficheGo: 'dir-fiche',
+        filters: ['Tous', 'Ouverts', 'À proximité', 'Enregistrés'],
+        proposition: true,
+      }),
+  },
+  'dir-signalement-proprete': {
+    title: 'Propreté — À valider',
+    side: 'user',
+    group: 'Vie locale',
+    render: () =>
+      rubriqueListe('Propreté', 'page-signalement', {
+        ficheGo: 'dir-fiche',
+        filters: ['Tous', 'Ouverts', 'À proximité', 'Enregistrés'],
+        proposition: true,
+      }),
+  },
+  'dir-signalement-equipements': {
+    title: 'Équipements — À valider',
+    side: 'user',
+    group: 'Vie locale',
+    render: () =>
+      rubriqueListe('Équipements', 'page-signalement', {
+        ficheGo: 'dir-fiche',
+        filters: ['Tous', 'Ouverts', 'À proximité', 'Enregistrés'],
+        proposition: true,
+      }),
+  },
+
+  /* —— Météo —— */
+  'page-meteo': { title: 'Météo — À valider', side: 'user', group: 'Vie locale', render: pageMeteo },
+  'meteo-maintenant': {
+    title: 'Météo — Maintenant',
+    side: 'user',
+    group: 'Vie locale',
+    render: () => meteoContenu('Maintenant'),
+  },
+  'meteo-aujourdhui': {
+    title: 'Météo — Aujourd’hui',
+    side: 'user',
+    group: 'Vie locale',
+    render: () => meteoContenu('Aujourd’hui'),
+  },
+  'meteo-demain': {
+    title: 'Météo — Demain',
+    side: 'user',
+    group: 'Vie locale',
+    render: () => meteoContenu('Demain'),
+  },
+  'meteo-7jours': {
+    title: 'Météo — 7 jours',
+    side: 'user',
+    group: 'Vie locale',
+    render: () => meteoContenu('7 jours'),
+  },
+
   'dir-restaurants': {
     title: 'Restaurants',
     side: 'user',
     group: 'Vie locale',
     render: () => rubriqueNonValidee('Restaurants'),
-  },
-  'dir-transports': {
-    title: 'Transports',
-    side: 'user',
-    group: 'Vie locale',
-    render: () => rubriqueNonValidee('Transports'),
-  },
-  'dir-bibliotheques': {
-    title: 'Bibliothèques',
-    side: 'user',
-    group: 'Vie locale',
-    render: () => rubriqueNonValidee('Bibliothèques'),
-  },
-  'dir-securite': {
-    title: 'Sécurité',
-    side: 'user',
-    group: 'Vie locale',
-    render: () => rubriqueNonValidee('Sécurité'),
   },
   'dir-patrimoine': {
     title: 'Patrimoine (rubrique)',
@@ -2288,8 +2874,6 @@ export const SCREENS = {
     group: 'Vie locale',
     render: () => dirFiche('horaires', { backTo: 'vie-locale-hub' }),
   },
-  'page-meteo': { title: 'Météo', side: 'user', group: 'Vie locale', render: pageMeteo },
-  'page-signalement': { title: 'Signalement', side: 'user', group: 'Vie locale', render: pageSignalement },
   'communautes-groupes': {
     title: 'Groupes',
     side: 'user',
@@ -2336,6 +2920,7 @@ export const SCREENS = {
     render: () => adminStub('Statistiques'),
   },
 }
+
 
 
 export const NAV = [
@@ -2408,22 +2993,20 @@ export const NAV = [
         ids: [
           'vie-locale-hub',
           'dir-tourisme',
-          'dir-tourisme-patrimoine',
-          'dir-tourisme-nature',
-          'dir-tourisme-culture',
-          'dir-tourisme-activites',
           'dir-education',
-          'dir-economie',
           'dir-cinemas',
+          'dir-economie',
           'dir-aide-sociale',
           'dir-associations',
-          'dir-restaurants',
+          'dir-banques',
           'dir-transports',
           'dir-bibliotheques',
+          'dir-permanences',
           'dir-securite',
-          'dir-patrimoine',
-          'page-meteo',
           'page-signalement',
+          'page-meteo',
+          'dir-restaurants',
+          'dir-patrimoine',
           'communautes-groupes',
           'communautes-clubs',
           'communautes-rencontres',
