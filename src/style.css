@@ -2271,16 +2271,27 @@ button.tree-node:hover .tree-label {
 .events-toolbar {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding-bottom: 8px;
+  gap: 16px;
+  padding-bottom: 12px;
   border-bottom: 1px solid var(--line-soft);
-  margin-bottom: 4px;
+  margin-bottom: 8px;
 }
 
 .events-toolbar .h-scroll.dates {
   gap: 8px;
-  padding: 4px 2px 8px;
+  padding: 0 2px 4px;
   margin: 0 -2px;
+}
+
+.events-week-filter {
+  display: flex;
+  align-items: center;
+  padding: 0;
+  margin: 0;
+}
+
+.events-week-filter .chip {
+  min-height: 34px;
 }
 
 .period-label {
@@ -2298,4 +2309,10 @@ button.tree-node:hover .tree-label {
 
 .event-card-body {
   gap: 12px;
+}
+
+.events-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
