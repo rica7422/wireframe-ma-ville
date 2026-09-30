@@ -40,7 +40,7 @@ export function soft(hex, pct = 14) {
 export function sectionFor(id) {
   if (!id) return 'neutral'
   if (id.startsWith('mairie-')) return 'mairie'
-  if (id === 'infos-citoyen' || id.startsWith('infos-')) return 'infos'
+  if (id.startsWith('infos-')) return 'infos'
   if (id.startsWith('evenement')) return 'evenements'
   if (id.startsWith('annonce')) return 'annonces'
   if (id.startsWith('emploi')) return 'emplois'

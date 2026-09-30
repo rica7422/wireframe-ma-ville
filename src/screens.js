@@ -145,7 +145,7 @@ function modaleConfirmer() {
 function accueilKapan() {
   const rapide = [
     { label: 'Ma mairie', go: 'mairie-accueil', section: 'mairie' },
-    { label: 'Infos citoyen', go: 'infos-citoyen', section: 'infos' },
+    { label: 'Infos citoyen', go: 'infos-feed', section: 'infos' },
     { label: 'Événements', go: 'evenements-liste', section: 'evenements' },
     { label: 'Petites annonces', go: 'annonces-liste', section: 'annonces' },
     { label: 'Offres d’emploi', go: 'emplois-liste', section: 'emplois' },
@@ -1116,22 +1116,6 @@ function mairieStub(title, note) {
 
 /* ——— Social / contenus ——— */
 
-function infosCitoyen() {
-  return wrap(
-    `
-    <h2 class="sec">Infos citoyen</h2>
-    ${text('Fil d’informations citoyennes de Kapan — publications, réactions, commentaires.')}
-    <button class="hit btn primary block" data-go="infos-feed">Ouvrir Infos Feed</button>
-    <button class="hit row-link" data-go="evenements-liste"><span>Événements liés</span><span>›</span></button>
-    <button class="hit row-link" data-go="mairie-infos"><span>Infos Mairie</span><span>›</span></button>
-    `,
-    {
-      header: phoneHeader({ title: 'Infos citoyen', backTo: 'accueil-kapan' }),
-      footer: phoneFooter('infos'),
-    }
-  )
-}
-
 function infosFeed() {
   return wrap(
     `
@@ -1200,7 +1184,7 @@ function infosFeed() {
     })}
     `,
     {
-      header: phoneHeader({ title: 'Infos Feed', backTo: 'infos-citoyen' }),
+      header: phoneHeader({ title: 'Infos Feed', backTo: 'accueil-kapan' }),
       footer: phoneFooter('infos'),
     }
   )
@@ -2686,7 +2670,6 @@ export const SCREENS = {
     render: mairiePlanAller,
   },
 
-  'infos-citoyen': { title: 'Infos citoyen', side: 'user', group: 'Social / contenus', render: infosCitoyen },
   'infos-feed': { title: 'Infos Feed', side: 'user', group: 'Social / contenus', render: infosFeed },
   'infos-post-options': {
     title: 'Publication — Options',
@@ -3838,21 +3821,15 @@ export const NAV_TREE = {
             ],
           },
           {
-            id: 'infos-citoyen',
-            label: 'Infos citoyen',
+            id: 'infos-feed',
+            label: 'Infos Feed',
             children: [
-              {
-                id: 'infos-feed',
-                label: 'Infos Feed',
-                children: [
-                  { id: 'infos-post-options', label: 'Options (propre)' },
-                  { id: 'infos-post-options-other', label: 'Options (autre)' },
-                  { id: 'infos-reactions', label: 'Réactions' },
-                  { id: 'infos-commentaires', label: 'Commentaires' },
-                  { id: 'infos-partage', label: 'Partage' },
-                  { id: 'infos-ajouter-ami', label: 'Ajouter ami' },
-                ],
-              },
+              { id: 'infos-post-options', label: 'Options (propre)' },
+              { id: 'infos-post-options-other', label: 'Options (autre)' },
+              { id: 'infos-reactions', label: 'Réactions' },
+              { id: 'infos-commentaires', label: 'Commentaires' },
+              { id: 'infos-partage', label: 'Partage' },
+              { id: 'infos-ajouter-ami', label: 'Ajouter ami' },
             ],
           },
           {
