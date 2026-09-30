@@ -64,8 +64,26 @@ function handleSim(kind) {
   toast(map[action] || `Action simulée : ${kind}`)
 }
 
+function themeFor(id) {
+  if (id.startsWith('mairie-')) return 'mairie'
+  if (id === 'infos-citoyen' || id.startsWith('infos-')) return 'infos'
+  if (id.startsWith('sante-')) return 'sante'
+  if (id.startsWith('dir-education')) return 'education'
+  if (
+    id.startsWith('dir-tourisme') ||
+    id.startsWith('dir-nature') ||
+    id.startsWith('dir-activites')
+  )
+    return 'tourisme'
+  if (id.startsWith('dir-cinemas')) return 'cinemas'
+  if (id === 'urgence-numeros') return 'urgence'
+  if (id.startsWith('dir-economie')) return 'economie'
+  if (id.startsWith('dir-aide')) return 'aide'
+  return 'neutral'
+}
+
 function buildNav(activeId) {
-  return NAV.map((side) => {
+  const columns = NAV.map((side) => {
     const groups = side.groups
       .map((g) => {
         const items = g.ids
@@ -86,10 +104,12 @@ function buildNav(activeId) {
         ${groups}
       </section>`
   }).join('')
+  return `<div class="nav-columns">${columns}</div>`
 }
 
 function render() {
   const screen = SCREENS[currentId]
+  const theme = themeFor(currentId)
   const app = document.getElementById('app')
   app.innerHTML = `
     <div class="shell">
@@ -107,10 +127,12 @@ function render() {
       </aside>
       <main class="stage">
         <div class="stage-label">
-          <span>${screen.side === 'admin' ? 'Admin' : 'Utilisateur'} · ${screen.group}</span>
+          <span>${screen.side === 'admin' ? 'Admin' : 'Utilisateur'} · ${screen.group}${
+            theme !== 'neutral' ? ` · ${theme}` : ''
+          }</span>
           <strong>${screen.title}</strong>
         </div>
-        <div class="phone" id="phone">
+        <div class="phone" id="phone" data-theme="${theme}">
           <div class="phone-notch"></div>
           <div class="phone-inner" id="phone-inner">${screen.render()}</div>
         </div>
