@@ -27,11 +27,14 @@ Ouvre [http://127.0.0.1:4317](http://127.0.0.1:4317) dans Chrome.
 
 | Mode | Visibilité |
 |---|---|
-| `npm run dev` sur **ton PC** | Toi seul (localhost) |
-| Serveur démarré dans cet environnement cloud | Lien partagé dans la session agent |
-| Repo cloné par un collègue | Chacun lance en local chez soi |
+| `npm run dev` | Localhost (toi seul) |
+| Tunnel trycloudflare | Partage temporaire tant que la VM tourne |
+| Build static + Vercel/Cloudflare claim | Lien partageable durable (PC éteint) |
 
-Ce n’est **pas** un site public hébergé : il faut lancer le serveur localement (ou déployer ailleurs si tu le souhaites plus tard).
+```bash
+npm run build
+# puis déployer dist/ (ex. vercel deploy dist --temporary, puis claim)
+```
 
 ## Build
 
