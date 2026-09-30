@@ -76,7 +76,6 @@ function bienvenue() {
         title: 'Choisir une ville',
         showBack: true,
         backTo: null,
-        right: `<button class="hit icon-btn" data-sim="miasin" title="Retour MIASIN">◎</button>`,
       }),
     }
   )
@@ -234,59 +233,43 @@ function accueilKapan() {
 /* ——— Santé ——— */
 
 function santeAccueil() {
-  return wrap(
-    `
-    <div class="banner-box">
-      ${photo('Illustration…')}
-      <strong>Votre santé, notre priorité</strong>
-      ${text('Texte…')}
-    </div>
-    <div class="grid-4">
-      ${[
-        ['Urgences', 'sante-urgences'],
-        ['Pharmacies', 'sante-pharmacies'],
-        ['Hôpitaux', 'sante-hopitaux'],
-        ['Ambulances', 'sante-ambulances'],
-      ]
-        .map(
-          ([l, g]) => `
-        <button class="hit icon-tile" data-go="${g}">
-          <span class="ico-box round"></span>
-          <span>${l}</span>
-        </button>`
-        )
-        .join('')}
-    </div>
-    ${search('Rechercher une pharmacie, un hôpital…')}
-    ${chips(['Tous', 'Hôpitaux', 'Pharmacies', 'Ouverts'])}
-    <h2 class="sec">Autour de vous</h2>
-    ${listCard({
-      title: 'Centre médical de Kapan',
-      meta: 'Médecine générale · 0,8 km',
-      badge: 'Ouvert',
-      actions: [
-        { label: 'Détails', go: 'sante-hopital-details' },
-        { label: 'Appeler', sim: 'appeler', primary: true },
-      ],
-    })}
-    ${listCard({
-      title: 'Pharmacie centrale',
-      meta: 'Pharmacie · 1,2 km',
-      badge: 'Ouvert',
-      actions: [
-        { label: 'Détails', go: 'sante-pharmacie-infos' },
-        { label: 'Appeler', sim: 'appeler', primary: true },
-      ],
-    })}
-    <h2 class="sec">Informations utiles</h2>
-    <button class="hit row-link" data-go="sante-pharmacies"><span>Pharmacie de garde aujourd’hui</span><span>›</span></button>
-    <button class="hit row-link" data-go="sante-urgences"><span>Permanence médicale Week-end</span><span>›</span></button>
-    `,
-    {
-      header: phoneHeader({ title: 'Santé', backTo: 'accueil-kapan' }),
-      footer: phoneFooter('menu'),
-    }
-  )
+  return rubriqueAccueil({
+    title: 'Santé',
+    bannerTitle: 'Votre santé, notre priorité',
+    bannerText: 'Des services de santé proches de vous',
+    searchPh: 'Rechercher un service de santé…',
+    filters: ['Tous', 'Hôpitaux', 'Pharmacies', 'Ouverts'],
+    cats: [
+      { label: 'Urgences', go: 'sante-urgences' },
+      { label: 'Pharmacies', go: 'sante-pharmacies' },
+      { label: 'Hôpitaux', go: 'sante-hopitaux' },
+      { label: 'Ambulance', go: 'sante-ambulances' },
+    ],
+    around: [
+      {
+        title: 'Centre médical de Kapan',
+        meta: 'Hôpitaux · 0,8 km',
+        badge: 'Ouvert',
+        go: 'sante-hopital-details',
+      },
+      {
+        title: 'Pharmacie centrale',
+        meta: 'Pharmacies · 1,2 km',
+        badge: 'Ouvert',
+        go: 'sante-pharmacie-infos',
+      },
+      {
+        title: 'SAMU Kapan',
+        meta: 'Ambulance · …',
+        badge: 'Disponible',
+        go: 'sante-ambulances',
+      },
+    ],
+    useful: [
+      { label: 'Pharmacie de garde aujourd’hui', meta: 'Voir la pharmacie de garde…', go: 'sante-pharmacies' },
+      { label: 'Permanence médicale Week-end', meta: 'Texte…', go: 'sante-urgences' },
+    ],
+  })
 }
 
 function santeUrgences() {
@@ -1257,103 +1240,72 @@ function menuPlus() {
   )
 }
 
-/* ——— Vie locale directory ——— */
+/* ——— Vie locale directory (modèle Santé) ——— */
 
-function vieLocaleHub() {
-  const cats = [
-    ['Santé', 'sante-accueil'],
-    ['Tourisme', 'dir-tourisme'],
-    ['Cinémas & Théâtres', 'dir-cinemas'],
-    ['Éducation', 'dir-education'],
-    ['Économie', 'dir-economie'],
-    ['Patrimoine', 'dir-patrimoine'],
-    ['Aide sociale', 'dir-aide-sociale'],
-    ['Associations', 'dir-associations'],
-    ['Restaurants', 'dir-restaurants'],
-    ['Transports', 'dir-transports'],
-    ['Bibliothèques', 'dir-bibliotheques'],
-    ['Sécurité', 'dir-securite'],
-    ['Météo', 'page-meteo'],
-    ['Signalement', 'page-signalement'],
-    ['N° Urgence', 'urgence-numeros'],
-  ]
-  return wrap(
-    `
-    <h2 class="sec">Vie locale</h2>
-    ${text('Famille annuaire — même modèle que Santé')}
-    <div class="grid-3">
-      ${cats
-        .map(
-          ([l, g]) => `
-        <button class="hit icon-tile" data-go="${g}">
-          <span class="ico-box"></span>
-          <span>${l}</span>
-        </button>`
-        )
-        .join('')}
-    </div>
-    ${tbd('Catégories / 4e sous-catégories manquantes — À préciser')}
-    `,
-    {
-      header: phoneHeader({ title: 'Vie locale', backTo: 'accueil-kapan' }),
-      footer: phoneFooter('menu'),
-    }
-  )
-}
+/** Accueil rubrique: banner + exactly 4 cats + search/filters + Autour de vous (+ useful if known) */
+function rubriqueAccueil({
+  title,
+  bannerTitle,
+  bannerText = 'Texte…',
+  searchPh,
+  filters,
+  cats,
+  around = null,
+  useful = [],
+  back = 'vie-locale-hub',
+} = {}) {
+  // Always exactly 4 subcategory blocks
+  const four = [...cats]
+  while (four.length < 4) four.push({ label: title, tbd: true, go: 'a-preciser' })
+  const blocks = four.slice(0, 4)
+  const filterChips = filters || ['Tous', ...blocks.map((c) => c.label.split(' ')[0]), 'Ouverts'].slice(0, 4)
+  const mixed =
+    around ||
+    blocks.map((c, i) => ({
+      title: `Fiche ${c.label}…`,
+      meta: `${c.label} · distance…`,
+      badge: i === 0 ? 'Ouvert' : '…',
+      go: c.tbd ? 'a-preciser' : c.go || 'dir-liste',
+      ficheGo: 'dir-fiche',
+    }))
 
-function directoryHome(title, subs, { back = 'vie-locale-hub', useful = [], filters = null } = {}) {
-  const known = subs.filter((s) => s && !s.tbd)
-  const unknown = subs.filter((s) => s && s.tbd)
-  const filterChips = filters || ['Tous', 'Ouverts', 'À proximité']
   return wrap(
     `
     <div class="banner-box">
       ${photo('Bannière…')}
-      <strong>${title}</strong>
-      ${text('Texte d’intro…')}
+      <strong>${bannerTitle || title}</strong>
+      ${text(bannerText)}
     </div>
-    ${
-      known.length
-        ? `<div class="grid-4">
-      ${known
+    <div class="grid-4">
+      ${blocks
         .map(
-          (s) => `
-        <button class="hit icon-tile" data-go="${s.go || 'dir-liste'}">
+          (c) => `
+        <button class="hit icon-tile" data-go="${c.go || 'a-preciser'}" title="${c.label}">
           <span class="ico-box round"></span>
-          <span>${s.label}</span>
+          <span>${c.label}${c.tbd ? ' *' : ''}</span>
+          ${c.tbd ? '<span class="meta">À préciser</span>' : ''}
         </button>`
         )
         .join('')}
-    </div>`
-        : ''
-    }
-    ${search(`Rechercher dans ${title}…`)}
+    </div>
+    ${search(searchPh || `Rechercher dans ${title}…`)}
     ${chips(filterChips)}
-    ${
-      unknown.length
-        ? `<h2 class="sec">Sous-catégories</h2>
-      ${unknown.map(() => `<div class="row-link static"><span>Sous-catégorie</span>${tbd('À préciser')}</div>`).join('')}`
-        : ''
-    }
     <h2 class="sec">Autour de vous</h2>
-    ${listCard({
-      title: `Fiche exemple — ${title}`,
-      meta: 'Adresse · distance…',
-      badge: 'Ouvert',
-      actions: [
-        { label: 'Détails', go: 'dir-fiche', primary: true },
-        { label: 'Appeler', sim: 'appeler' },
-      ],
-    })}
-    ${listCard({
-      title: `Autre fiche — ${title}`,
-      meta: 'Adresse · …',
-      badge: 'À préciser',
-      actions: [
-        { label: 'Détails', go: 'dir-fiche', primary: true },
-        { label: 'Appeler', sim: 'appeler' },
-      ],
-    })}
+    <p class="meta">Liste mixte des 4 sous-catégories</p>
+    ${mixed
+      .map(
+        (item) =>
+          listCard({
+            title: item.title,
+            meta: item.meta,
+            badge: item.badge || 'Ouvert',
+            actions: [
+              { label: 'Détails', go: item.ficheGo || item.go || 'dir-fiche', primary: true },
+              { label: 'Appeler', sim: 'appeler' },
+            ],
+          })
+      )
+      .join('')}
     ${
       useful.length
         ? `<h2 class="sec">Informations utiles</h2>
@@ -1377,14 +1329,15 @@ function directoryHome(title, subs, { back = 'vie-locale-hub', useful = [], filt
   )
 }
 
-function dirListe() {
+/** Sous-page: no banner, no 4 blocks — search, filters, cards */
+function rubriqueListe(title, parentId, { tbdLabel = false } = {}) {
   return wrap(
     `
-    ${search('Rechercher…')}
+    ${tbdLabel ? tbd(`Sous-catégorie « ${title} » — À préciser`) : ''}
+    ${search(`Rechercher dans ${title}…`)}
     ${chips(['Tous', 'Ouverts', 'À proximité'])}
-    <h2 class="sec">Liste (sous-catégorie)</h2>
     ${listCard({
-      title: 'Établissement A…',
+      title: `${title} — fiche A…`,
       meta: 'Adresse · distance…',
       badge: 'Ouvert',
       actions: [
@@ -1393,7 +1346,7 @@ function dirListe() {
       ],
     })}
     ${listCard({
-      title: 'Établissement B…',
+      title: `${title} — fiche B…`,
       meta: 'Adresse · …',
       badge: 'Fermé',
       actions: [
@@ -1404,7 +1357,48 @@ function dirListe() {
     ${emptyState('Aucun résultat (état vide)')}
     `,
     {
-      header: phoneHeader({ title: 'Liste', backTo: 'vie-locale-hub' }),
+      header: phoneHeader({ title, backTo: parentId }),
+      footer: phoneFooter('menu'),
+    }
+  )
+}
+
+function vieLocaleHub() {
+  const cats = [
+    ['Santé', 'sante-accueil'],
+    ['Tourisme', 'dir-tourisme'],
+    ['Cinémas & Théâtres', 'dir-cinemas'],
+    ['Éducation', 'dir-education'],
+    ['Économie', 'dir-economie'],
+    ['Patrimoine', 'dir-patrimoine'],
+    ['Aide sociale', 'dir-aide-sociale'],
+    ['Associations', 'dir-associations'],
+    ['Restaurants', 'dir-restaurants'],
+    ['Transports', 'dir-transports'],
+    ['Bibliothèques', 'dir-bibliotheques'],
+    ['Sécurité', 'dir-securite'],
+    ['Météo', 'page-meteo'],
+    ['Signalement', 'page-signalement'],
+    ['N° Urgence', 'urgence-numeros'],
+  ]
+  return wrap(
+    `
+    <h2 class="sec">Vie locale</h2>
+    ${text('Même modèle d’annuaire que Santé (4 sous-catégories)')}
+    <div class="grid-3">
+      ${cats
+        .map(
+          ([l, g]) => `
+        <button class="hit icon-tile" data-go="${g}">
+          <span class="ico-box"></span>
+          <span>${l}</span>
+        </button>`
+        )
+        .join('')}
+    </div>
+    `,
+    {
+      header: phoneHeader({ title: 'Vie locale', backTo: 'accueil-kapan' }),
       footer: phoneFooter('menu'),
     }
   )
@@ -1422,7 +1416,6 @@ function dirFiche(tab = 'infos') {
     <div class="row-actions">
       <button class="hit btn" data-sim="itineraire">Itinéraire</button>
       <button class="hit btn primary" data-sim="appeler">Appeler</button>
-      <button class="hit btn" data-sim="enregistrer">Enregistrer</button>
     </div>
     <div class="tabs">
       <button class="hit tab ${tab === 'infos' ? 'on' : ''}" data-go="dir-fiche">Informations</button>
@@ -1448,6 +1441,15 @@ function dirFiche(tab = 'infos') {
       footer: phoneFooter('menu'),
     }
   )
+}
+
+/** Helper: 4 identical TBD cats named after the rubrique */
+function fourTbd(name, parentId) {
+  return [1, 2, 3, 4].map((n) => ({
+    label: name,
+    tbd: true,
+    go: `${parentId}-cat${n}`,
+  }))
 }
 
 function pageMeteo() {
@@ -1619,7 +1621,6 @@ function adminHome() {
       header: phoneHeader({
         title: 'Admin',
         showBack: false,
-        right: `<button class="hit icon-btn" data-go="accueil-kapan" title="Vue user">⌂</button>`,
       }),
     }
   )
@@ -1850,115 +1851,435 @@ export const SCREENS = {
   'a-preciser': { title: 'À préciser', side: 'user', group: 'Social / contenus', render: pageAPreciser },
 
   'vie-locale-hub': { title: 'Vie locale — Hub', side: 'user', group: 'Vie locale', render: vieLocaleHub },
-  'dir-education': {
-    title: 'Éducation',
-    side: 'user',
-    group: 'Vie locale',
-    render: () =>
-      directoryHome('Éducation', [
-        { label: 'Écoles', go: 'dir-liste' },
-        { label: 'À préciser', tbd: true },
-      ]),
-  },
-  'dir-economie': {
-    title: 'Économie',
-    side: 'user',
-    group: 'Vie locale',
-    render: () =>
-      directoryHome('Économie', [
-        { label: 'À préciser', tbd: true },
-        { label: 'À préciser', tbd: true },
-        { label: 'À préciser', tbd: true },
-        { label: 'À préciser', tbd: true },
-      ]),
-  },
-  'dir-cinemas': {
-    title: 'Cinémas & Théâtres',
-    side: 'user',
-    group: 'Vie locale',
-    render: () =>
-      directoryHome(
-        'Cinémas & Théâtres',
-        [
-          { label: 'Cinémas', go: 'dir-liste' },
-          { label: 'Théâtres', go: 'dir-liste' },
-          { label: 'Programmes', go: 'dir-liste' },
-          { label: 'Spectacles', go: 'dir-liste' },
-        ],
-        {
-          filters: ['Tous', 'Cinémas', 'Théâtres', 'Salles'],
-          useful: [
-            { label: 'Programme de la semaine', meta: 'Texte…', go: 'a-preciser' },
-            { label: 'Événements à venir', meta: 'Lien événements', go: 'evenements-liste' },
-          ],
-        }
-      ),
-  },
+
   'dir-tourisme': {
     title: 'Tourisme',
     side: 'user',
     group: 'Vie locale',
     render: () =>
-      directoryHome(
-        'Tourisme',
-        [
-          { label: 'Patrimoine', go: 'dir-liste' },
-          { label: 'Nature', go: 'dir-liste' },
-          { label: 'Culture', go: 'dir-liste' },
-          { label: 'Activités', go: 'dir-liste' },
+      rubriqueAccueil({
+        title: 'Tourisme',
+        bannerTitle: 'Découvrez notre ville',
+        bannerText: 'Patrimoine, nature et lieux à visiter',
+        searchPh: 'Rechercher un lieu…',
+        filters: ['Tous', 'Ouverts', 'Randonnées', 'À proximité'],
+        cats: [
+          { label: 'Patrimoine', go: 'dir-tourisme-patrimoine' },
+          { label: 'Nature', go: 'dir-tourisme-nature' },
+          { label: 'Culture', go: 'dir-tourisme-culture' },
+          { label: 'Activités', go: 'dir-tourisme-activites' },
         ],
-        {
-          filters: ['Tous', 'Ouverts', 'Randonnées', 'À proximité'],
-          useful: [
-            { label: 'Plan touristique', meta: 'Texte…', go: 'a-preciser' },
-            { label: 'Patrimoine (rubrique)', meta: 'Vie locale', go: 'dir-patrimoine' },
-          ],
-        }
-      ),
+      }),
   },
-  'dir-patrimoine': {
-    title: 'Patrimoine',
+  'dir-tourisme-patrimoine': {
+    title: 'Tourisme — Patrimoine',
     side: 'user',
     group: 'Vie locale',
-    render: () => directoryHome('Patrimoine', [{ label: 'À préciser', tbd: true }]),
+    render: () => rubriqueListe('Patrimoine', 'dir-tourisme'),
   },
+  'dir-tourisme-nature': {
+    title: 'Tourisme — Nature',
+    side: 'user',
+    group: 'Vie locale',
+    render: () => rubriqueListe('Nature', 'dir-tourisme'),
+  },
+  'dir-tourisme-culture': {
+    title: 'Tourisme — Culture',
+    side: 'user',
+    group: 'Vie locale',
+    render: () => rubriqueListe('Culture', 'dir-tourisme'),
+  },
+  'dir-tourisme-activites': {
+    title: 'Tourisme — Activités',
+    side: 'user',
+    group: 'Vie locale',
+    render: () => rubriqueListe('Activités', 'dir-tourisme'),
+  },
+
+  'dir-education': {
+    title: 'Éducation',
+    side: 'user',
+    group: 'Vie locale',
+    render: () =>
+      rubriqueAccueil({
+        title: 'Éducation',
+        bannerTitle: 'Éducation',
+        searchPh: 'Rechercher un établissement…',
+        cats: [
+          { label: 'Écoles', go: 'dir-education-ecoles' },
+          { label: 'Formations', go: 'dir-education-formations' },
+          { label: 'Universités', go: 'dir-education-universites' },
+          { label: 'Activités', go: 'dir-education-activites' },
+        ],
+      }),
+  },
+  'dir-education-ecoles': {
+    title: 'Éducation — Écoles',
+    side: 'user',
+    group: 'Vie locale',
+    render: () => rubriqueListe('Écoles', 'dir-education'),
+  },
+  'dir-education-formations': {
+    title: 'Éducation — Formations',
+    side: 'user',
+    group: 'Vie locale',
+    render: () => rubriqueListe('Formations', 'dir-education'),
+  },
+  'dir-education-universites': {
+    title: 'Éducation — Universités',
+    side: 'user',
+    group: 'Vie locale',
+    render: () => rubriqueListe('Universités', 'dir-education'),
+  },
+  'dir-education-activites': {
+    title: 'Éducation — Activités',
+    side: 'user',
+    group: 'Vie locale',
+    render: () => rubriqueListe('Activités', 'dir-education'),
+  },
+
+  'dir-cinemas': {
+    title: 'Cinémas & Théâtres',
+    side: 'user',
+    group: 'Vie locale',
+    render: () =>
+      rubriqueAccueil({
+        title: 'Cinémas & Théâtres',
+        bannerTitle: 'La culture, au cœur de la ville',
+        bannerText: 'Salles, programmes et spectacles',
+        searchPh: 'Rechercher une salle, spectacle…',
+        filters: ['Tous', 'Cinémas', 'Théâtres', 'Salles'],
+        cats: [
+          { label: 'Cinémas', go: 'dir-cinemas-cinemas' },
+          { label: 'Théâtres', go: 'dir-cinemas-theatres' },
+          { label: 'Programmes', go: 'dir-cinemas-programmes' },
+          { label: 'Spectacles', go: 'dir-cinemas-spectacles' },
+        ],
+      }),
+  },
+  'dir-cinemas-cinemas': {
+    title: 'Cinémas',
+    side: 'user',
+    group: 'Vie locale',
+    render: () => rubriqueListe('Cinémas', 'dir-cinemas'),
+  },
+  'dir-cinemas-theatres': {
+    title: 'Théâtres',
+    side: 'user',
+    group: 'Vie locale',
+    render: () => rubriqueListe('Théâtres', 'dir-cinemas'),
+  },
+  'dir-cinemas-programmes': {
+    title: 'Programmes',
+    side: 'user',
+    group: 'Vie locale',
+    render: () => rubriqueListe('Programmes', 'dir-cinemas'),
+  },
+  'dir-cinemas-spectacles': {
+    title: 'Spectacles',
+    side: 'user',
+    group: 'Vie locale',
+    render: () => rubriqueListe('Spectacles', 'dir-cinemas'),
+  },
+
+  'dir-economie': {
+    title: 'Économie',
+    side: 'user',
+    group: 'Vie locale',
+    render: () =>
+      rubriqueAccueil({
+        title: 'Économie',
+        bannerTitle: 'Économie',
+        cats: [
+          { label: 'Commerces', go: 'dir-economie-commerces' },
+          { label: 'Entreprises', go: 'dir-economie-entreprises' },
+          { label: 'Services', go: 'dir-economie-services' },
+          { label: 'Services', tbd: true, go: 'dir-economie-services2' },
+        ],
+      }),
+  },
+  'dir-economie-commerces': {
+    title: 'Commerces',
+    side: 'user',
+    group: 'Vie locale',
+    render: () => rubriqueListe('Commerces', 'dir-economie'),
+  },
+  'dir-economie-entreprises': {
+    title: 'Entreprises',
+    side: 'user',
+    group: 'Vie locale',
+    render: () => rubriqueListe('Entreprises', 'dir-economie'),
+  },
+  'dir-economie-services': {
+    title: 'Services',
+    side: 'user',
+    group: 'Vie locale',
+    render: () => rubriqueListe('Services', 'dir-economie'),
+  },
+  'dir-economie-services2': {
+    title: 'Services (À préciser)',
+    side: 'user',
+    group: 'Vie locale',
+    render: () => rubriqueListe('Services', 'dir-economie', { tbdLabel: true }),
+  },
+
   'dir-aide-sociale': {
     title: 'Aide sociale',
     side: 'user',
     group: 'Vie locale',
-    render: () => directoryHome('Aide sociale', [{ label: 'À préciser', tbd: true }]),
+    render: () =>
+      rubriqueAccueil({
+        title: 'Aide sociale',
+        bannerTitle: 'Aide sociale',
+        cats: [
+          { label: 'Familles', go: 'dir-aide-familles' },
+          { label: 'Seniors', go: 'dir-aide-seniors' },
+          { label: 'Handicap', go: 'dir-aide-handicap' },
+          { label: 'Aide sociale', tbd: true, go: 'dir-aide-cat4' },
+        ],
+      }),
   },
+  'dir-aide-familles': {
+    title: 'Familles',
+    side: 'user',
+    group: 'Vie locale',
+    render: () => rubriqueListe('Familles', 'dir-aide-sociale'),
+  },
+  'dir-aide-seniors': {
+    title: 'Seniors',
+    side: 'user',
+    group: 'Vie locale',
+    render: () => rubriqueListe('Seniors', 'dir-aide-sociale'),
+  },
+  'dir-aide-handicap': {
+    title: 'Handicap',
+    side: 'user',
+    group: 'Vie locale',
+    render: () => rubriqueListe('Handicap', 'dir-aide-sociale'),
+  },
+  'dir-aide-cat4': {
+    title: 'Aide sociale (À préciser)',
+    side: 'user',
+    group: 'Vie locale',
+    render: () => rubriqueListe('Aide sociale', 'dir-aide-sociale', { tbdLabel: true }),
+  },
+
+  'dir-patrimoine': {
+    title: 'Patrimoine',
+    side: 'user',
+    group: 'Vie locale',
+    render: () =>
+      rubriqueAccueil({
+        title: 'Patrimoine',
+        bannerTitle: 'Patrimoine',
+        cats: fourTbd('Patrimoine', 'dir-patrimoine'),
+      }),
+  },
+  'dir-patrimoine-cat1': {
+    title: 'Patrimoine (1)',
+    side: 'user',
+    group: 'Vie locale',
+    render: () => rubriqueListe('Patrimoine', 'dir-patrimoine', { tbdLabel: true }),
+  },
+  'dir-patrimoine-cat2': {
+    title: 'Patrimoine (2)',
+    side: 'user',
+    group: 'Vie locale',
+    render: () => rubriqueListe('Patrimoine', 'dir-patrimoine', { tbdLabel: true }),
+  },
+  'dir-patrimoine-cat3': {
+    title: 'Patrimoine (3)',
+    side: 'user',
+    group: 'Vie locale',
+    render: () => rubriqueListe('Patrimoine', 'dir-patrimoine', { tbdLabel: true }),
+  },
+  'dir-patrimoine-cat4': {
+    title: 'Patrimoine (4)',
+    side: 'user',
+    group: 'Vie locale',
+    render: () => rubriqueListe('Patrimoine', 'dir-patrimoine', { tbdLabel: true }),
+  },
+
   'dir-associations': {
     title: 'Associations',
     side: 'user',
     group: 'Vie locale',
-    render: () => directoryHome('Associations', [{ label: 'À préciser', tbd: true }]),
+    render: () =>
+      rubriqueAccueil({
+        title: 'Associations',
+        bannerTitle: 'Associations',
+        cats: fourTbd('Associations', 'dir-associations'),
+      }),
   },
+  'dir-associations-cat1': {
+    title: 'Associations (1)',
+    side: 'user',
+    group: 'Vie locale',
+    render: () => rubriqueListe('Associations', 'dir-associations', { tbdLabel: true }),
+  },
+  'dir-associations-cat2': {
+    title: 'Associations (2)',
+    side: 'user',
+    group: 'Vie locale',
+    render: () => rubriqueListe('Associations', 'dir-associations', { tbdLabel: true }),
+  },
+  'dir-associations-cat3': {
+    title: 'Associations (3)',
+    side: 'user',
+    group: 'Vie locale',
+    render: () => rubriqueListe('Associations', 'dir-associations', { tbdLabel: true }),
+  },
+  'dir-associations-cat4': {
+    title: 'Associations (4)',
+    side: 'user',
+    group: 'Vie locale',
+    render: () => rubriqueListe('Associations', 'dir-associations', { tbdLabel: true }),
+  },
+
   'dir-restaurants': {
     title: 'Restaurants',
     side: 'user',
     group: 'Vie locale',
-    render: () => directoryHome('Restaurants', [{ label: 'À préciser', tbd: true }]),
+    render: () =>
+      rubriqueAccueil({
+        title: 'Restaurants',
+        bannerTitle: 'Restaurants',
+        cats: fourTbd('Restaurants', 'dir-restaurants'),
+      }),
   },
+  'dir-restaurants-cat1': {
+    title: 'Restaurants (1)',
+    side: 'user',
+    group: 'Vie locale',
+    render: () => rubriqueListe('Restaurants', 'dir-restaurants', { tbdLabel: true }),
+  },
+  'dir-restaurants-cat2': {
+    title: 'Restaurants (2)',
+    side: 'user',
+    group: 'Vie locale',
+    render: () => rubriqueListe('Restaurants', 'dir-restaurants', { tbdLabel: true }),
+  },
+  'dir-restaurants-cat3': {
+    title: 'Restaurants (3)',
+    side: 'user',
+    group: 'Vie locale',
+    render: () => rubriqueListe('Restaurants', 'dir-restaurants', { tbdLabel: true }),
+  },
+  'dir-restaurants-cat4': {
+    title: 'Restaurants (4)',
+    side: 'user',
+    group: 'Vie locale',
+    render: () => rubriqueListe('Restaurants', 'dir-restaurants', { tbdLabel: true }),
+  },
+
   'dir-transports': {
     title: 'Transports',
     side: 'user',
     group: 'Vie locale',
-    render: () => directoryHome('Transports', [{ label: 'À préciser', tbd: true }]),
+    render: () =>
+      rubriqueAccueil({
+        title: 'Transports',
+        bannerTitle: 'Transports',
+        cats: fourTbd('Transports', 'dir-transports'),
+      }),
   },
+  'dir-transports-cat1': {
+    title: 'Transports (1)',
+    side: 'user',
+    group: 'Vie locale',
+    render: () => rubriqueListe('Transports', 'dir-transports', { tbdLabel: true }),
+  },
+  'dir-transports-cat2': {
+    title: 'Transports (2)',
+    side: 'user',
+    group: 'Vie locale',
+    render: () => rubriqueListe('Transports', 'dir-transports', { tbdLabel: true }),
+  },
+  'dir-transports-cat3': {
+    title: 'Transports (3)',
+    side: 'user',
+    group: 'Vie locale',
+    render: () => rubriqueListe('Transports', 'dir-transports', { tbdLabel: true }),
+  },
+  'dir-transports-cat4': {
+    title: 'Transports (4)',
+    side: 'user',
+    group: 'Vie locale',
+    render: () => rubriqueListe('Transports', 'dir-transports', { tbdLabel: true }),
+  },
+
   'dir-bibliotheques': {
     title: 'Bibliothèques',
     side: 'user',
     group: 'Vie locale',
-    render: () => directoryHome('Bibliothèques', [{ label: 'Liste', go: 'dir-liste' }]),
+    render: () =>
+      rubriqueAccueil({
+        title: 'Bibliothèques',
+        bannerTitle: 'Bibliothèques',
+        cats: fourTbd('Bibliothèques', 'dir-bibliotheques'),
+      }),
   },
+  'dir-bibliotheques-cat1': {
+    title: 'Bibliothèques (1)',
+    side: 'user',
+    group: 'Vie locale',
+    render: () => rubriqueListe('Bibliothèques', 'dir-bibliotheques', { tbdLabel: true }),
+  },
+  'dir-bibliotheques-cat2': {
+    title: 'Bibliothèques (2)',
+    side: 'user',
+    group: 'Vie locale',
+    render: () => rubriqueListe('Bibliothèques', 'dir-bibliotheques', { tbdLabel: true }),
+  },
+  'dir-bibliotheques-cat3': {
+    title: 'Bibliothèques (3)',
+    side: 'user',
+    group: 'Vie locale',
+    render: () => rubriqueListe('Bibliothèques', 'dir-bibliotheques', { tbdLabel: true }),
+  },
+  'dir-bibliotheques-cat4': {
+    title: 'Bibliothèques (4)',
+    side: 'user',
+    group: 'Vie locale',
+    render: () => rubriqueListe('Bibliothèques', 'dir-bibliotheques', { tbdLabel: true }),
+  },
+
   'dir-securite': {
     title: 'Sécurité',
     side: 'user',
     group: 'Vie locale',
-    render: () => directoryHome('Sécurité', [{ label: 'À préciser', tbd: true }]),
+    render: () =>
+      rubriqueAccueil({
+        title: 'Sécurité',
+        bannerTitle: 'Sécurité',
+        cats: fourTbd('Sécurité', 'dir-securite'),
+      }),
   },
-  'dir-liste': { title: 'Liste annuaire', side: 'user', group: 'Vie locale', render: dirListe },
+  'dir-securite-cat1': {
+    title: 'Sécurité (1)',
+    side: 'user',
+    group: 'Vie locale',
+    render: () => rubriqueListe('Sécurité', 'dir-securite', { tbdLabel: true }),
+  },
+  'dir-securite-cat2': {
+    title: 'Sécurité (2)',
+    side: 'user',
+    group: 'Vie locale',
+    render: () => rubriqueListe('Sécurité', 'dir-securite', { tbdLabel: true }),
+  },
+  'dir-securite-cat3': {
+    title: 'Sécurité (3)',
+    side: 'user',
+    group: 'Vie locale',
+    render: () => rubriqueListe('Sécurité', 'dir-securite', { tbdLabel: true }),
+  },
+  'dir-securite-cat4': {
+    title: 'Sécurité (4)',
+    side: 'user',
+    group: 'Vie locale',
+    render: () => rubriqueListe('Sécurité', 'dir-securite', { tbdLabel: true }),
+  },
+
   'dir-fiche': {
     title: 'Fiche — Informations',
     side: 'user',
@@ -2088,18 +2409,17 @@ export const NAV = [
         name: 'Vie locale',
         ids: [
           'vie-locale-hub',
-          'dir-education',
-          'dir-economie',
-          'dir-cinemas',
           'dir-tourisme',
-          'dir-patrimoine',
+          'dir-education',
+          'dir-cinemas',
+          'dir-economie',
           'dir-aide-sociale',
+          'dir-patrimoine',
           'dir-associations',
           'dir-restaurants',
           'dir-transports',
           'dir-bibliotheques',
           'dir-securite',
-          'dir-liste',
           'dir-fiche',
           'dir-fiche-horaires',
           'page-meteo',

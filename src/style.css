@@ -244,15 +244,17 @@ textarea {
 
 .header-right {
   display: flex;
-  gap: 2px;
+  gap: 4px;
+  justify-content: flex-end;
 }
 
-.perm-links {
-  display: flex;
-  justify-content: space-between;
-  gap: 4px;
-  padding: 0 8px 6px;
-  border-top: 1px dashed var(--line-soft);
+.icon-btn .ico-svg {
+  font-size: 1.05rem;
+  line-height: 1;
+}
+
+.icon-btn .ico-miasin {
+  font-weight: 700;
 }
 
 .linkish {

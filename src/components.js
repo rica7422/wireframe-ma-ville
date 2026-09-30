@@ -17,15 +17,15 @@ export function statusBar() {
 }
 
 /**
- * In-phone chrome: back / home / MIASIN + title row
- * Permanent controls per build spec
+ * Permanent in-phone header — icons only:
+ * Retour · (title/city) · Accueil Ma Ville · Accueil MIASIN (simulé)
+ * No duplicate text « Retour ».
  */
 export function phoneHeader({
   title = '',
   showBack = true,
   showCity = false,
   city = 'Kapan',
-  right = '',
   backTo = null,
 } = {}) {
   const backAttr = backTo ? `data-go="${backTo}"` : 'data-back'
@@ -33,21 +33,26 @@ export function phoneHeader({
     ${statusBar()}
     <div class="phone-header">
       <div class="phone-header-row">
-        ${showBack ? `<button class="hit icon-btn" ${backAttr} title="Retour">←</button>` : `<span class="icon-btn ghost"></span>`}
-        ${showCity
-          ? `<button class="hit city-pill" data-go="ville-modale-choisir" title="Changer de ville">🇦🇲 ${city} ▾</button>`
-          : `<div class="phone-title">${title}</div>`}
+        ${
+          showBack
+            ? `<button class="hit icon-btn" ${backAttr} title="Retour" aria-label="Retour">
+                <span class="ico-svg" aria-hidden="true">←</span>
+              </button>`
+            : `<span class="icon-btn ghost"></span>`
+        }
+        ${
+          showCity
+            ? `<button class="hit city-pill" data-go="ville-modale-choisir" title="Changer de ville">🇦🇲 ${city} ▾</button>`
+            : `<div class="phone-title">${title}</div>`
+        }
         <div class="header-right">
-          ${right || `
-            <button class="hit icon-btn" data-go="accueil-kapan" title="Accueil Ma Ville">⌂</button>
-            <button class="hit icon-btn" data-sim="miasin" title="Retour MIASIN (simulé)">◎</button>
-          `}
+          <button class="hit icon-btn" data-go="accueil-kapan" title="Accueil Ma Ville" aria-label="Accueil Ma Ville">
+            <span class="ico-svg" aria-hidden="true">⌂</span>
+          </button>
+          <button class="hit icon-btn" data-sim="miasin" title="Accueil MIASIN (simulé)" aria-label="Accueil MIASIN">
+            <span class="ico-svg ico-miasin" aria-hidden="true">◎</span>
+          </button>
         </div>
-      </div>
-      <div class="perm-links">
-        <button class="hit linkish" data-back>Retour</button>
-        <button class="hit linkish" data-go="accueil-kapan">Accueil Ma Ville</button>
-        <button class="hit linkish" data-sim="miasin">MIASIN (simulé)</button>
       </div>
     </div>
   `
@@ -103,15 +108,17 @@ export function listCard({
           ${badge ? `<span class="badge">${badge}</span>` : ''}
         </div>
         ${meta ? `<p class="meta">${meta}</p>` : ''}
-        ${actions.length
-          ? `<div class="row-actions">${actions
-              .map((a) =>
-                a.sim
-                  ? `<button class="hit btn ${a.primary ? 'primary' : ''}" data-sim="${a.sim}">${a.label}</button>`
-                  : `<button class="hit btn ${a.primary ? 'primary' : ''}" data-go="${a.go}">${a.label}</button>`
-              )
-              .join('')}</div>`
-          : ''}
+        ${
+          actions.length
+            ? `<div class="row-actions">${actions
+                .map((a) =>
+                  a.sim
+                    ? `<button class="hit btn ${a.primary ? 'primary' : ''}" data-sim="${a.sim}">${a.label}</button>`
+                    : `<button class="hit btn ${a.primary ? 'primary' : ''}" data-go="${a.go}">${a.label}</button>`
+                )
+                .join('')}</div>`
+            : ''
+        }
       </div>
     </article>
   `
@@ -134,9 +141,11 @@ export function postCard({
         <button class="hit icon-btn" type="button">⋯</button>
       </header>
       ${text(body)}
-      ${multi
-        ? `<div class="photo-grid">${photo('Photo…')}${photo('Photo…')}${photo('Photo…')}${photo('+N')}</div>`
-        : photo('Photo…', 'wide')}
+      ${
+        multi
+          ? `<div class="photo-grid">${photo('Photo…')}${photo('Photo…')}${photo('Photo…')}${photo('+N')}</div>`
+          : photo('Photo…', 'wide')
+      }
       <div class="post-social">
         <span class="meta">${avatar(3)} 32 personnes</span>
       </div>
@@ -155,7 +164,7 @@ export function modalShell(title, body, footer = '') {
       <div class="modal-sheet">
         <header class="modal-head">
           <strong>${title}</strong>
-          <button class="hit icon-btn" data-back title="Fermer">✕</button>
+          <button class="hit icon-btn" data-back title="Fermer" aria-label="Fermer">✕</button>
         </header>
         <div class="modal-body">${body}</div>
         ${footer ? `<footer class="modal-foot">${footer}</footer>` : ''}
