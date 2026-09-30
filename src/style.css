@@ -988,6 +988,91 @@ button.tree-node:hover .tree-label {
   gap: 6px;
 }
 
+.motif-field {
+  gap: 6px;
+}
+
+.motif-select {
+  position: relative;
+}
+
+.motif-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  color: inherit;
+  font: inherit;
+}
+
+.motif-select.open .motif-trigger {
+  border-color: var(--accent, var(--c-mairie));
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.motif-chev {
+  color: var(--accent, var(--c-mairie));
+  font-size: 0.75rem;
+  transition: transform 0.15s ease;
+}
+
+.motif-select.open .motif-chev {
+  transform: rotate(180deg);
+}
+
+.motif-dropdown {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  max-height: 220px;
+  overflow: auto;
+  border: 1px solid var(--accent, var(--c-mairie));
+  border-top: none;
+  border-radius: 0 0 10px 10px;
+  background: #fff;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.06);
+}
+
+.motif-dropdown[hidden] {
+  display: none;
+}
+
+.motif-option {
+  text-align: left;
+  padding: 10px 14px;
+  border: none;
+  border-bottom: 1px solid var(--line-soft);
+  background: #fff;
+  color: inherit;
+  font: inherit;
+  border-radius: 0;
+}
+
+.motif-option:last-child {
+  border-bottom: none;
+}
+
+.motif-option.on,
+.motif-option:hover {
+  background: var(--accent-soft, #eef0f4);
+  color: var(--accent, var(--c-mairie));
+  font-weight: 600;
+}
+
+.rdv-en-cours .btn {
+  margin-top: 8px;
+}
+
 .motif-row .chev {
   color: var(--accent, var(--ink));
   font-size: 1.15rem;

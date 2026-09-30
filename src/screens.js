@@ -648,39 +648,25 @@ const MAIRIE_MOTIFS = [
   'Autre',
 ]
 
-function mairieRdv() {
-  return wrap(
-    `
-    <article class="card">
-      <strong>Mes rendez-vous en cours</strong>
-      <p>Renouvellement de passeport</p>
-      <span class="badge">Confirmé</span>
-      <p class="meta">Date / heure…</p>
-      ${tbd('Confirmer / Annuler RDV — À préciser')}
+/** Wireframe: set to null to hide the block; object = RDV en cours */
+const MAIRIE_RDV_EN_COURS = null
+// Example when present:
+// { motif: 'Carte d’identité / Passeport', when: '27 mai 2026 · 09:30' }
+
+function mairieRdvEnCoursBlock(rdv) {
+  if (!rdv) return ''
+  return `
+    <article class="card rdv-en-cours">
+      <strong>Rendez-vous en cours</strong>
+      <p class="meta">${rdv.when}</p>
+      <p><strong>Motif</strong> · ${rdv.motif}</p>
+      <button class="hit btn block" data-sim="rdv-annuler">Annuler le RDV</button>
     </article>
-    <h2 class="sec">Motif de rendez-vous</h2>
-    <p class="meta">Un seul motif · toucher › pour choisir la date</p>
-    <div class="motif-list">
-      ${MAIRIE_MOTIFS.map(
-        (m) => `
-      <button class="hit row-link motif-row" data-go="mairie-rdv-creneau" data-motif="${m}">
-        <span>${m}</span>
-        <span class="chev" aria-hidden="true">›</span>
-      </button>`
-      ).join('')}
-    </div>
-    `,
-    {
-      header: phoneHeader({ title: 'Prendre rendez-vous', backTo: 'mairie-accueil', showCity: true }),
-      footer: phoneFooter('mairie'),
-    }
-  )
+  `
 }
 
-function mairieRdvCreneau() {
-  return wrap(
-    `
-    <p class="meta">Motif sélectionné · (illustratif)</p>
+function mairieRdvDateSlots() {
+  return `
     <h2 class="sec">Choisir une date</h2>
     <p class="meta">Mai 2026</p>
     <div class="calendar">
@@ -704,12 +690,44 @@ function mairieRdvCreneau() {
         .join('')}
     </div>
     <button class="hit btn primary block" data-go="mairie-rdv-suite">Continuer</button>
+  `
+}
+
+function mairieRdv() {
+  const selected = 'Carte d’identité / Passeport'
+  return wrap(
+    `
+    ${mairieRdvEnCoursBlock(MAIRIE_RDV_EN_COURS)}
+    <label class="field motif-field">
+      <span>Motif de rendez-vous</span>
+      <div class="motif-select" data-motif-select>
+        <button class="hit motif-trigger" type="button" data-motif-toggle aria-expanded="false">
+          <span class="motif-value">${selected}</span>
+          <span class="motif-chev" aria-hidden="true">▼</span>
+        </button>
+        <div class="motif-dropdown" hidden>
+          ${MAIRIE_MOTIFS.map(
+            (m) => `
+          <button class="hit motif-option ${m === selected ? 'on' : ''}" type="button" data-motif-pick="${m}">
+            ${m}
+          </button>`
+          ).join('')}
+        </div>
+      </div>
+    </label>
+    <p class="meta">Un seul motif par rendez-vous</p>
+    ${mairieRdvDateSlots()}
     `,
     {
-      header: phoneHeader({ title: 'Date & créneau', backTo: 'mairie-rdv', showCity: true }),
+      header: phoneHeader({ title: 'Prendre rendez-vous', backTo: 'mairie-accueil', showCity: true }),
       footer: phoneFooter('mairie'),
     }
   )
+}
+
+function mairieRdvCreneau() {
+  // Date & créneaux live on the RDV screen (below motif dropdown)
+  return mairieRdv()
 }
 
 function mairieRdvSuite() {
@@ -723,15 +741,13 @@ function mairieRdvSuite() {
       <p><strong>Créneau</strong> · 09:30</p>
       <p class="meta">Un motif par rendez-vous · valeurs illustratives</p>
     </article>
-    ${tbd('Confirmer / Annuler RDV — workflow À préciser')}
     <div class="row-actions">
-      <button class="hit btn" data-go="mairie-rdv-creneau">Retour</button>
+      <button class="hit btn" data-go="mairie-rdv">Retour</button>
       <button class="hit btn primary" data-sim="rdv">Confirmer (simulé)</button>
     </div>
-    <button class="hit btn block" data-sim="rdv-annuler">Annuler un RDV (simulé — À préciser)</button>
     `,
     {
-      header: phoneHeader({ title: 'Confirmer le RDV', backTo: 'mairie-rdv-creneau' }),
+      header: phoneHeader({ title: 'Confirmer le RDV', backTo: 'mairie-rdv' }),
       footer: phoneFooter('mairie'),
     }
   )
@@ -3416,10 +3432,7 @@ export const NAV_TREE = {
               {
                 id: 'mairie-rdv',
                 label: 'Prendre rendez-vous',
-                children: [
-                  { id: 'mairie-rdv-creneau', label: 'Date & créneau' },
-                  { id: 'mairie-rdv-suite', label: 'Confirmation' },
-                ],
+                children: [{ id: 'mairie-rdv-suite', label: 'Confirmation' }],
               },
               {
                 id: 'mairie-presentation',

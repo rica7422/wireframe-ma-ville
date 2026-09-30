@@ -60,7 +60,7 @@ function handleSim(kind) {
     suivre: 'Suivi simulé',
     participation: 'Participation mise à jour (simulé)',
     rdv: 'Rendez-vous — suite À préciser (simulé)',
-    'rdv-annuler': 'Annulation RDV (simulé — À préciser)',
+    'rdv-annuler': 'Rendez-vous annulé (simulé)',
     position: 'Partage de position (simulé)',
     upload: 'Upload photo (simulé)',
     sauver: 'Enregistrement admin (simulé)',
@@ -183,6 +183,31 @@ function render({ focusActive = false, resetNavScroll = false } = {}) {
       day.classList.add('on')
       return
     }
+    const motifToggle = e.target.closest('[data-motif-toggle]')
+    if (motifToggle) {
+      e.preventDefault()
+      const box = motifToggle.closest('[data-motif-select]')
+      const open = box.classList.toggle('open')
+      motifToggle.setAttribute('aria-expanded', open ? 'true' : 'false')
+      const menu = box.querySelector('.motif-dropdown')
+      if (menu) menu.hidden = !open
+      return
+    }
+    const motifPick = e.target.closest('[data-motif-pick]')
+    if (motifPick) {
+      e.preventDefault()
+      const box = motifPick.closest('[data-motif-select]')
+      const value = box.querySelector('.motif-value')
+      if (value) value.textContent = motifPick.dataset.motifPick
+      box.querySelectorAll('[data-motif-pick]').forEach((o) => o.classList.remove('on'))
+      motifPick.classList.add('on')
+      box.classList.remove('open')
+      const trigger = box.querySelector('[data-motif-toggle]')
+      if (trigger) trigger.setAttribute('aria-expanded', 'false')
+      const menu = box.querySelector('.motif-dropdown')
+      if (menu) menu.hidden = true
+      return
+    }
     const chip = e.target.closest('.chip')
     if (chip && chip.closest('.chips')) {
       e.preventDefault()
@@ -195,7 +220,13 @@ function render({ focusActive = false, resetNavScroll = false } = {}) {
     e.preventDefault()
     if (t.hasAttribute('data-back')) back()
     else if (t.dataset.go) go(t.dataset.go)
-    else if (t.dataset.sim) handleSim(t.dataset.sim)
+    else if (t.dataset.sim) {
+      handleSim(t.dataset.sim)
+      if (t.dataset.sim === 'rdv-annuler') {
+        const card = t.closest('.rdv-en-cours')
+        if (card) card.remove()
+      }
+    }
   })
 }
 
