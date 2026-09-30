@@ -563,11 +563,8 @@ function mairieTabs(active = 'publications') {
 }
 
 function mairieHeader(title = 'Ma mairie', backTo = 'accueil-kapan') {
-  return phoneHeader({
-    title,
-    backTo,
-    extraRight: `<button class="hit icon-btn" data-go="mairie-menu" title="Menu Ma mairie" aria-label="Menu">⋯</button>`,
-  })
+  /* Exactly 3 icons: Retour · Accueil Ma Ville · MIASIN (no ⋯ in header) */
+  return phoneHeader({ title, backTo })
 }
 
 function mairieAccueil() {
@@ -591,6 +588,7 @@ function mairieAccueil() {
       optionsGo: 'mairie-presentation-options',
     })}
     <button class="hit btn block" data-go="mairie-nouvelle-publication">+ Nouvelle publication</button>
+    <button class="hit row-link" data-go="mairie-menu"><span>Menu Ma mairie</span><span>›</span></button>
     <button class="hit btn primary block" data-go="mairie-rdv">Prendre rendez-vous</button>
     `,
     {
@@ -872,7 +870,6 @@ function mairieConseil() {
       header: phoneHeader({
         title: 'Maire & Conseil municipal',
         backTo: 'mairie-accueil',
-        extraRight: `<button class="hit icon-btn" data-go="mairie-conseil-edit" title="Éditer">⋯</button>`,
       }),
       footer: phoneFooter('mairie'),
     }
