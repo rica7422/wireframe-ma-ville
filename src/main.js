@@ -182,6 +182,11 @@ function render() {
     btn.addEventListener('click', () => go(btn.dataset.nav, { push: false }))
   })
 
+  const activeRow = app.querySelector('.tree-row.active')
+  if (activeRow) {
+    activeRow.scrollIntoView({ block: 'center', inline: 'nearest' })
+  }
+
   const phone = document.getElementById('phone-inner')
   phone.addEventListener('click', (e) => {
     const chip = e.target.closest('.chip')
