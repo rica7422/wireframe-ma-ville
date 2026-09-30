@@ -128,21 +128,25 @@ export function listCard({
 
 /** Shared reaction row — identical on every social card */
 export function socialActions({
-  likes = '200',
-  comments = '15',
-  shares = '200',
+  likes = '128',
+  comments = '18',
+  shares = '12',
   reactGo = 'infos-reactions',
   commentGo = 'infos-commentaires',
   shareGo = 'infos-partage',
+  reactors = 'Rupen D. et 32 autres',
 } = {}) {
   return `
     <div class="post-social">
-      <span class="meta">${avatar(2)} Rupen D. et 32 autres</span>
+      <button class="hit linkish social-reactors" data-go="${reactGo}" type="button">
+        <span class="react-badges" aria-hidden="true"><span class="rb like">👍</span><span class="rb love">♥</span></span>
+        <span class="meta">${reactors}</span>
+      </button>
     </div>
     <div class="post-actions">
-      <button class="hit btn" data-go="${reactGo}">♡ J’aime · ${likes}</button>
-      <button class="hit btn" data-go="${commentGo}">💬 Commentaire · ${comments}</button>
-      <button class="hit btn" data-go="${shareGo}">↗ Partage · ${shares}</button>
+      <button class="hit btn" data-go="${reactGo}">♡ ${likes}</button>
+      <button class="hit btn" data-go="${commentGo}">💬 ${comments}</button>
+      <button class="hit btn" data-go="${shareGo}">↗ ${shares}</button>
     </div>
   `
 }
@@ -198,27 +202,57 @@ export function postCard({
   role = 'Rôle…',
   body = 'Texte…',
   multi = false,
+  media = null,
+  time = 'il y a 2 h',
+  identified = 0,
   optionsGo = null,
+  likes,
+  comments,
+  shares,
 } = {}) {
+  const kind = media || (multi ? 'multi' : 'photo')
+  let mediaBlock = ''
+  if (kind === 'none' || kind === 'text') {
+    mediaBlock = ''
+  } else if (kind === 'multi') {
+    mediaBlock = `<div class="photo-grid">${photo('Photo…')}${photo('Photo…')}${photo('Photo…')}${photo('+12')}</div>`
+  } else if (kind === 'video') {
+    mediaBlock = `<div class="slot-photo wide video-slot"><span>▶ Vidéo…</span></div>`
+  } else {
+    mediaBlock = photo('Photo…', 'wide')
+  }
   return `
     <article class="card post-card">
       <header class="post-head">
         <span class="avatar"></span>
-        <div>
+        <div class="grow">
           <strong>${author}</strong>
-          <div class="meta">${role} · il y a 2 h</div>
+          <div class="meta"><span class="role-pill">${role}</span> · ${time}</div>
         </div>
-        <button class="hit icon-btn" ${optionsGo ? `data-go="${optionsGo}"` : 'type="button"'}>⋯</button>
+        <button class="hit icon-btn" ${optionsGo ? `data-go="${optionsGo}"` : 'type="button"'} title="Options" aria-label="Options">⋯</button>
       </header>
       ${text(body)}
+      <div class="post-meta-links">
+        <button class="hit linkish" type="button">… Plus</button>
+        <button class="hit linkish" type="button">🌐 Traduire</button>
+      </div>
       ${
-        multi
-          ? `<div class="photo-grid">${photo('Photo…')}${photo('Photo…')}${photo('Photo…')}${photo('+N')}</div>`
-          : photo('Photo…', 'wide')
+        identified
+          ? `<button class="hit identified-row" type="button">${avatar(Math.min(identified, 4))}<span class="meta">${identified} identifiés</span></button>`
+          : ''
       }
-      ${socialActions()}
+      ${mediaBlock}
+      ${socialActions({ likes, comments, shares })}
     </article>
   `
+}
+
+/** Infos Feed post — all media variants (text / photo / multi / video) */
+export function feedPostCard(opts = {}) {
+  return postCard({
+    optionsGo: opts.optionsGo || 'infos-post-options',
+    ...opts,
+  })
 }
 
 /** Publication-style card (Présentation, Infos Mairie, etc.) */

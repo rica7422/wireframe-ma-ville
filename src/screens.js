@@ -8,6 +8,7 @@ import {
   search,
   listCard,
   postCard,
+  feedPostCard,
   publicationCard,
   infoFeedCard,
   socialActions,
@@ -1119,8 +1120,7 @@ function infosCitoyen() {
   return wrap(
     `
     <h2 class="sec">Infos citoyen</h2>
-    ${tbd('Lien Infos citoyen ↔ Infos Feed — à clarifier')}
-    ${text('Point d’entrée citoyen (structure)…')}
+    ${text('Fil d’informations citoyennes de Kapan — publications, réactions, commentaires.')}
     <button class="hit btn primary block" data-go="infos-feed">Ouvrir Infos Feed</button>
     <button class="hit row-link" data-go="evenements-liste"><span>Événements liés</span><span>›</span></button>
     <button class="hit row-link" data-go="mairie-infos"><span>Infos Mairie</span><span>›</span></button>
@@ -1135,52 +1135,133 @@ function infosCitoyen() {
 function infosFeed() {
   return wrap(
     `
-    <div class="compose">
-      <span class="avatar"></span>
-      <button class="hit compose-input" data-sim="publier">Commencer une publication</button>
+    <div class="compose-card">
+      <div class="compose">
+        <span class="avatar"></span>
+        <button class="hit compose-input" data-sim="publier" type="button">Commencer une publication</button>
+      </div>
+      <div class="row-actions compose-media">
+        <button class="hit btn" data-sim="publier" type="button">▶ Vidéo</button>
+        <button class="hit btn" data-sim="publier" type="button">🖼 Photo</button>
+      </div>
     </div>
-    <div class="row-actions">
-      <button class="hit btn" data-sim="publier">Vidéo</button>
-      <button class="hit btn" data-sim="publier">Photo</button>
-    </div>
-    <p class="meta">Classer par : Récents ▾</p>
-    ${postCard({
-      author: 'Maire de Kapan',
+    <p class="meta sort-row">Classer par · <button class="hit linkish" type="button">Récent ▾</button></p>
+
+    ${feedPostCard({
+      author: 'Arman Petrosyan',
       role: 'Mairie',
-      body: 'Texte de la publication…',
+      time: 'il y a 2 h',
+      body: 'Collecte des déchets verts renforcée ce week-end dans les quartiers sud et centre. Merci de sortir vos bacs avant 7 h.',
+      media: 'none',
+      identified: 0,
+      likes: '128',
+      comments: '18',
+      shares: '12',
+      optionsGo: 'infos-post-options',
     })}
-    ${postCard({
-      author: 'Délégué local',
+
+    ${feedPostCard({
+      author: 'Liana Avetisyan',
+      role: 'Délégué',
+      time: 'il y a 5 h',
+      body: 'Marché du samedi — producteurs locaux sur la place centrale dès 8 h. Venez nombreux !',
+      media: 'photo',
+      identified: 5,
+      likes: '86',
+      comments: '24',
+      shares: '9',
+      optionsGo: 'infos-post-options-other',
+    })}
+
+    ${feedPostCard({
+      author: 'Hovhannes Mkrtchyan',
       role: 'Membre',
-      body: 'Autre publication…',
-      multi: true,
+      time: 'il y a 1 j',
+      body: 'Retour en images du festival de musique au parc municipal.',
+      media: 'multi',
+      identified: 12,
+      likes: '210',
+      comments: '41',
+      shares: '33',
+      optionsGo: 'infos-post-options-other',
+    })}
+
+    ${feedPostCard({
+      author: 'Mairie de Kapan',
+      role: 'Mairie',
+      time: 'il y a 2 j',
+      body: 'Replay du conseil municipal du 24 septembre — points budgétaires et travaux voirie.',
+      media: 'video',
+      identified: 3,
+      likes: '64',
+      comments: '11',
+      shares: '27',
+      optionsGo: 'infos-post-options',
     })}
     `,
     {
-      header: phoneHeader({ title: 'Infos Feed', backTo: 'accueil-kapan' }),
+      header: phoneHeader({ title: 'Infos Feed', backTo: 'infos-citoyen' }),
       footer: phoneFooter('infos'),
     }
   )
 }
 
+function infosPostOptions(own = true) {
+  return wrap(`${photo('Fond feed…', 'dim')}`, {
+    header: phoneHeader({ title: 'Infos Feed', backTo: 'infos-feed' }),
+    footer: phoneFooter('infos'),
+    overlay: modalShell(
+      'Options de la publication',
+      own
+        ? `
+        ${sheetOption('Modifier', { sim: 'modifier' })}
+        ${sheetOption('Supprimer', { sim: 'supprimer' })}
+        `
+        : `
+        ${sheetOption('Signaler', { sim: 'signaler' })}
+        ${sheetOption('Masquer la publication', { sim: 'masquer' })}
+        `
+    ),
+  })
+}
+
 function infosReactions() {
+  const people = [
+    { name: 'Anahit Mkrtchyan', role: 'Membre', react: '♥', follow: false },
+    { name: 'Armen Sargsyan', role: 'Mairie de Kapan', react: '♥', follow: true },
+    { name: 'Hasmik Gevorgyan', role: 'Délégué', react: '👍', follow: false },
+    { name: 'Gurgen Khachatryan', role: 'Membre', react: '♥', follow: false },
+    { name: 'Syuzanna Vardanyan', role: 'Membre', react: '👍', follow: true },
+  ]
   return wrap(
     `
-    <div class="tabs">
-      <button class="hit tab on" type="button">Tous (166)</button>
-      <button class="hit tab" type="button">J’aime (120)</button>
-      <button class="hit tab" type="button">J’adore (46)</button>
+    <div class="tabs react-tabs">
+      <button class="hit tab on" type="button">Tous (146)</button>
+      <button class="hit tab" type="button">J’aime (128)</button>
+      <button class="hit tab" type="button">J’adore (18)</button>
     </div>
-    ${['Marie Dupont', 'Anahit S.', 'Rupen D.']
-      .map(
-        (n) => `
-      <div class="row-link static">
-        <span class="avatar"></span>
-        <span><strong>${n}</strong><br/><span class="meta">Membre</span></span>
-        <button class="hit btn" data-sim="suivre">Suivre</button>
-      </div>`
-      )
-      .join('')}
+    <div class="react-list">
+      ${people
+        .map(
+          (p) => `
+        <div class="react-row">
+          <button class="hit react-person" data-go="${p.follow ? 'infos-feed' : 'infos-ajouter-ami'}" type="button">
+            <span class="avatar-wrap">
+              <span class="avatar"></span>
+              <span class="react-badge" aria-hidden="true">${p.react}</span>
+            </span>
+            <span class="grow">
+              <strong>${p.name}</strong>
+              <span class="meta">${p.role}</span>
+            </span>
+          </button>
+          <button class="hit btn ${p.follow ? '' : 'primary'}" data-go="${
+            p.follow ? 'infos-feed' : 'infos-ajouter-ami'
+          }" type="button">${p.follow ? 'Suivi' : 'Suivre'}</button>
+        </div>`
+        )
+        .join('')}
+    </div>
     `,
     {
       header: phoneHeader({ title: 'Réactions', backTo: 'infos-feed' }),
@@ -1189,29 +1270,97 @@ function infosReactions() {
   )
 }
 
+function infosAjouterAmi() {
+  return wrap(`${photo('Fond réactions…', 'dim')}`, {
+    header: phoneHeader({ title: 'Réactions', backTo: 'infos-reactions' }),
+    footer: phoneFooter('infos'),
+    overlay: `
+      <div class="modal-layer">
+        <div class="modal-sheet center-card">
+          <header class="modal-head">
+            <strong>Confirmation d’ajout</strong>
+            <button class="hit icon-btn" data-back title="Fermer" aria-label="Fermer">✕</button>
+          </header>
+          <div class="modal-body add-friend-body">
+            <div class="avatar-wrap lg-wrap">
+              <span class="avatar lg"></span>
+              <span class="react-badge" aria-hidden="true">♥</span>
+            </div>
+            <strong class="add-friend-q">Ajouter Anahit à vos amis ?</strong>
+            ${text(
+              'En ajoutant Anahit dans Ma Ville, elle sera également ajoutée à vos amis Miasin afin de garder vos contacts synchronisés.'
+            )}
+            <div class="sync-pill"><span>Ma Ville</span><span class="sync-ico">↻</span><span>Miasin</span></div>
+          </div>
+          <footer class="modal-foot add-friend-actions">
+            <button class="hit btn" data-back type="button">Annuler</button>
+            <button class="hit btn primary" data-sim="ami-ajoute" type="button">Ajouter aux amis</button>
+          </footer>
+        </div>
+      </div>
+    `,
+  })
+}
+
 function infosCommentaires() {
   return wrap(
     `
     <h2 class="sec">Commentaires (2)</h2>
-    <article class="card">
-      <div class="post-head">
+    <article class="card comment-thread">
+      <div class="comment">
         <span class="avatar"></span>
-        <div><strong>Marie Dupont</strong><div class="meta">Membre · 1 h</div></div>
+        <div class="grow">
+          <div class="comment-head">
+            <strong>Armen Sargsyan</strong>
+            <span class="role-pill">Maire de Kapan</span>
+            <span class="meta">2 h</span>
+          </div>
+          <div class="comment-bubble">${text('Très bonne initiative, merci à l’équipe municipale !')}</div>
+          <div class="row-actions comment-acts">
+            <button class="hit linkish" type="button">♥ J’adore</button>
+            <button class="hit linkish" type="button">↩ Répondre</button>
+          </div>
+        </div>
       </div>
-      ${text('Commentaire…')}
-      <div class="row-actions">
-        <button class="hit linkish" type="button">J’adore</button>
-        <button class="hit linkish" type="button">Répondre</button>
-      </div>
-      <div class="reply">
+      <div class="comment reply-indent">
         <span class="avatar"></span>
-        ${text('Réponse…')}
+        <div class="grow">
+          <div class="comment-head">
+            <strong>Mairie de Kapan</strong>
+            <span class="role-pill">Membre</span>
+            <span class="meta">1 h</span>
+          </div>
+          <div class="comment-bubble">${text('Avec plaisir Armen ! Nos équipes font le maximum.')}</div>
+          <div class="row-actions comment-acts">
+            <button class="hit linkish" type="button">♥ J’adore</button>
+            <button class="hit linkish" type="button">↩ Répondre</button>
+          </div>
+        </div>
+      </div>
+      <div class="comment">
+        <span class="avatar"></span>
+        <div class="grow">
+          <div class="comment-head">
+            <strong>Syuzanna Vardanyan</strong>
+            <span class="role-pill">Conseiller</span>
+            <span class="meta">30 m</span>
+          </div>
+          <div class="comment-bubble">${text('Est-ce que ça concerne aussi le quartier Nord @MairieDeKapan ?')}</div>
+          <div class="row-actions comment-acts">
+            <button class="hit linkish" type="button">♥ J’adore</button>
+            <button class="hit linkish" type="button">↩ Répondre</button>
+          </div>
+        </div>
       </div>
     </article>
     <div class="composer-bar">
       <span class="avatar"></span>
-      <input type="text" placeholder="Écrire un commentaire…" />
-      <button class="hit btn primary" data-sim="commentaire">Envoyer</button>
+      <div class="composer-field">
+        <input type="text" placeholder="Écrire un commentaire…" />
+        <button class="hit icon-btn" data-sim="emoji" type="button" title="Emoji">☺</button>
+        <button class="hit icon-btn" data-sim="image" type="button" title="Image">🖼</button>
+      </div>
+      <button class="hit btn primary send-btn" data-sim="commentaire" type="button" title="Envoyer">➤</button>
     </div>
     `,
     {
@@ -1222,29 +1371,41 @@ function infosCommentaires() {
 }
 
 function infosPartage() {
-  return wrap(
-    `${photo('Fond feed…', 'dim')}`,
-    {
-      header: phoneHeader({ title: 'Infos Feed', backTo: 'infos-feed' }),
-      footer: phoneFooter('infos'),
-      overlay: modalShell(
-        'Partager la publication',
-        `
-        ${search('Rechercher des destinataires…')}
-        <div class="h-scroll">${avatar(5)}</div>
-        ${[
-          'Envoyer dans une conversation',
-          'Copier le lien',
-          'Partager dans une autre application',
-          'Partager sur mon profil',
-        ]
-          .map((l) => `<button class="hit row-link" data-sim="partage"><span>${l}</span><span>›</span></button>`)
+  const recents = [
+    { name: 'Anahit', selected: true },
+    { name: 'Armen', selected: false },
+    { name: 'Hasmik', selected: true },
+    { name: 'Gurgen', selected: false },
+    { name: 'Syuzanna', selected: false },
+  ]
+  return wrap(`${photo('Fond feed…', 'dim')}`, {
+    header: phoneHeader({ title: 'Infos Feed', backTo: 'infos-feed' }),
+    footer: phoneFooter('infos'),
+    overlay: modalShell(
+      'Partager la publication',
+      `
+      ${search('Rechercher des destinataires…')}
+      <p class="meta section-label">Destinataires récents</p>
+      <div class="h-scroll share-recents">
+        ${recents
+          .map(
+            (r) => `
+          <button class="hit share-avatar ${r.selected ? 'on' : ''}" data-sim="destinataire" type="button">
+            <span class="avatar"></span>
+            ${r.selected ? '<span class="check" aria-hidden="true">✓</span>' : ''}
+            <span class="meta">${r.name}</span>
+          </button>`
+          )
           .join('')}
-        `,
-        `<button class="hit btn primary block" data-sim="partage">Envoyer aux destinataires sélectionnés</button>`
-      ),
-    }
-  )
+      </div>
+      ${sheetOption('Envoyer dans une conversation', { sim: 'partage-conv' })}
+      ${sheetOption('Copier le lien', { sim: 'partage-lien' })}
+      ${sheetOption('Partager dans une autre application', { sim: 'partage-app' })}
+      ${sheetOption('Partager sur mon profil', { sim: 'partage-profil' })}
+      `,
+      `<button class="hit btn primary block" data-sim="partage-envoyer" type="button">Envoyer aux destinataires sélectionnés</button>`
+    ),
+  })
 }
 
 function evenementsListe() {
@@ -2527,7 +2688,25 @@ export const SCREENS = {
 
   'infos-citoyen': { title: 'Infos citoyen', side: 'user', group: 'Social / contenus', render: infosCitoyen },
   'infos-feed': { title: 'Infos Feed', side: 'user', group: 'Social / contenus', render: infosFeed },
-  'infos-reactions': { title: 'Réactions (overlay)', side: 'user', group: 'Social / contenus', render: infosReactions },
+  'infos-post-options': {
+    title: 'Publication — Options',
+    side: 'user',
+    group: 'Social / contenus',
+    render: () => infosPostOptions(true),
+  },
+  'infos-post-options-other': {
+    title: 'Publication — Signaler',
+    side: 'user',
+    group: 'Social / contenus',
+    render: () => infosPostOptions(false),
+  },
+  'infos-reactions': { title: 'Réactions', side: 'user', group: 'Social / contenus', render: infosReactions },
+  'infos-ajouter-ami': {
+    title: 'Ajouter ami',
+    side: 'user',
+    group: 'Social / contenus',
+    render: infosAjouterAmi,
+  },
   'infos-commentaires': {
     title: 'Commentaires',
     side: 'user',
@@ -3658,14 +3837,22 @@ export const NAV_TREE = {
               },
             ],
           },
-          { id: 'infos-citoyen', label: 'Infos citoyen' },
           {
-            id: 'infos-feed',
-            label: 'Infos Feed',
+            id: 'infos-citoyen',
+            label: 'Infos citoyen',
             children: [
-              { id: 'infos-reactions', label: 'Réactions' },
-              { id: 'infos-commentaires', label: 'Commentaires' },
-              { id: 'infos-partage', label: 'Partage' },
+              {
+                id: 'infos-feed',
+                label: 'Infos Feed',
+                children: [
+                  { id: 'infos-post-options', label: 'Options (propre)' },
+                  { id: 'infos-post-options-other', label: 'Options (autre)' },
+                  { id: 'infos-reactions', label: 'Réactions' },
+                  { id: 'infos-commentaires', label: 'Commentaires' },
+                  { id: 'infos-partage', label: 'Partage' },
+                  { id: 'infos-ajouter-ami', label: 'Ajouter ami' },
+                ],
+              },
             ],
           },
           {
