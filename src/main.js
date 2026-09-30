@@ -146,6 +146,13 @@ function render() {
 
   const phone = document.getElementById('phone-inner')
   phone.addEventListener('click', (e) => {
+    const chip = e.target.closest('.chip')
+    if (chip && chip.closest('.chips')) {
+      e.preventDefault()
+      chip.parentElement.querySelectorAll('.chip').forEach((c) => c.classList.remove('on'))
+      chip.classList.add('on')
+      return
+    }
     const t = e.target.closest('[data-go], [data-back], [data-sim]')
     if (!t) return
     e.preventDefault()

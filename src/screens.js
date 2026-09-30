@@ -1535,45 +1535,188 @@ function pageUtile(title, note, backTo) {
   )
 }
 
-function pageMeteo() {
-  return rubriqueAccueil({
-    title: 'Météo',
-    bannerTitle: 'Météo — Kapan',
-    bannerText: 'Conditions et prévisions (structure)',
-    searchPh: 'Rechercher…',
-    filters: ['Tout', 'Température', 'Pluie', 'Vent'],
-    proposition: true,
-    cats: [
-      { label: 'Maintenant', go: 'meteo-maintenant' },
-      { label: 'Aujourd’hui', go: 'meteo-aujourdhui' },
-      { label: 'Demain', go: 'meteo-demain' },
-      { label: '7 jours', go: 'meteo-7jours' },
-    ],
-    around: [
-      { title: 'Aperçu Maintenant…', meta: 'Température · …', badge: '…', ficheGo: 'meteo-maintenant' },
-      { title: 'Aperçu Aujourd’hui…', meta: 'Pluie · …', badge: '…', ficheGo: 'meteo-aujourdhui' },
-    ],
-    aroundActions: (item) => [{ label: 'Voir', go: item.ficheGo, primary: true }],
-  })
+/* ——— Météo (structure validée) ——— */
+
+function meteoVal(val, { illustratif = true } = {}) {
+  if (val == null || val === '' || val === 'Indisponible') {
+    return `<span class="meta">Indisponible</span>`
+  }
+  return illustratif
+    ? `<span>${val} <span class="meta">(illustratif)</span></span>`
+    : `<span>${val}</span>`
 }
 
-function meteoContenu(title, parent = 'page-meteo') {
+function pageMeteo() {
+  const ville = 'Kapan'
   return wrap(
     `
-    ${tbd('Proposition météo — À valider')}
-    <div class="banner-box">
-      <strong>${title}</strong>
-      <div class="big-num">…°</div>
-      ${text('Conditions… · vent… · pluie…')}
+    <h1 class="block-title">Météo — ${ville}</h1>
+    <div class="grid-4">
+      ${[
+        ['Maintenant', 'meteo-maintenant'],
+        ['Aujourd’hui', 'meteo-aujourdhui'],
+        ['Demain', 'meteo-demain'],
+        ['7 jours', 'meteo-7jours'],
+      ]
+        .map(
+          ([l, g]) => `
+        <button class="hit icon-tile" data-go="${g}">
+          <span class="ico-box round"></span>
+          <span>${l}</span>
+        </button>`
+        )
+        .join('')}
     </div>
-    <h2 class="sec">Détail (placeholder)</h2>
-    ${text('Température…')}
-    ${text('Précipitations…')}
-    ${text('Vent…')}
-    <p class="meta">Pas d’actions Appeler / Itinéraire (contenu météo, pas une fiche lieu)</p>
+
+    <section class="card">
+      <h2 class="sec">Synthèse actuelle</h2>
+      <p><strong>Condition</strong> · ${meteoVal('Ensoleillé')}</p>
+      <p><strong>T°</strong> · ${meteoVal('22°C')} · ressentie ${meteoVal('21°C')}</p>
+      <p class="meta">Min / max jour · ${meteoVal('14° / 24°')}</p>
+      <p class="meta">Actualisé · ${meteoVal('aujourd’hui 07:00')}</p>
+      <button class="hit btn primary block" data-go="meteo-maintenant">Voir les détails</button>
+    </section>
+
+    <section class="card">
+      <h2 class="sec">Prochaines heures</h2>
+      <p class="meta">Aperçu (illustratif)</p>
+      ${['08:00', '11:00', '14:00']
+        .map(
+          (h) => `
+        <div class="row-link static">
+          <span>${h}</span>
+          <span class="meta">Conditions… · ${meteoVal('…°')} · pluie ${meteoVal('…%')}</span>
+        </div>`
+        )
+        .join('')}
+      <button class="hit btn block" data-go="meteo-aujourdhui">Voir toute la journée</button>
+    </section>
+
+    <section class="card">
+      <h2 class="sec">Aperçu prochains jours</h2>
+      ${[
+        ['Demain', 'meteo-demain', '15° / 23°'],
+        ['Après-demain', 'meteo-jour', 'Indisponible'],
+        ['J+3', 'meteo-jour', 'Indisponible'],
+      ]
+        .map(
+          ([jour, go, mm]) => `
+        <button class="hit row-link" data-go="${go}">
+          <span><strong>${jour}</strong><br/><span class="meta">Conditions… · ${
+            mm === 'Indisponible' ? meteoVal(null) : meteoVal(mm)
+          }</span></span>
+          <span>›</span>
+        </button>`
+        )
+        .join('')}
+      <button class="hit btn block" data-go="meteo-7jours">Voir les 7 jours</button>
+    </section>
     `,
     {
-      header: phoneHeader({ title, backTo: parent }),
+      header: phoneHeader({ title: 'Météo', backTo: 'vie-locale-hub' }),
+      footer: phoneFooter('menu'),
+    }
+  )
+}
+
+/** Modèle : Conditions actuelles (= détail Maintenant) */
+function meteoMaintenant() {
+  return wrap(
+    `
+    <h1 class="block-title">Maintenant</h1>
+    <p class="meta">Kapan · Actualisé ${meteoVal('07:00')}</p>
+    <div class="banner-box">
+      <strong>Condition</strong>
+      <div class="big-num">${meteoVal('22°C')}</div>
+      <p>Ressentie ${meteoVal('21°C')}</p>
+    </div>
+    <h2 class="sec">Conditions détaillées</h2>
+    <div class="row-link static"><span>Vent</span><span>${meteoVal('12 km/h')}</span></div>
+    <div class="row-link static"><span>Humidité</span><span>${meteoVal('45 %')}</span></div>
+    <div class="row-link static"><span>Précipitations</span><span>${meteoVal('0 %')}</span></div>
+    <div class="row-link static"><span>Visibilité</span><span>${meteoVal(null)}</span></div>
+    <h2 class="sec">Soleil</h2>
+    <div class="row-link static"><span>Lever</span><span>${meteoVal('06:42')}</span></div>
+    <div class="row-link static"><span>Coucher</span><span>${meteoVal('18:55')}</span></div>
+    <button class="hit btn primary block" data-go="meteo-aujourdhui">Voir les prévisions d’aujourd’hui</button>
+    `,
+    {
+      header: phoneHeader({ title: 'Maintenant', backTo: 'page-meteo' }),
+      footer: phoneFooter('menu'),
+    }
+  )
+}
+
+/** Modèle : Prévisions d’une journée (Aujourd’hui / Demain / jour choisi) */
+function meteoJournee(label, { backTo = 'page-meteo', dateLabel = null } = {}) {
+  const title = dateLabel ? `Météo du ${dateLabel}` : label
+  return wrap(
+    `
+    <h1 class="block-title">${title}</h1>
+    <section class="card">
+      <strong>Résumé du jour</strong>
+      <p>Conditions… · min ${meteoVal('14°')} / max ${meteoVal('24°')}</p>
+      <p class="meta">Actualisé · ${meteoVal('07:00')}</p>
+    </section>
+    <p class="meta">Filtres (filtrent la liste horaire — pas de changement de page)</p>
+    ${chips(['Toute la journée', 'Matin', 'Après-midi', 'Soir'])}
+    <h2 class="sec">Liste horaire</h2>
+    <p class="meta">Non cliquable</p>
+    ${['08:00', '10:00', '12:00', '14:00', '16:00', '18:00', '20:00']
+      .map(
+        (h) => `
+      <div class="row-link static">
+        <span>${h}</span>
+        <span class="meta">Cond.… · ${meteoVal('…°')} · pluie ${meteoVal('…%')} · vent ${meteoVal('…')}</span>
+      </div>`
+      )
+      .join('')}
+    ${
+      backTo === 'meteo-7jours'
+        ? `<button class="hit btn block" data-go="meteo-7jours">Retour à la liste 7 jours</button>`
+        : ''
+    }
+    `,
+    {
+      header: phoneHeader({ title, backTo }),
+      footer: phoneFooter('menu'),
+    }
+  )
+}
+
+/** Modèle : Liste des journées (7 jours) */
+function meteo7Jours() {
+  const days = [
+    { label: 'Aujourd’hui', go: 'meteo-aujourdhui', mm: '14° / 24°' },
+    { label: 'Demain', go: 'meteo-demain', mm: '15° / 23°' },
+    { label: 'Jeu. 2 oct.', go: 'meteo-jour', mm: 'Indisponible' },
+    { label: 'Ven. 3 oct.', go: 'meteo-jour', mm: 'Indisponible' },
+    { label: 'Sam. 4 oct.', go: 'meteo-jour', mm: 'Indisponible' },
+    { label: 'Dim. 5 oct.', go: 'meteo-jour', mm: 'Indisponible' },
+    { label: 'Lun. 6 oct.', go: 'meteo-jour', mm: 'Indisponible' },
+  ]
+  return wrap(
+    `
+    <h1 class="block-title">7 jours</h1>
+    <p class="meta">Kapan · Actualisé ${meteoVal('07:00')}</p>
+    ${days
+      .map(
+        (d) => `
+      <article class="card">
+        <div class="row-link static">
+          <span><strong>${d.label}</strong><br/>
+            <span class="meta">Conditions… · ${
+              d.mm === 'Indisponible' ? meteoVal(null) : meteoVal(d.mm)
+            } · pluie ${meteoVal(d.mm === 'Indisponible' ? null : '…%')}</span>
+          </span>
+        </div>
+        <button class="hit btn primary block" data-go="${d.go}">Voir la journée</button>
+      </article>`
+      )
+      .join('')}
+    `,
+    {
+      header: phoneHeader({ title: '7 jours', backTo: 'page-meteo' }),
       footer: phoneFooter('menu'),
     }
   )
@@ -2822,31 +2965,46 @@ export const SCREENS = {
       }),
   },
 
-  /* —— Météo —— */
-  'page-meteo': { title: 'Météo — À valider', side: 'user', group: 'Vie locale', render: pageMeteo },
+  /* —— Météo (accueil synthèse + 4 destinations + 3 modèles) —— */
+  'page-meteo': {
+    title: 'Météo — Accueil',
+    side: 'user',
+    group: 'Vie locale',
+    render: pageMeteo,
+  },
   'meteo-maintenant': {
     title: 'Météo — Maintenant',
     side: 'user',
     group: 'Vie locale',
-    render: () => meteoContenu('Maintenant'),
+    render: meteoMaintenant,
   },
   'meteo-aujourdhui': {
     title: 'Météo — Aujourd’hui',
     side: 'user',
     group: 'Vie locale',
-    render: () => meteoContenu('Aujourd’hui'),
+    render: () => meteoJournee('Aujourd’hui'),
   },
   'meteo-demain': {
     title: 'Météo — Demain',
     side: 'user',
     group: 'Vie locale',
-    render: () => meteoContenu('Demain'),
+    render: () => meteoJournee('Demain'),
   },
   'meteo-7jours': {
     title: 'Météo — 7 jours',
     side: 'user',
     group: 'Vie locale',
-    render: () => meteoContenu('7 jours'),
+    render: meteo7Jours,
+  },
+  'meteo-jour': {
+    title: 'Météo — Jour choisi',
+    side: 'user',
+    group: 'Vie locale',
+    render: () =>
+      meteoJournee('Jour', {
+        backTo: 'meteo-7jours',
+        dateLabel: '2 octobre',
+      }),
   },
 
   'dir-restaurants': {
@@ -3005,6 +3163,11 @@ export const NAV = [
           'dir-securite',
           'page-signalement',
           'page-meteo',
+          'meteo-maintenant',
+          'meteo-aujourdhui',
+          'meteo-demain',
+          'meteo-7jours',
+          'meteo-jour',
           'dir-restaurants',
           'dir-patrimoine',
           'communautes-groupes',
