@@ -2,15 +2,32 @@
   /* Charte Ma Ville — docs/ma-ville-charte.md */
   --text: #001339;
   --text-secondary: #606060;
+
   --c-mairie: #29676d;
   --c-infos: #1648df;
-  --c-sante: #c93e84;
+  --c-evenements: #8b5cf6;
+  --c-annonces: #db2777;
+  --c-emplois: #1d4ed8;
+  --c-groupes: #8b5cf6;
+  --c-clubs: #1d4ed8;
+  --c-rencontres: #d97706;
   --c-education: #1b7842;
-  --c-tourisme: #cc8040;
-  --c-cinemas: #1d3c65;
-  --c-urgence: #ca042d;
   --c-economie: #af734a;
+  --c-cinemas: #1d3c65;
+  --c-permanences: #c2410c;
   --c-aide: #0b2c71;
+  --c-associations: #4f46e5;
+  --c-banques: #1d4ed8;
+  --c-transports: #0891b2;
+  --c-bibliotheques: #047857;
+  --c-sante: #c93e84;
+  --c-securite: #475569;
+  --c-tourisme: #cc8040;
+  --c-meteo: #ca8a04;
+  --c-urgence: #dc2626;
+  --c-signalement: #475569;
+  --c-patrimoine: #cc8040;
+  --c-restaurants: #af734a;
 
   --bg: #e8e8e8;
   --panel: #f4f4f4;
@@ -133,12 +150,12 @@ h2,
   color: var(--muted);
 }
 
-/* User | Admin — horizontal tabs (fixed above scrollable tree) */
+/* Utilisateur | Administrateur — horizontal tabs */
 .nav-tabs {
   display: flex;
   gap: 0;
   margin: 0 12px 8px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--line-soft);
   flex-shrink: 0;
   background: #fff;
   z-index: 2;
@@ -152,7 +169,7 @@ h2,
   cursor: pointer;
   font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
   font-weight: 600;
-  font-size: 14px;
+  font-size: 13px;
   color: var(--muted);
   border-bottom: 2px solid transparent;
   margin-bottom: -1px;
@@ -170,72 +187,147 @@ h2,
 
 .proto-scroll {
   overflow: auto;
-  padding: 0 12px 24px;
+  padding: 4px 10px 24px;
   flex: 1;
   min-height: 0;
 }
 
-/* Hierarchical tree with connector guides (├─ └─ │) */
-.nav-tree {
-  font-family: 'SFMono-Regular', 'Menlo', 'Consolas', 'Liberation Mono', ui-monospace, monospace;
-  font-size: 12.5px;
-  line-height: 1.55;
-  color: var(--ink);
+/* Professional hierarchical tree (CSS connectors, not ASCII) */
+.nav-tree,
+.nav-tree ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
 }
 
-.tree-row {
+.nav-tree ul {
+  margin: 0;
+  padding: 0 0 2px 0;
+}
+
+.nav-tree li {
+  position: relative;
+  margin: 0;
+  padding: 0;
+}
+
+/* Nested levels: vertical + horizontal rules */
+.nav-tree ul > li {
+  padding-left: 16px;
+}
+
+.nav-tree ul > li::before {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: #d0d4dc;
+}
+
+.nav-tree ul > li::after {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 13px;
+  width: 9px;
+  height: 1px;
+  background: #d0d4dc;
+}
+
+.nav-tree ul > li:last-child::before {
+  bottom: auto;
+  height: 13px;
+}
+
+/* Root level: no connectors */
+.nav-tree > ul > li {
+  padding-left: 0;
+}
+
+.nav-tree > ul > li::before,
+.nav-tree > ul > li::after {
+  content: none;
+  display: none;
+}
+
+.tree-node {
   display: flex;
-  align-items: baseline;
-  gap: 0;
-  width: fit-content;
+  align-items: center;
+  gap: 8px;
+  width: calc(100% - 2px);
   max-width: 100%;
   text-align: left;
   border: none;
   background: transparent;
-  padding: 2px 6px 2px 2px;
-  margin: 0;
-  border-radius: 3px;
-  color: inherit;
-  font: inherit;
-  line-height: inherit;
+  padding: 5px 8px 5px 4px;
+  margin: 1px 0;
+  border-radius: 6px;
+  cursor: default;
+  color: var(--ink);
+  font-family: 'Urbanist', system-ui, sans-serif;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.35;
+  position: relative;
+  z-index: 1;
 }
 
-button.tree-link {
+button.tree-node {
   cursor: pointer;
 }
 
-button.tree-link:hover .tree-label {
-  text-decoration: underline;
+button.tree-node:hover {
+  background: #f3f5f8;
 }
 
-.tree-row.active {
-  background: #f0f0f0;
+button.tree-node:hover .tree-label {
+  color: var(--ink);
 }
 
-.tree-row.active .tree-label {
-  font-weight: 700;
+.tree-node.active {
+  background: #eef1f6;
 }
 
-.tree-guides {
+.tree-node.active .tree-label {
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  font-weight: 600;
+}
+
+.tree-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
   flex-shrink: 0;
-  white-space: pre;
-  color: #222;
-  user-select: none;
+  background: var(--dot, #c5c9d2);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--dot, #c5c9d2) 22%, #fff);
+}
+
+.tree-node.active .tree-dot {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--dot, #c5c9d2) 28%, #fff);
 }
 
 .tree-label {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  min-width: 0;
 }
 
-.tree-note {
+.tree-node.note {
   color: var(--muted);
-  cursor: default;
+  font-size: 12px;
+  font-style: italic;
+  padding-top: 2px;
+  padding-bottom: 2px;
 }
 
-.tree-note .tree-label {
-  font-style: italic;
+.tree-node.note .tree-dot {
+  opacity: 0.45;
+  width: 5px;
+  height: 5px;
+  box-shadow: none;
 }
 
 .proto-meta {
@@ -720,6 +812,11 @@ button.tree-link:hover .tree-label {
   display: inline-block;
 }
 
+.ico-box[style*='--section'] {
+  border-color: color-mix(in srgb, var(--section) 50%, #fff);
+  background: color-mix(in srgb, var(--section) 18%, #fff);
+}
+
 .ico-box.round {
   border-radius: 50%;
 }
@@ -1130,39 +1227,103 @@ button.tree-link:hover .tree-label {
 
 .phone[data-theme='mairie'] {
   --accent: var(--c-mairie);
-  --accent-soft: #e4f0f1;
+  --accent-soft: color-mix(in srgb, var(--c-mairie) 12%, #fff);
 }
 .phone[data-theme='infos'] {
   --accent: var(--c-infos);
-  --accent-soft: #e8eefc;
+  --accent-soft: color-mix(in srgb, var(--c-infos) 12%, #fff);
+}
+.phone[data-theme='evenements'] {
+  --accent: var(--c-evenements);
+  --accent-soft: color-mix(in srgb, var(--c-evenements) 12%, #fff);
+}
+.phone[data-theme='annonces'] {
+  --accent: var(--c-annonces);
+  --accent-soft: color-mix(in srgb, var(--c-annonces) 12%, #fff);
+}
+.phone[data-theme='emplois'] {
+  --accent: var(--c-emplois);
+  --accent-soft: color-mix(in srgb, var(--c-emplois) 12%, #fff);
+}
+.phone[data-theme='groupes'] {
+  --accent: var(--c-groupes);
+  --accent-soft: color-mix(in srgb, var(--c-groupes) 12%, #fff);
+}
+.phone[data-theme='clubs'] {
+  --accent: var(--c-clubs);
+  --accent-soft: color-mix(in srgb, var(--c-clubs) 12%, #fff);
+}
+.phone[data-theme='rencontres'] {
+  --accent: var(--c-rencontres);
+  --accent-soft: color-mix(in srgb, var(--c-rencontres) 12%, #fff);
 }
 .phone[data-theme='sante'] {
   --accent: var(--c-sante);
-  --accent-soft: #f9e8f1;
+  --accent-soft: color-mix(in srgb, var(--c-sante) 12%, #fff);
 }
 .phone[data-theme='education'] {
   --accent: var(--c-education);
-  --accent-soft: #e5f2ea;
+  --accent-soft: color-mix(in srgb, var(--c-education) 12%, #fff);
 }
 .phone[data-theme='tourisme'] {
   --accent: var(--c-tourisme);
-  --accent-soft: #f8eee4;
+  --accent-soft: color-mix(in srgb, var(--c-tourisme) 12%, #fff);
 }
 .phone[data-theme='cinemas'] {
   --accent: var(--c-cinemas);
-  --accent-soft: #e6ebf0;
+  --accent-soft: color-mix(in srgb, var(--c-cinemas) 12%, #fff);
 }
 .phone[data-theme='urgence'] {
   --accent: var(--c-urgence);
-  --accent-soft: #f9e6ea;
+  --accent-soft: color-mix(in srgb, var(--c-urgence) 12%, #fff);
 }
 .phone[data-theme='economie'] {
   --accent: var(--c-economie);
-  --accent-soft: #f5eee7;
+  --accent-soft: color-mix(in srgb, var(--c-economie) 12%, #fff);
 }
 .phone[data-theme='aide'] {
   --accent: var(--c-aide);
-  --accent-soft: #e6eaf1;
+  --accent-soft: color-mix(in srgb, var(--c-aide) 12%, #fff);
+}
+.phone[data-theme='permanences'] {
+  --accent: var(--c-permanences);
+  --accent-soft: color-mix(in srgb, var(--c-permanences) 12%, #fff);
+}
+.phone[data-theme='associations'] {
+  --accent: var(--c-associations);
+  --accent-soft: color-mix(in srgb, var(--c-associations) 12%, #fff);
+}
+.phone[data-theme='banques'] {
+  --accent: var(--c-banques);
+  --accent-soft: color-mix(in srgb, var(--c-banques) 12%, #fff);
+}
+.phone[data-theme='transports'] {
+  --accent: var(--c-transports);
+  --accent-soft: color-mix(in srgb, var(--c-transports) 12%, #fff);
+}
+.phone[data-theme='bibliotheques'] {
+  --accent: var(--c-bibliotheques);
+  --accent-soft: color-mix(in srgb, var(--c-bibliotheques) 12%, #fff);
+}
+.phone[data-theme='securite'] {
+  --accent: var(--c-securite);
+  --accent-soft: color-mix(in srgb, var(--c-securite) 12%, #fff);
+}
+.phone[data-theme='meteo'] {
+  --accent: var(--c-meteo);
+  --accent-soft: color-mix(in srgb, var(--c-meteo) 14%, #fff);
+}
+.phone[data-theme='signalement'] {
+  --accent: var(--c-signalement);
+  --accent-soft: color-mix(in srgb, var(--c-signalement) 12%, #fff);
+}
+.phone[data-theme='patrimoine'] {
+  --accent: var(--c-patrimoine);
+  --accent-soft: color-mix(in srgb, var(--c-patrimoine) 12%, #fff);
+}
+.phone[data-theme='restaurants'] {
+  --accent: var(--c-restaurants);
+  --accent-soft: color-mix(in srgb, var(--c-restaurants) 12%, #fff);
 }
 
 .phone[data-theme] .phone-header {
@@ -1230,6 +1391,22 @@ button.tree-link:hover .tree-label {
 .phone[data-theme] .alert-box {
   border-color: color-mix(in srgb, var(--accent) 35%, var(--line));
   background: var(--accent-soft);
+}
+
+/* Per-icon section colors (Accueil & hubs) — set --section inline */
+.tile[style*='--section'] .slot-photo,
+.icon-tile[style*='--section'] .ico-box {
+  border-color: color-mix(in srgb, var(--section) 50%, #fff);
+  background: color-mix(in srgb, var(--section) 18%, #fff);
+}
+
+.urgence-box {
+  border-color: color-mix(in srgb, var(--c-urgence) 45%, var(--line)) !important;
+  background: color-mix(in srgb, var(--c-urgence) 8%, #fff) !important;
+}
+
+.urgence-box .sec {
+  color: var(--c-urgence);
 }
 
 .meta {

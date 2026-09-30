@@ -1,5 +1,6 @@
 import './style.css'
 import { SCREENS, NAV_TREE, navIdsForSide } from './screens.js'
+import { themeFor, colorFor, sectionFor } from './theme.js'
 
 const historyStack = []
 let currentId = 'ville-bienvenue'
@@ -71,54 +72,30 @@ function handleSim(kind) {
   toast(map[action] || `Action simulée : ${kind}`)
 }
 
-function themeFor(id) {
-  if (id.startsWith('mairie-')) return 'mairie'
-  if (id === 'infos-citoyen' || id.startsWith('infos-')) return 'infos'
-  if (id.startsWith('sante-')) return 'sante'
-  if (id.startsWith('dir-education')) return 'education'
-  if (
-    id.startsWith('dir-tourisme') ||
-    id.startsWith('dir-nature') ||
-    id.startsWith('dir-activites')
-  )
-    return 'tourisme'
-  if (id.startsWith('dir-cinemas')) return 'cinemas'
-  if (id === 'urgence-numeros') return 'urgence'
-  if (id.startsWith('dir-economie')) return 'economie'
-  if (id.startsWith('dir-aide')) return 'aide'
-  return 'neutral'
-}
-
-/** Render one tree level with box-drawing connectors (├─ └─ │). */
-function renderTreeNodes(nodes, activeId, ancestorsHaveMore = []) {
+/** Nested UL tree with CSS connectors + section color dots */
+function renderTreeNodes(nodes, activeId) {
   if (!nodes?.length) return ''
-  return nodes
-    .map((node, i) => {
-      const isLast = i === nodes.length - 1
-      const prefix = ancestorsHaveMore
-        .map((more) => (more ? '│  ' : '   '))
-        .join('')
-      const branch = ancestorsHaveMore.length === 0 ? '' : isLast ? '└─ ' : '├─ '
-      const label = node.label
+  return `<ul>${nodes
+    .map((node) => {
       const isActive = node.id && node.id === activeId
-      const rowClass = [
-        'tree-row',
-        node.id ? 'tree-link' : 'tree-note',
+      const section = node.section || (node.id ? sectionFor(node.id) : null)
+      const dot = colorFor(section || 'neutral')
+      const classes = [
+        'tree-node',
+        node.id ? 'link' : 'note',
         isActive ? 'active' : '',
       ]
         .filter(Boolean)
         .join(' ')
 
-      const labelHtml = node.id
-        ? `<button type="button" class="${rowClass}" data-nav="${node.id}" title="${label}"><span class="tree-guides" aria-hidden="true">${prefix}${branch}</span><span class="tree-label">${label}</span></button>`
-        : `<div class="${rowClass}"><span class="tree-guides" aria-hidden="true">${prefix}${branch}</span><span class="tree-label">${label}</span></div>`
+      const row = node.id
+        ? `<button type="button" class="${classes}" data-nav="${node.id}" title="${node.label}" style="--dot:${dot}"><span class="tree-dot" aria-hidden="true"></span><span class="tree-label">${node.label}</span></button>`
+        : `<div class="${classes}" style="--dot:${dot}"><span class="tree-dot" aria-hidden="true"></span><span class="tree-label">${node.label}</span></div>`
 
-      const kids = node.children
-        ? renderTreeNodes(node.children, activeId, [...ancestorsHaveMore, !isLast])
-        : ''
-      return `${labelHtml}${kids}`
+      const kids = node.children ? renderTreeNodes(node.children, activeId) : ''
+      return `<li>${row}${kids}</li>`
     })
-    .join('')
+    .join('')}</ul>`
 }
 
 function buildTabs(tab) {
@@ -133,15 +110,15 @@ function buildTabs(tab) {
 function buildTree(activeId, tab) {
   const side = NAV_TREE[tab]
   return `
-    <div class="nav-tree" role="tree" aria-label="Arbre ${side.tab}">
-      ${renderTreeNodes(side.roots, activeId, [])}
-    </div>
+    <nav class="nav-tree" aria-label="Arbre ${side.tab}">
+      ${renderTreeNodes(side.roots, activeId)}
+    </nav>
   `
 }
 
 function scrollActiveIntoNavPanel() {
   const scroll = document.querySelector('.proto-scroll')
-  const active = document.querySelector('.nav-tree .tree-row.active')
+  const active = document.querySelector('.nav-tree .tree-node.active')
   if (!scroll || !active) return
   const sRect = scroll.getBoundingClientRect()
   const aRect = active.getBoundingClientRect()
@@ -212,7 +189,6 @@ function render({ focusActive = false, resetNavScroll = false } = {}) {
   })
 }
 
-/* Event delegation — survives full re-renders via re-bind on app (document-level). */
 document.getElementById('app').addEventListener('click', (e) => {
   const tab = e.target.closest('[data-nav-tab]')
   if (tab) {

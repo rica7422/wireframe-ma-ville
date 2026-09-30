@@ -14,6 +14,7 @@ import {
   loadingState,
   errorState,
 } from './components.js'
+import { colorFor } from './theme.js'
 
 /** Screen registry: id → { title, group, render(state) } */
 
@@ -136,30 +137,44 @@ function modaleConfirmer() {
 }
 
 function accueilKapan() {
-  const vieLocale = [
-    { label: 'Éducation', go: 'dir-education' },
-    { label: 'Économie', go: 'dir-economie' },
-    { label: 'Cinéma & Théâtres', go: 'dir-cinemas' },
-    { label: 'Patrimoine', go: 'dir-patrimoine' },
-    { label: 'Aide sociale', go: 'dir-aide-sociale' },
-    { label: 'Associations', go: 'dir-associations' },
-    { label: 'Banques & Assurances', go: 'dir-banques' },
-    { label: 'Restaurants', go: 'dir-restaurants' },
-    { label: 'Transports', go: 'dir-transports' },
-    { label: 'Bibliothèque', go: 'dir-bibliotheques' },
-    { label: 'Permanences', go: 'dir-permanences' },
-    { label: 'Santé', go: 'sante-accueil' },
-    { label: 'Sécurité', go: 'dir-securite' },
-    { label: 'Tourisme', go: 'dir-tourisme' },
-    { label: 'Météo', go: 'page-meteo' },
-    { label: 'Signalement', go: 'page-signalement' },
+  const rapide = [
+    { label: 'Ma mairie', go: 'mairie-accueil', section: 'mairie' },
+    { label: 'Infos citoyen', go: 'infos-citoyen', section: 'infos' },
+    { label: 'Événements', go: 'evenements-liste', section: 'evenements' },
+    { label: 'Petites annonces', go: 'annonces-liste', section: 'annonces' },
+    { label: 'Offres d’emploi', go: 'emplois-liste', section: 'emplois' },
   ]
+  const communautes = [
+    { label: 'Groupes', go: 'communautes-groupes', section: 'groupes' },
+    { label: 'Clubs', go: 'communautes-clubs', section: 'clubs' },
+    { label: 'Mes rencontres', go: 'communautes-rencontres', section: 'rencontres' },
+  ]
+  const vieLocale = [
+    { label: 'Éducation', go: 'dir-education', section: 'education' },
+    { label: 'Économie', go: 'dir-economie', section: 'economie' },
+    { label: 'Cinéma & Théâtres', go: 'dir-cinemas', section: 'cinemas' },
+    { label: 'Patrimoine', go: 'dir-patrimoine', section: 'patrimoine' },
+    { label: 'Aide sociale', go: 'dir-aide-sociale', section: 'aide' },
+    { label: 'Associations', go: 'dir-associations', section: 'associations' },
+    { label: 'Banques & Assurances', go: 'dir-banques', section: 'banques' },
+    { label: 'Restaurants', go: 'dir-restaurants', section: 'restaurants' },
+    { label: 'Transports', go: 'dir-transports', section: 'transports' },
+    { label: 'Bibliothèque', go: 'dir-bibliotheques', section: 'bibliotheques' },
+    { label: 'Permanences', go: 'dir-permanences', section: 'permanences' },
+    { label: 'Santé', go: 'sante-accueil', section: 'sante' },
+    { label: 'Sécurité', go: 'dir-securite', section: 'securite' },
+    { label: 'Tourisme', go: 'dir-tourisme', section: 'tourisme' },
+    { label: 'Météo', go: 'page-meteo', section: 'meteo' },
+    { label: 'Signalement', go: 'page-signalement', section: 'signalement' },
+  ]
+  const hex = (s) => colorFor(s)
+
   return wrap(
     `
     <section class="hero-block">
       ${photo('Photo couverture Kapan…', 'hero')}
       <div class="overlay-badges">
-        <span class="badge">22°C Ensoleillé</span>
+        <span class="badge" style="--accent:#CA8A04;border-color:#CA8A04;color:#CA8A04;background:color-mix(in srgb,#CA8A04 12%,#fff)">22°C Ensoleillé</span>
       </div>
       <div class="hero-caption">
         <h1>Kapan</h1>
@@ -173,33 +188,23 @@ function accueilKapan() {
     </div>
     <h2 class="sec">Accès rapides</h2>
     <div class="grid-2">
-      ${[
-        ['Ma mairie', 'mairie-accueil'],
-        ['Infos citoyen', 'infos-citoyen'],
-        ['Événements', 'evenements-liste'],
-        ['Petites annonces', 'annonces-liste'],
-        ['Offres d’emploi', 'emplois-liste'],
-      ]
+      ${rapide
         .map(
-          ([label, go]) => `
-        <button class="hit tile" data-go="${go}">
+          (it) => `
+        <button class="hit tile" data-go="${it.go}" style="--section:${hex(it.section)}">
           ${photo('Photo…')}
-          <span>${label}</span>
+          <span style="color:${hex(it.section)}">${it.label}</span>
         </button>`
         )
         .join('')}
     </div>
     <h2 class="sec">Communautés</h2>
-    ${[
-      ['Groupes', 'communautes-groupes'],
-      ['Clubs', 'communautes-clubs'],
-      ['Mes rencontres', 'communautes-rencontres'],
-    ]
+    ${communautes
       .map(
-        ([label, go]) => `
-      <button class="hit row-link" data-go="${go}">
-        <span class="ico-box"></span>
-        <span><strong>${label}</strong><br/><span class="meta">Texte…</span></span>
+        (it) => `
+      <button class="hit row-link" data-go="${it.go}">
+        <span class="ico-box" style="--section:${hex(it.section)}"></span>
+        <span><strong style="color:${hex(it.section)}">${it.label}</strong><br/><span class="meta">Texte…</span></span>
         <span>›</span>
       </button>`
       )
@@ -209,8 +214,8 @@ function accueilKapan() {
       ${vieLocale
         .map(
           (it) => `
-        <button class="hit icon-tile" data-go="${it.go}">
-          <span class="ico-box"></span>
+        <button class="hit icon-tile" data-go="${it.go}" style="--section:${hex(it.section)}">
+          <span class="ico-box" style="--section:${hex(it.section)}"></span>
           <span>${it.label}</span>
         </button>`
         )
@@ -1398,6 +1403,11 @@ function rubriqueNonValidee(title) {
 }
 
 function vieLocaleHub() {
+  const tile = (l, g) => `
+        <button class="hit icon-tile" data-go="${g}" style="--section:${colorFor(g)}">
+          <span class="ico-box" style="--section:${colorFor(g)}"></span>
+          <span>${l}</span>
+        </button>`
   const validated = [
     ['Santé', 'sante-accueil'],
     ['Tourisme', 'dir-tourisme'],
@@ -1425,23 +1435,15 @@ function vieLocaleHub() {
     `
     <h2 class="sec">Vie locale — validées</h2>
     <div class="grid-3">
-      ${validated
-        .map(
-          ([l, g]) => `
-        <button class="hit icon-tile" data-go="${g}">
-          <span class="ico-box"></span>
-          <span>${l}</span>
-        </button>`
-        )
-        .join('')}
+      ${validated.map(([l, g]) => tile(l, g)).join('')}
     </div>
     <h2 class="sec">Propositions — À valider</h2>
     <div class="grid-3">
       ${propositions
         .map(
           ([l, g]) => `
-        <button class="hit icon-tile" data-go="${g}">
-          <span class="ico-box"></span>
+        <button class="hit icon-tile" data-go="${g}" style="--section:${colorFor(g)}">
+          <span class="ico-box" style="--section:${colorFor(g)}"></span>
           <span>${l}</span>
           <span class="meta">À valider</span>
         </button>`
@@ -1450,15 +1452,7 @@ function vieLocaleHub() {
     </div>
     <h2 class="sec">Autres</h2>
     <div class="grid-3">
-      ${other
-        .map(
-          ([l, g]) => `
-        <button class="hit icon-tile" data-go="${g}">
-          <span class="ico-box"></span>
-          <span>${l}</span>
-        </button>`
-        )
-        .join('')}
+      ${other.map(([l, g]) => tile(l, g)).join('')}
     </div>
     `,
     {
@@ -3087,7 +3081,7 @@ export const SCREENS = {
  */
 export const NAV_TREE = {
   user: {
-    tab: 'User',
+    tab: 'Utilisateur',
     roots: [
       { id: 'ville-bienvenue', label: 'Bienvenue' },
       { id: 'ville-modale-choisir', label: 'Choisir une ville' },
@@ -3246,7 +3240,7 @@ export const NAV_TREE = {
     ],
   },
   admin: {
-    tab: 'Admin',
+    tab: 'Administrateur',
     roots: [
       {
         id: 'admin-home',
