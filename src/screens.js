@@ -557,7 +557,6 @@ function mairieTabs(active = 'publications') {
     <div class="tabs">
       <button class="hit tab ${active === 'publications' ? 'on' : ''}" data-go="mairie-accueil">Publications</button>
       <button class="hit tab ${active === 'evenements' ? 'on' : ''}" data-go="mairie-accueil-evenements">Événements</button>
-      <button class="hit tab ${active === 'informations' ? 'on' : ''}" data-go="mairie-infos">Informations</button>
     </div>
   `
 }
@@ -572,8 +571,8 @@ function mairieAccueil() {
     `
     ${mairieShellTop()}
     ${search('Effectuer une recherche…')}
-    ${mairieTabs('publications')}
     ${mairieAccesGrid()}
+    ${mairieTabs('publications')}
     ${postCard({
       author: 'Mairie de Kapan',
       role: 'Publication',
@@ -603,6 +602,7 @@ function mairieAccueilEvenements() {
     `
     ${mairieShellTop()}
     ${search('Effectuer une recherche…')}
+    ${mairieAccesGrid()}
     ${mairieTabs('evenements')}
     ${evenementsListeBody({
       titles: ['Réunion publique', 'Fête de la ville', 'Conseil municipal (public)'],
@@ -926,7 +926,6 @@ function mairieInfos() {
   ]
   return wrap(
     `
-    ${mairieTabs('informations')}
     <div class="chips filter-chips">
       <button class="hit chip on" type="button">À la une</button>
       <button class="hit chip" type="button">Administration municipale</button>
