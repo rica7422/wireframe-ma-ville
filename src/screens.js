@@ -1025,6 +1025,7 @@ function mairieCommunaute() {
 function mairiePlan() {
   return wrap(
     `
+    ${mairieShellTop()}
     <div class="sec-row">
       <h2 class="sec">Plan de la ville</h2>
       <button class="hit linkish" data-sim="agrandir" type="button">Agrandir</button>
