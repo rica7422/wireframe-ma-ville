@@ -60,7 +60,7 @@ function handleSim(kind) {
     suivre: 'Suivi simulé',
     participation: 'Participation mise à jour (simulé)',
     rdv: 'Rendez-vous — suite À préciser (simulé)',
-    'rdv-annuler': 'Rendez-vous annulé (simulé)',
+    'rdv-annuler': 'Rendez-vous annulé (simulé) — bloc masqué',
     position: 'Partage de position (simulé)',
     upload: 'Upload photo (simulé)',
     sauver: 'Enregistrement admin (simulé)',

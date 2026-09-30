@@ -648,10 +648,11 @@ const MAIRIE_MOTIFS = [
   'Autre',
 ]
 
-/** Wireframe: set to null to hide the block; object = RDV en cours */
-const MAIRIE_RDV_EN_COURS = null
-// Example when present:
-// { motif: 'Carte d’identité / Passeport', when: '27 mai 2026 · 09:30' }
+/** Wireframe: always show one fictional RDV en cours (Annuler hides the block) */
+const MAIRIE_RDV_EN_COURS = {
+  motif: 'Carte d’identité / Passeport',
+  when: '12 juin 2026 · 10:00',
+}
 
 function mairieRdvEnCoursBlock(rdv) {
   if (!rdv) return ''
@@ -660,7 +661,7 @@ function mairieRdvEnCoursBlock(rdv) {
       <strong>Rendez-vous en cours</strong>
       <p class="meta">${rdv.when}</p>
       <p><strong>Motif</strong> · ${rdv.motif}</p>
-      <button class="hit btn block" data-sim="rdv-annuler">Annuler le RDV</button>
+      <button class="hit btn block" data-sim="rdv-annuler">Annuler le rendez-vous</button>
     </article>
   `
 }
