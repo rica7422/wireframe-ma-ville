@@ -8,7 +8,11 @@ import {
   search,
   listCard,
   postCard,
+  publicationCard,
+  socialActions,
+  sheetOption,
   modalShell,
+  evenementsListeBody,
   tbd,
   emptyState,
   loadingState,
@@ -513,9 +517,9 @@ function santeAmbulances() {
 function mairieShellTop() {
   return `
     ${photo('Photo de la mairie…', 'hero')}
-    <div class="overlay-badges"><span class="badge">☀ 22 °C — Ensoleillé</span></div>
+    <div class="overlay-badges"><span class="badge">☀ 14° / 4°</span></div>
     <div class="detail-head">
-      <strong>Ma mairie – Kapan</strong>
+      <strong>Kapan · Arménie</strong>
       ${text('Présentation courte de la mairie…')}
     </div>
     <div class="members-row">
@@ -523,7 +527,12 @@ function mairieShellTop() {
       <span>3649 membres</span>
       <button class="hit btn" data-sim="inviter">+ Inviter</button>
     </div>
-    <div class="grid-4 mairie-acces">
+  `
+}
+
+function mairieAccesGrid() {
+  return `
+    <div class="grid-2 mairie-acces">
       ${[
         ['Présentation de la ville', 'mairie-presentation'],
         ['Maire & Conseil municipal', 'mairie-conseil'],
@@ -532,9 +541,10 @@ function mairieShellTop() {
       ]
         .map(
           ([l, g]) => `
-        <button class="hit icon-tile" data-go="${g}" title="${l}">
+        <button class="hit icon-tile mairie-tile" data-go="${g}" title="${l}">
           <span class="ico-box"></span>
-          <span>${l}</span>
+          <span class="grow">${l}</span>
+          <span class="meta">›</span>
         </button>`
         )
         .join('')}
@@ -547,90 +557,82 @@ function mairieTabs(active = 'publications') {
     <div class="tabs">
       <button class="hit tab ${active === 'publications' ? 'on' : ''}" data-go="mairie-accueil">Publications</button>
       <button class="hit tab ${active === 'evenements' ? 'on' : ''}" data-go="mairie-accueil-evenements">Événements</button>
+      <button class="hit tab ${active === 'informations' ? 'on' : ''}" data-go="mairie-infos">Informations</button>
     </div>
   `
+}
+
+function mairieHeader(title = 'Ma mairie', backTo = 'accueil-kapan') {
+  return phoneHeader({
+    title,
+    backTo,
+    extraRight: `<button class="hit icon-btn" data-go="mairie-menu" title="Menu Ma mairie" aria-label="Menu">⋯</button>`,
+  })
 }
 
 function mairieAccueil() {
   return wrap(
     `
     ${mairieShellTop()}
+    ${search('Effectuer une recherche…')}
     ${mairieTabs('publications')}
-    <article class="card post-card">
-      <header class="post-head">
-        <span class="avatar"></span>
-        <div>
-          <strong>Mairie de Kapan</strong>
-          <div class="meta">Il y a 2 h</div>
-        </div>
-        <button class="hit icon-btn" type="button">⋯</button>
-      </header>
-      ${text('Informations et actualités de votre mairie.')}
-      ${photo('Photo de la publication…', 'wide')}
-      <div class="post-actions">
-        <button class="hit btn" data-go="infos-reactions">Réagir</button>
-        <button class="hit btn" data-go="infos-commentaires">Commenter</button>
-        <button class="hit btn" data-go="infos-partage">Partager</button>
-      </div>
-    </article>
-    <article class="card post-card">
-      <header class="post-head">
-        <span class="avatar"></span>
-        <div>
-          <strong>Mairie de Kapan</strong>
-          <div class="meta">Il y a 1 j</div>
-        </div>
-        <button class="hit icon-btn" type="button">⋯</button>
-      </header>
-      ${text('Rappel — démarches en mairie et horaires d’accueil.')}
-      ${photo('Photo de la publication…', 'wide')}
-      <div class="post-actions">
-        <button class="hit btn" data-go="infos-reactions">Réagir</button>
-        <button class="hit btn" data-go="infos-commentaires">Commenter</button>
-        <button class="hit btn" data-go="infos-partage">Partager</button>
-      </div>
-    </article>
-    <button class="hit btn block" data-go="mairie-rdv">Prendre rendez-vous</button>
+    ${mairieAccesGrid()}
+    ${postCard({
+      author: 'Mairie de Kapan',
+      role: 'Publication',
+      body: 'Informations et actualités de votre mairie.',
+      optionsGo: 'mairie-presentation-options',
+    })}
+    ${postCard({
+      author: 'Mairie de Kapan',
+      role: 'Publication',
+      body: 'Rappel — démarches en mairie et horaires d’accueil.',
+      multi: true,
+      optionsGo: 'mairie-presentation-options',
+    })}
+    <button class="hit btn block" data-go="mairie-nouvelle-publication">+ Nouvelle publication</button>
+    <button class="hit btn primary block" data-go="mairie-rdv">Prendre rendez-vous</button>
     `,
     {
-      header: phoneHeader({ title: 'Ma mairie', backTo: 'accueil-kapan' }),
+      header: mairieHeader(),
       footer: phoneFooter('mairie'),
     }
   )
 }
 
 function mairieAccueilEvenements() {
-  const events = [
-    { title: 'Réunion publique', when: '15 octobre · 18 h', where: 'Salle municipale' },
-    { title: 'Fête de la ville', when: '2 novembre · 14 h', where: 'Place centrale' },
-    { title: 'Conseil municipal (public)', when: '20 novembre · 19 h', where: 'Hôtel de ville' },
-  ]
   return wrap(
     `
     ${mairieShellTop()}
+    ${search('Effectuer une recherche…')}
     ${mairieTabs('evenements')}
-    <h2 class="sec">Événements de la mairie</h2>
-    ${events
-      .map(
-        (ev) => `
-      <article class="card rowish">
-        ${photo('Photo de l’événement…', 'thumb')}
-        <div class="grow">
-          <strong>${ev.title}</strong>
-          <p class="meta">📅 ${ev.when}</p>
-          <p class="meta">📍 ${ev.where}</p>
-          <button class="hit btn" data-go="evenement-details">Voir les détails</button>
-        </div>
-      </article>`
-      )
-      .join('')}
-    <button class="hit btn block" data-go="mairie-rdv">Prendre rendez-vous</button>
+    ${evenementsListeBody({
+      titles: ['Réunion publique', 'Fête de la ville', 'Conseil municipal (public)'],
+      detailsGo: 'evenement-details',
+    })}
+    <button class="hit btn primary block" data-go="mairie-rdv">Prendre rendez-vous</button>
     `,
     {
-      header: phoneHeader({ title: 'Ma mairie', backTo: 'accueil-kapan' }),
+      header: mairieHeader(),
       footer: phoneFooter('mairie'),
     }
   )
+}
+
+function mairieMenu() {
+  return wrap(`${photo('Fond Ma mairie…', 'dim')}`, {
+    header: mairieHeader(),
+    footer: phoneFooter('mairie'),
+    overlay: modalShell(
+      'Menu de Ma Mairie',
+      `
+      ${sheetOption('Partager Ma Mairie', { sim: 'partage' })}
+      ${sheetOption('Notification de Ma Mairie', { toggle: true, on: true })}
+      ${sheetOption('Discussions', { go: 'messages' })}
+      ${sheetOption('Quitter Ma Mairie', { sim: 'quitter' })}
+      `
+    ),
+  })
 }
 
 const MAIRIE_MOTIFS = [
@@ -657,15 +659,16 @@ function mairieRdv() {
       ${tbd('Confirmer / Annuler RDV — À préciser')}
     </article>
     <h2 class="sec">Motif de rendez-vous</h2>
-    <p class="meta">Un seul motif par rendez-vous</p>
-    ${MAIRIE_MOTIFS.map(
-      (m, i) => `
-      <button class="hit row-link motif-row ${i === 1 ? 'on' : ''}" type="button" data-motif="${m}">
+    <p class="meta">Un seul motif · toucher › pour choisir la date</p>
+    <div class="motif-list">
+      ${MAIRIE_MOTIFS.map(
+        (m) => `
+      <button class="hit row-link motif-row" data-go="mairie-rdv-creneau" data-motif="${m}">
         <span>${m}</span>
-        <span class="meta">${i === 1 ? '✓' : ''}</span>
+        <span class="chev" aria-hidden="true">›</span>
       </button>`
-    ).join('')}
-    <button class="hit btn primary block" data-go="mairie-rdv-creneau">Continuer — choisir la date</button>
+      ).join('')}
+    </div>
     `,
     {
       header: phoneHeader({ title: 'Prendre rendez-vous', backTo: 'mairie-accueil', showCity: true }),
@@ -677,7 +680,7 @@ function mairieRdv() {
 function mairieRdvCreneau() {
   return wrap(
     `
-    <p class="meta">Motif · Carte d’identité / Passeport <span class="meta">(illustratif)</span></p>
+    <p class="meta">Motif sélectionné · (illustratif)</p>
     <h2 class="sec">Choisir une date</h2>
     <p class="meta">Mai 2026</p>
     <div class="calendar">
@@ -737,29 +740,223 @@ function mairieRdvSuite() {
 function mairiePresentation() {
   return wrap(
     `
-    <article class="card post-card">
-      ${photo('Photo paysage…', 'wide')}
-      <strong>À propos de la ville de KAPAN</strong>
-      ${text('Texte de présentation…')}
-      <div class="post-actions">
-        <button class="hit btn" data-go="infos-reactions">♡ J’aime</button>
-        <button class="hit btn" data-go="infos-commentaires">💬 Commenter</button>
-        <button class="hit btn" data-go="infos-partage">↗ Partager</button>
-      </div>
-    </article>
-    <article class="card post-card">
-      <div class="photo-grid">${photo('Photo…')}${photo('Photo…')}${photo('+5')}</div>
-      <strong>Kapan, entre ville et nature</strong>
-      ${text('Texte…')}
-      <div class="post-actions">
-        <button class="hit btn" data-go="infos-reactions">♡ J’aime</button>
-        <button class="hit btn" data-go="infos-commentaires">💬 Commenter</button>
-        <button class="hit btn" data-go="infos-partage">↗ Partager</button>
-      </div>
-    </article>
+    ${publicationCard({
+      title: 'À propos de la ville de KAPAN',
+      body: 'Texte de présentation de la ville…',
+      optionsGo: 'mairie-presentation-options',
+    })}
+    ${publicationCard({
+      title: 'Kapan, entre ville et nature',
+      body: 'Texte…',
+      multi: true,
+      optionsGo: 'mairie-presentation-options',
+    })}
     `,
     {
       header: phoneHeader({ title: 'Présentation de la ville', backTo: 'mairie-accueil' }),
+      footer: phoneFooter('mairie'),
+    }
+  )
+}
+
+function mairiePresentationOptions() {
+  return wrap(`${photo('Fond présentation…', 'dim')}`, {
+    header: phoneHeader({ title: 'Présentation de la ville', backTo: 'mairie-presentation' }),
+    footer: phoneFooter('mairie'),
+    overlay: modalShell(
+      'Plus d’options',
+      `
+      ${sheetOption('Afficher la liste des réactions', { go: 'infos-reactions' })}
+      ${sheetOption('Modifier la publication', { go: 'mairie-nouvelle-publication' })}
+      ${sheetOption('Partager la publication', { go: 'infos-partage' })}
+      ${sheetOption('Supprimer la publication', { sim: 'supprimer' })}
+      `
+    ),
+  })
+}
+
+function mairieNouvellePublication() {
+  return wrap(
+    `
+    <div class="compose-area">
+      ${text('Dire quelque chose…')}
+    </div>
+    <h2 class="sec">Médias ajoutés</h2>
+    <div class="photo-grid media-added">
+      ${photo('Photo…')}${photo('Photo…')}${photo('Photo…')}${photo('Photo…')}
+    </div>
+    <div class="row-link static">
+      <span>Activer les commentaires</span>
+      <span class="toggle on" aria-hidden="true"></span>
+    </div>
+    <h2 class="sec">Ajouter à la publication</h2>
+    <button class="hit media-add-btn" data-go="mairie-medias-sheet">
+      <span class="ico-box round"></span>
+      <span>Médias</span>
+    </button>
+    <button class="hit btn primary block" data-sim="publier">Publier (simulé)</button>
+    `,
+    {
+      header: phoneHeader({ title: 'Nouvelle publication', backTo: 'mairie-accueil' }),
+      footer: phoneFooter('mairie'),
+    }
+  )
+}
+
+function mairieMediasSheet() {
+  return wrap(
+    `
+    <div class="compose-area">
+      ${text('Dire quelque chose…')}
+    </div>
+    `,
+    {
+      header: phoneHeader({ title: 'Nouvelle publication', backTo: 'mairie-nouvelle-publication' }),
+      footer: phoneFooter('mairie'),
+      overlay: modalShell(
+        'Médias',
+        `
+        ${sheetOption('Ajouter des photos ou vidéos', { sim: 'media' })}
+        ${sheetOption('Prendre une photo', { sim: 'media' })}
+        ${sheetOption('Prendre une vidéo', { sim: 'media' })}
+        `
+      ),
+    }
+  )
+}
+
+function mairieConseil() {
+  const person = (name, role, featured = false) => `
+    <article class="card conseil-card ${featured ? 'featured' : ''}">
+      <span class="avatar lg"></span>
+      <div class="grow">
+        <strong>${name}</strong>
+        <div class="meta accent-text">${role}</div>
+        ${featured ? text('Les membres du conseil municipal représentent les habitants…') : ''}
+      </div>
+    </article>
+  `
+  return wrap(
+    `
+    ${person('Gevorg Parsyan', 'Maire', true)}
+    <h2 class="sec">Les adjoints au Maire</h2>
+    ${person('Anush Mezhlumyan', '1er Adjoint')}
+    ${person('Davros Nabavian', '2ème Adjoint')}
+    ${person('Kohar Kinosyan', '3ème Adjoint')}
+    <h2 class="sec">Les délégués et conseillers</h2>
+    ${person('Vrtanes Gorgodian', 'Conseiller')}
+    ${person('Sosi Hagopian', 'Conseillère')}
+    ${person('Avids Minassian', 'Conseiller')}
+    <button class="hit row-link" data-go="mairie-conseil-edit">
+      <span>Édition (admin) — À préciser</span><span>›</span>
+    </button>
+    `,
+    {
+      header: phoneHeader({
+        title: 'Maire & Conseil municipal',
+        backTo: 'mairie-accueil',
+        extraRight: `<button class="hit icon-btn" data-go="mairie-conseil-edit" title="Éditer">⋯</button>`,
+      }),
+      footer: phoneFooter('mairie'),
+    }
+  )
+}
+
+function mairieConseilEdit() {
+  return wrap(
+    `
+    ${tbd('Écran d’édition admin — À préciser')}
+    <h2 class="sec">Informations du maire <button class="hit linkish" type="button">Modifier</button></h2>
+    <div class="conseil-edit-head">
+      <span class="avatar lg"></span>
+      <div>
+        <strong>Gevorg PARSYAN</strong>
+        <div class="meta accent-text">Maire</div>
+      </div>
+    </div>
+    <label class="field"><span>Nom du maire</span><input type="text" placeholder="Nom du maire" value="Gevorg PARSYAN" /></label>
+    <label class="field"><span>Biographie ou les mots du maire</span><textarea placeholder="Décrivez-vous…" rows="3"></textarea><span class="meta">0/100</span></label>
+    <h2 class="sec">Les adjoints au maire <button class="hit linkish" type="button">Enregistrer</button></h2>
+    <div class="row-link static">
+      <span>Ajouter des adjoints au maire</span>
+      <button class="hit icon-btn roundish" type="button">+</button>
+    </div>
+    <label class="field"><span>Nom</span><input type="text" value="Anush Mezhlumyan" /></label>
+    <p class="meta">Photo de l’adjoint</p>
+    <div class="row-link static">
+      <span class="avatar lg"></span>
+      <span class="meta">JPG / PNG · max 5 Mo · À préciser</span>
+    </div>
+    <h2 class="sec">Les délégués & conseillers <button class="hit linkish" type="button">Modifier</button></h2>
+    <div class="row-link static">
+      <span>Ajouter des délégués & conseillers</span>
+      <button class="hit icon-btn roundish" type="button">+</button>
+    </div>
+    <label class="field"><span>Nom</span><input type="text" placeholder="1er conseiller" /></label>
+    <p class="meta">Photo du conseiller — placeholder upload</p>
+    <span class="avatar lg upload-slot"></span>
+    <button class="hit btn primary block" data-sim="enregistrer">Enregistrer (simulé)</button>
+    `,
+    {
+      header: phoneHeader({ title: 'Maire & Conseil municipal', backTo: 'mairie-conseil' }),
+      footer: phoneFooter('mairie'),
+    }
+  )
+}
+
+function mairieInfos() {
+  const items = [
+    { title: 'Construction et réhabilitation de routes', cat: 'Transports', badge: 'À la une' },
+    { title: 'Rentrée scolaire — informations pratiques', cat: 'Éducation', badge: 'Admin' },
+    { title: 'Soutien aux commerces locaux', cat: 'Économie', badge: 'Admin' },
+  ]
+  return wrap(
+    `
+    ${mairieTabs('informations')}
+    <div class="chips filter-chips">
+      <button class="hit chip on" type="button">À la une</button>
+      <button class="hit chip" type="button">Administration municipale</button>
+      <button class="hit chip" type="button">Culture</button>
+    </div>
+    ${items
+      .map(
+        (it) => `
+      <article class="card info-feed-card">
+        <div class="info-feed-top">
+          <div class="slot-photo thumb with-badge">
+            <span>Photo…</span>
+            <span class="badge abs">${it.cat}</span>
+          </div>
+          <div class="grow">
+            <strong>${it.title}</strong>
+            <p class="meta accent-text">Admin Kapan</p>
+            ${text('Extrait de l’info mairie…')}
+          </div>
+        </div>
+        ${socialActions()}
+      </article>`
+      )
+      .join('')}
+    `,
+    {
+      header: phoneHeader({ title: 'Infos Mairie', backTo: 'mairie-accueil' }),
+      footer: phoneFooter('mairie'),
+    }
+  )
+}
+
+function mairiePlan() {
+  return wrap(
+    `
+    <h2 class="sec">Plan de la ville</h2>
+    ${tbd('Carte interactive — À préciser')}
+    ${photo('Carte de Kapan…', 'map hero')}
+    ${search('Rechercher un lieu…')}
+    <button class="hit row-link" type="button"><span>Lieux municipaux</span><span>›</span></button>
+    <button class="hit row-link" type="button"><span>Services de proximité</span><span>›</span></button>
+    `,
+    {
+      header: phoneHeader({ title: 'Plan de la ville', backTo: 'mairie-accueil' }),
       footer: phoneFooter('mairie'),
     }
   )
@@ -772,19 +969,7 @@ function mairieStub(title, note) {
     ${tbd(note || 'Contenu — À préciser')}
     ${photo('Photo / document…', 'wide')}
     ${text('Texte…')}
-    <article class="card post-card">
-      <header class="post-head">
-        <span class="avatar"></span>
-        <div><strong>Mairie de Kapan</strong><div class="meta">Publication · …</div></div>
-      </header>
-      ${text('Contenu type publication…')}
-      ${photo('Photo…', 'wide')}
-      <div class="post-actions">
-        <button class="hit btn" data-go="infos-reactions">♡ J’aime</button>
-        <button class="hit btn" data-go="infos-commentaires">💬 Commenter</button>
-        <button class="hit btn" data-go="infos-partage">↗ Partager</button>
-      </div>
-    </article>
+    ${postCard({ author: 'Mairie de Kapan', role: 'Publication', body: 'Contenu type publication…' })}
     <button class="hit row-link" data-go="mairie-accueil"><span>Retour Ma mairie</span><span>›</span></button>
     `,
     {
@@ -931,36 +1116,7 @@ function infosPartage() {
 function evenementsListe() {
   return wrap(
     `
-    ${search('Rechercher un événement…')}
-    ${chips(['Tous', 'Populaire', 'Près de moi', 'Les plus proches'])}
-    <div class="row-link static">
-      <strong>Juin 2026</strong>
-      <div class="chips">
-        <button class="hit chip" type="button">Toute période</button>
-        <button class="hit chip on" type="button">Cette semaine</button>
-      </div>
-    </div>
-    <div class="h-scroll dates">
-      ${[22, 23, 24, 25, 26, 27, 28]
-        .map(
-          (d) =>
-            `<button class="hit cal-day ${d === 26 ? 'on' : ''}" type="button">${d}</button>`
-        )
-        .join('')}
-    </div>
-    <h2 class="sec">Jeudi 26 Juin <span class="badge">3 événements</span></h2>
-    ${['Atelier Créatif de Kapan', 'Festival de Musique de Kapan', 'Randonnée Montagne Syunik']
-      .map(
-        (title) => `
-      <article class="card">
-        ${photo('Photo événement…', 'wide')}
-        <span class="badge">Catégorie…</span>
-        <strong>${title}</strong>
-        <p class="meta">16:30 – 18:30 · Lieu… · places restantes…</p>
-        <button class="hit btn primary" data-go="evenement-details">Voir les détails</button>
-      </article>`
-      )
-      .join('')}
+    ${evenementsListeBody()}
     `,
     {
       header: phoneHeader({ title: 'Événements', backTo: 'accueil-kapan' }),
@@ -982,11 +1138,7 @@ function evenementDetails() {
     </div>
     ${text('Description de l’événement…')}
     <button class="hit row-link" data-go="messages"><span>Centre de Messagerie</span><span>›</span></button>
-    <div class="post-actions">
-      <button class="hit btn" data-go="infos-reactions">♡ 128</button>
-      <button class="hit btn" data-go="infos-commentaires">💬 18</button>
-      <button class="hit btn" data-go="infos-partage">↗ 13</button>
-    </div>
+    ${socialActions({ likes: '128', comments: '18', shares: '13' })}
     <button class="hit btn block" data-sim="participation">Annuler la participation (simulé)</button>
     <h2 class="sec">Organisateurs</h2>
     <div class="row-link static">
@@ -2105,6 +2257,7 @@ export const SCREENS = {
     group: 'Ma mairie',
     render: mairieAccueilEvenements,
   },
+  'mairie-menu': { title: 'Menu Ma mairie', side: 'user', group: 'Ma mairie', render: mairieMenu },
   'mairie-rdv': { title: 'Prendre rendez-vous', side: 'user', group: 'Ma mairie', render: mairieRdv },
   'mairie-rdv-creneau': {
     title: 'RDV — Date & créneau',
@@ -2124,23 +2277,47 @@ export const SCREENS = {
     group: 'Ma mairie',
     render: mairiePresentation,
   },
+  'mairie-presentation-options': {
+    title: 'Présentation — Options',
+    side: 'user',
+    group: 'Ma mairie',
+    render: mairiePresentationOptions,
+  },
+  'mairie-nouvelle-publication': {
+    title: 'Nouvelle publication',
+    side: 'user',
+    group: 'Ma mairie',
+    render: mairieNouvellePublication,
+  },
+  'mairie-medias-sheet': {
+    title: 'Médias (sheet)',
+    side: 'user',
+    group: 'Ma mairie',
+    render: mairieMediasSheet,
+  },
   'mairie-conseil': {
     title: 'Maire & Conseil',
     side: 'user',
     group: 'Ma mairie',
-    render: () => mairieStub('Maire & Conseil municipal', 'Contenu institutionnel — À préciser'),
+    render: mairieConseil,
+  },
+  'mairie-conseil-edit': {
+    title: 'Conseil — Édition (admin)',
+    side: 'user',
+    group: 'Ma mairie',
+    render: mairieConseilEdit,
   },
   'mairie-infos': {
     title: 'Infos Mairie',
     side: 'user',
     group: 'Ma mairie',
-    render: () => mairieStub('Infos Mairie', 'Infos mairie — À préciser'),
+    render: mairieInfos,
   },
   'mairie-plan': {
     title: 'Plan de la ville',
     side: 'user',
     group: 'Ma mairie',
-    render: () => mairieStub('Plan de la ville', 'Carte interactive — À préciser'),
+    render: mairiePlan,
   },
 
   'infos-citoyen': { title: 'Infos citoyen', side: 'user', group: 'Social / contenus', render: infosCitoyen },
@@ -3234,6 +3411,7 @@ export const NAV_TREE = {
             id: 'mairie-accueil',
             label: 'Ma mairie',
             children: [
+              { id: 'mairie-menu', label: 'Menu Ma mairie' },
               { id: 'mairie-accueil-evenements', label: 'Événements (onglet)' },
               {
                 id: 'mairie-rdv',
@@ -3243,8 +3421,21 @@ export const NAV_TREE = {
                   { id: 'mairie-rdv-suite', label: 'Confirmation' },
                 ],
               },
-              { id: 'mairie-presentation', label: 'Présentation de la ville' },
-              { id: 'mairie-conseil', label: 'Maire & Conseil' },
+              {
+                id: 'mairie-presentation',
+                label: 'Présentation de la ville',
+                children: [{ id: 'mairie-presentation-options', label: 'Plus d’options' }],
+              },
+              {
+                id: 'mairie-nouvelle-publication',
+                label: 'Nouvelle publication',
+                children: [{ id: 'mairie-medias-sheet', label: 'Médias (sheet)' }],
+              },
+              {
+                id: 'mairie-conseil',
+                label: 'Maire & Conseil',
+                children: [{ id: 'mairie-conseil-edit', label: 'Édition admin' }],
+              },
               { id: 'mairie-infos', label: 'Infos Mairie' },
               { id: 'mairie-plan', label: 'Plan de la ville' },
             ],

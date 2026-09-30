@@ -68,6 +68,9 @@ function handleSim(kind) {
     'filtre-admin': 'Filtres admin — À préciser',
     enregistrer: 'Ajout aux enregistrements (simulé)',
     signalement: 'Signalement envoyé (simulé — À préciser)',
+    quitter: 'Quitter Ma Mairie (simulé — À préciser)',
+    supprimer: 'Suppression (simulée — À préciser)',
+    media: 'Ajout média (simulé)',
   }
   toast(map[action] || `Action simulée : ${kind}`)
 }
@@ -178,19 +181,6 @@ function render({ focusActive = false, resetNavScroll = false } = {}) {
       e.preventDefault()
       day.parentElement.querySelectorAll('.cal-day').forEach((d) => d.classList.remove('on'))
       day.classList.add('on')
-      return
-    }
-    const motif = e.target.closest('.motif-row')
-    if (motif && motif.closest('.phone-scroll, .phone-inner')) {
-      e.preventDefault()
-      motif.parentElement.querySelectorAll('.motif-row').forEach((r) => {
-        r.classList.remove('on')
-        const mark = r.querySelector('span.meta')
-        if (mark) mark.textContent = ''
-      })
-      motif.classList.add('on')
-      const mark = motif.querySelector('span.meta')
-      if (mark) mark.textContent = '✓'
       return
     }
     const chip = e.target.closest('.chip')

@@ -1,7 +1,7 @@
-# Ma Ville — wireframe interactif (local)
+# Ma Ville — wireframe interactif
 
 Prototype de structure navigable pour **Ma Ville** (MIASIN hors scope).  
-Panneau gauche = navigation du prototype · téléphone 390 px = structure (pas un mockup hi‑fi).
+Panneau gauche = navigation · téléphone 390 px = structure (pas un mockup hi‑fi). Charte mairie : teal `#29676D`.
 
 ## Lancer en local
 
@@ -10,30 +10,31 @@ npm install
 npm run dev
 ```
 
-Ouvre [http://127.0.0.1:4317](http://127.0.0.1:4317) dans Chrome.
+Ouvre [http://127.0.0.1:4317](http://127.0.0.1:4317).
 
 - Port fixe : **4317** (`vite.config.js`)
-- Clics dans le téléphone et dans le panneau gauche naviguent entre les écrans
 - Actions Appeler / Itinéraire / Message → toast « simulé »
-- Zones non définies → libellé **À préciser**
+- Zones non définies → **À préciser**
 
-## Contenu
+## Contenu (Ma mairie)
 
-- **Côté utilisateur** : entrée (choix de ville), accueil Kapan, Santé (modèle annuaire), Ma mairie, social/contenus, Vie locale (hub + rubriques), **Météo** (accueil synthèse + Maintenant / Aujourd’hui / Demain / 7 jours), états UI
-- **Côté administrateur** : coquilles (home, liste contenus, édition) — workflows non inventés
-- Écrans navigables (structure only) ; valeurs météo illustratives ou **Indisponible**
+- Accueil Publications / Événements / Informations + grille d’accès
+- RDV : liste de motifs avec **›** (pas de bouton Continuer) → date / créneaux → confirmation
+- Présentation type publications (photo, titre, J’aime / Commentaire / Partage, sheet options)
+- Nouvelle publication + sheet Médias, Maire & Conseil, Infos Mairie (filtres), édition admin stub
 
-## Qui peut voir le wireframe ?
+## Partage durable (Vercel)
 
-| Mode | Visibilité |
-|---|---|
-| `npm run dev` | Localhost (toi seul) |
-| Tunnel trycloudflare | Partage temporaire tant que la VM tourne |
-| Build static + Vercel/Cloudflare claim | Lien partageable durable (PC éteint) |
+Les URLs anonymes Vercel expirent (~60 min) **sauf si vous les revendiquez**.
+
+1. Ouvrir le **lien Claim** fourni après le déploiement (validité limitée).
+2. Se connecter à Vercel et accepter le déploiement.
+3. Dans Vercel : **Project Settings → General → Project Name** (ex. `ma-ville-wireframe`) pour changer le sous-domaine `*.vercel.app`.
 
 ```bash
 npm run build
-# puis déployer dist/ (ex. vercel deploy dist --temporary, puis claim)
+npx vercel deploy dist --yes
+# récupérer claim URL dans la sortie / .vercel/anonymous.json
 ```
 
 ## Build
