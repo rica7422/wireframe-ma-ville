@@ -916,12 +916,13 @@ button.tree-node:hover .tree-label {
 .members-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   border: 1px solid var(--line-soft);
   background: #fff;
-  padding: 8px;
-  border-radius: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
   font-size: 0.8rem;
+  flex-wrap: wrap;
 }
 
 .members-row .btn {
