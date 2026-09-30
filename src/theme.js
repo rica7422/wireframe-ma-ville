@@ -23,7 +23,7 @@ export const SECTION = {
   tourisme: '#CC8040',
   meteo: '#CA8A04',
   urgence: '#DC2626',
-  signalement: '#475569',
+  signalement: '#9F1239',
   patrimoine: '#CC8040',
   restaurants: '#AF734A',
   neutral: '#001339',

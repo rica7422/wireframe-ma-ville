@@ -173,6 +173,26 @@ function render({ focusActive = false, resetNavScroll = false } = {}) {
 
   const phone = document.getElementById('phone-inner')
   phone.addEventListener('click', (e) => {
+    const day = e.target.closest('.cal-day')
+    if (day && day.closest('.calendar') && !day.classList.contains('closed')) {
+      e.preventDefault()
+      day.parentElement.querySelectorAll('.cal-day').forEach((d) => d.classList.remove('on'))
+      day.classList.add('on')
+      return
+    }
+    const motif = e.target.closest('.motif-row')
+    if (motif && motif.closest('.phone-scroll, .phone-inner')) {
+      e.preventDefault()
+      motif.parentElement.querySelectorAll('.motif-row').forEach((r) => {
+        r.classList.remove('on')
+        const mark = r.querySelector('span.meta')
+        if (mark) mark.textContent = ''
+      })
+      motif.classList.add('on')
+      const mark = motif.querySelector('span.meta')
+      if (mark) mark.textContent = '✓'
+      return
+    }
     const chip = e.target.closest('.chip')
     if (chip && chip.closest('.chips')) {
       e.preventDefault()

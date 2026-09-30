@@ -25,7 +25,7 @@
   --c-tourisme: #cc8040;
   --c-meteo: #ca8a04;
   --c-urgence: #dc2626;
-  --c-signalement: #475569;
+  --c-signalement: #9f1239;
   --c-patrimoine: #cc8040;
   --c-restaurants: #af734a;
 
@@ -952,10 +952,48 @@ button.tree-node:hover .tree-label {
   min-height: 70px;
 }
 
-.post-actions {
-  display: flex;
+.mairie-acces.grid-4 {
   gap: 6px;
-  flex-wrap: wrap;
+}
+
+.mairie-acces .icon-tile {
+  font-size: 0.62rem;
+  padding: 8px 2px;
+  min-height: 72px;
+}
+
+.mairie-acces .ico-box {
+  width: 24px;
+  height: 24px;
+}
+
+.motif-row.on {
+  border-color: var(--accent, var(--ink));
+  background: var(--accent-soft, #eef0f4);
+}
+
+.motif-row.on span:first-child {
+  font-weight: 600;
+}
+
+.post-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 0;
+}
+
+.post-actions .btn {
+  border-radius: 0;
+  border-left: none;
+}
+
+.post-actions .btn:first-child {
+  border-left: 1px solid var(--line);
+  border-radius: 8px 0 0 8px;
+}
+
+.post-actions .btn:last-child {
+  border-radius: 0 8px 8px 0;
 }
 
 .post-social {
