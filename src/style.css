@@ -2405,7 +2405,7 @@ button.tree-node:hover .tree-label {
 .event-detail {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 20px;
 }
 .event-detail-head {
   display: flex;
@@ -2427,8 +2427,11 @@ button.tree-node:hover .tree-label {
 }
 .event-detail .stats-row {
   gap: 12px;
-  padding: 16px 0;
+  padding: 20px 0;
   margin: 4px 0;
+}
+.event-detail .btn.primary.block {
+  margin: 8px 0 12px;
 }
 .event-detail .places-note {
   margin: 0 0 8px;
