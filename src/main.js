@@ -24,6 +24,13 @@ import {
   getCommentContext,
 } from './content-context.js'
 import { getDirectory } from './demo-data.js'
+import {
+  setSignalFilter,
+  setOpenSignalId,
+  createSignalement,
+  appendSignalMessage,
+  setSignalStatus,
+} from './signalements-data.js'
 
 const historyStack = []
 let currentId = 'ville-bienvenue'
@@ -32,6 +39,7 @@ let navTab = 'user' // 'user' | 'admin'
 let savedNavScroll = 0
 
 const ADMIN_IDS = new Set(navIdsForSide('admin'))
+const USER_IDS = new Set(navIdsForSide('user'))
 const ROOTS = new Set([
   'accueil-kapan',
   'mairie-accueil',
@@ -39,6 +47,13 @@ const ROOTS = new Set([
   'messages',
   'menu-plus',
 ])
+
+function pickNavTab(id) {
+  const inAdmin = ADMIN_IDS.has(id)
+  const inUser = USER_IDS.has(id)
+  if (inAdmin && inUser) return isAdminRole() ? 'admin' : 'user'
+  return inAdmin ? 'admin' : 'user'
+}
 
 function toast(msg) {
   const el = document.getElementById('toast')
@@ -52,8 +67,13 @@ function toast(msg) {
 
 function refuseManage(id) {
   toast('Accès refusé pour ce rôle (simulé)')
-  const publicFallback =
-    id?.startsWith('evenement-') ? 'evenement-details' : id?.startsWith('mairie-') ? 'mairie-accueil' : 'mairie-accueil'
+  const publicFallback = id?.startsWith('evenement-')
+    ? 'evenement-details'
+    : id?.startsWith('signalement')
+      ? 'signalements'
+      : id?.startsWith('mairie-')
+        ? 'mairie-accueil'
+        : 'mairie-accueil'
   if (SCREENS[publicFallback]) {
     // Always land on public view + sync hash (currentId may already be the fallback
     // when hash was set before the gate ran).
@@ -81,7 +101,7 @@ function go(id, { push = true, resetStack = false } = {}) {
   if (resetStack) historyStack.length = 0
   if (push && currentId && currentId !== id) historyStack.push(currentId)
   currentId = id
-  navTab = ADMIN_IDS.has(id) ? 'admin' : 'user'
+  navTab = pickNavTab(id)
   if (location.hash.slice(1) !== id) {
     history.replaceState(null, '', `#${id}`)
   }
@@ -97,7 +117,7 @@ function back() {
       return
     }
     currentId = prev
-    navTab = ADMIN_IDS.has(prev) ? 'admin' : 'user'
+    navTab = pickNavTab(prev)
     if (location.hash.slice(1) !== prev) {
       history.replaceState(null, '', `#${prev}`)
     }
@@ -164,6 +184,53 @@ function handleSim(kind) {
   if (action === 'accept' && arg) {
     toast('Participant accepté (simulé)')
     render()
+    return
+  }
+  if (action === 'signal-filter' && arg) {
+    setSignalFilter(isAdminRole(), arg)
+    render()
+    return
+  }
+  if (action === 'signal-create') {
+    createSignalement({
+      subject: 'Nouveau signalement',
+      category: 'Voirie',
+      place: 'Lieu saisi…',
+      body: 'Message…',
+    })
+    toast('Signalement envoyé (simulé)')
+    go('signalement-conversation', { push: false })
+    return
+  }
+  if (action === 'signal-reply' && arg) {
+    const admin = isAdminRole()
+    appendSignalMessage(arg, {
+      kind: admin ? 'mairie' : 'user',
+      body: admin ? 'Réponse de la mairie (simulée).' : 'Réponse habitant (simulée).',
+      authorLabel: admin ? 'Mairie de Kapan' : 'Rica',
+    })
+    toast('Réponse envoyée (simulé)')
+    render()
+    return
+  }
+  if (action === 'signal-status' && arg) {
+    // kind = signal-status:id:Status — Status may contain spaces (En cours)
+    const parts = String(kind).split(':')
+    const sid = parts[1]
+    const status = parts.slice(2).join(':')
+    if (!isAdminRole()) {
+      toast('Accès refusé pour ce rôle (simulé)')
+      return
+    }
+    const explanation =
+      status === 'Résolu'
+        ? 'Problème traité.'
+        : status === 'Clôturé'
+          ? 'Clôturé sans résolution.'
+          : ''
+    setSignalStatus(sid, status, explanation)
+    toast(`Statut · ${status} (simulé)`)
+    go('signalement-conversation', { push: false })
     return
   }
   if (action === 'supprimer' || action === 'delete-confirm') {
@@ -337,7 +404,7 @@ function render({ focusActive = false, resetNavScroll = false } = {}) {
       <aside class="proto-nav">
         <header class="proto-brand">
           <strong>Ma Ville</strong>
-          <span class="proto-tag">Wireframe · build 1001-f · nav-stack</span>
+          <span class="proto-tag">Wireframe · build 1001-g · signalements</span>
         </header>
         <p class="proto-hint">Navigation du prototype (≠ nav dans le téléphone)</p>
         <div class="nav-tabs" role="tablist" aria-label="Côté prototype">
@@ -407,6 +474,13 @@ function render({ focusActive = false, resetNavScroll = false } = {}) {
       go('infos-reactions')
       return
     }
+    const openSignal = e.target.closest('[data-open-signal]')
+    if (openSignal) {
+      e.preventDefault()
+      setOpenSignalId(openSignal.dataset.openSignal)
+      go('signalement-conversation')
+      return
+    }
     const day = e.target.closest('.cal-day')
     if (day && day.closest('.calendar') && !day.classList.contains('closed')) {
       e.preventDefault()
@@ -442,6 +516,10 @@ function render({ focusActive = false, resetNavScroll = false } = {}) {
     const chip = e.target.closest('.chip')
     if (chip && chip.closest('.chips') && !chip.closest('.lifecycle-bar')) {
       e.preventDefault()
+      if (chip.dataset.sim) {
+        handleSim(chip.dataset.sim)
+        return
+      }
       chip.parentElement.querySelectorAll('.chip').forEach((c) => c.classList.remove('on'))
       chip.classList.add('on')
       return
@@ -517,6 +595,7 @@ function resolveScreenId(id) {
   if (id === 'admin-bo-mairie') return 'admin-mairie'
   if (id === 'admin-bo-evenements-creer') return 'evenement-gerer'
   if (id === 'admin-bo-annuaire-form') return 'fiche-annuaire-form'
+  if (id === 'page-signalement' || (id && id.startsWith('dir-signalement'))) return 'signalements'
   return id
 }
 

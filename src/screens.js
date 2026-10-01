@@ -41,6 +41,16 @@ import {
   getParticipant,
 } from './demo-data.js'
 import { getCommentContext, getReactContext } from './content-context.js'
+import {
+  SIGNAL_CATEGORIES,
+  listSignalementsForViewer,
+  getSignalement,
+  getOpenSignalId,
+  getSignalFilter,
+  markSignalRead,
+  statusTransitions,
+  canReplyToSignal,
+} from './signalements-data.js'
 
 /** Screen registry: id → { title, group, render(state) } */
 
@@ -191,7 +201,7 @@ function accueilKapan() {
     { label: 'Sécurité', go: 'dir-securite', section: 'securite' },
     { label: 'Tourisme', go: 'dir-tourisme', section: 'tourisme' },
     { label: 'Météo', go: 'page-meteo', section: 'meteo' },
-    { label: 'Signalement', go: 'page-signalement', section: 'signalement' },
+    { label: 'Signalements', go: 'signalements', section: 'signalement' },
   ]
   const hex = (s) => colorFor(s)
 
@@ -2847,7 +2857,7 @@ function vieLocaleHub() {
     ['Bibliothèque', 'dir-bibliotheques'],
     ['Permanences', 'dir-permanences'],
     ['Sécurité', 'dir-securite'],
-    ['Signalement', 'page-signalement'],
+    ['Signalements', 'signalements'],
     ['Météo', 'page-meteo'],
   ]
   const other = [
@@ -3182,21 +3192,257 @@ function meteo7Jours() {
   )
 }
 
-function pageSignalement() {
-  return rubriqueAccueil({
-    title: 'Signalement',
-    bannerTitle: 'Signalement',
-    bannerText: 'Annuaire de services / contacts (pas un formulaire de ticket)',
-    searchPh: 'Rechercher un service…',
-    filters: ['Tous', 'Ouverts', 'À proximité', 'Enregistrés'],
-    proposition: true,
-    cats: [
-      { label: 'Voirie', go: 'dir-signalement-voirie', ficheGo: 'dir-signalement-voirie-fiche-infos' },
-      { label: 'Éclairage', go: 'dir-signalement-eclairage', ficheGo: 'dir-signalement-eclairage-fiche-infos' },
-      { label: 'Propreté', go: 'dir-signalement-proprete', ficheGo: 'dir-signalement-proprete-fiche-infos' },
-      { label: 'Équipements', go: 'dir-signalement-equipements', ficheGo: 'dir-signalement-equipements-fiche-infos' },
-    ],
-  })
+function signalFilterChips(admin) {
+  const filters = admin
+    ? ['Tous', 'À traiter', 'En cours', 'Résolus']
+    : ['Tous', 'En cours', 'Résolus']
+  const active = getSignalFilter(admin)
+  return `<div class="chips">${filters
+    .map(
+      (f) =>
+        `<button class="hit chip ${f === active ? 'on' : ''}" type="button" data-sim="signal-filter:${f}">${f}</button>`
+    )
+    .join('')}</div>`
+}
+
+function signalStatusBadge(status) {
+  return `<span class="badge signal-status-badge">${status}</span>`
+}
+
+function signalementsInbox() {
+  const admin = isAdminRole()
+  const list = listSignalementsForViewer({ admin })
+  const title = admin ? 'Signalements reçus' : 'Signalements'
+  const intro = admin
+    ? 'Boîte de la mairie de Kapan — signalements du quartier.'
+    : 'Un problème dans votre quartier ? Écrivez à votre mairie et suivez ses réponses ici.'
+
+  const rows =
+    list.length === 0
+      ? `
+      ${emptyState(
+        admin
+          ? 'Aucun signalement pour cette ville.'
+          : 'Vous n’avez pas encore envoyé de signalement.'
+      )}
+      ${
+        admin
+          ? ''
+          : `<button class="hit btn primary block" data-go="signalement-nouveau" type="button">Signaler un problème</button>`
+      }`
+      : list
+          .map((s) => {
+            const last =
+              [...s.messages].reverse().find((m) => m.kind !== 'status') ||
+              s.messages[s.messages.length - 1]
+            const preview = last
+              ? `${last.authorLabel || 'Statut'} · ${last.body}`
+              : ''
+            const date = (last?.at || '').split(' · ')[0] || '…'
+            return `
+        <button class="hit signal-row ${s.unread ? 'signal-unread' : ''}" type="button" data-open-signal="${s.id}">
+          <div class="signal-row-top">
+            <span class="badge">${s.category}</span>
+            ${signalStatusBadge(s.status)}
+            ${s.unread ? '<span class="signal-dot" aria-label="Non lu"></span>' : ''}
+          </div>
+          <strong>${s.subject}</strong>
+          ${admin ? `<p class="meta">${s.authorName}</p>` : ''}
+          <p class="meta signal-preview">${preview}</p>
+          <span class="meta signal-date">${date}</span>
+        </button>`
+          })
+          .join('')
+
+  return wrap(
+    `
+    <h2 class="sec">${title}</h2>
+    <p class="meta">${intro}</p>
+    ${
+      admin
+        ? ''
+        : `<button class="hit btn primary block" data-go="signalement-nouveau" type="button">Nouveau signalement</button>`
+    }
+    ${signalFilterChips(admin)}
+    <div class="signal-list">${rows}</div>
+    `,
+    {
+      header: phoneHeader({ title, backTo: 'accueil-kapan' }),
+      footer: phoneFooter('menu'),
+    }
+  )
+}
+
+function signalementNouveau() {
+  const uploadSlot = `
+    <p class="meta">Photos (facultatif)</p>
+    <div class="upload-box">
+      <span class="avatar lg upload-slot"></span>
+      <p class="meta">Ajoutez une image · JPG / PNG · max 5 Mo</p>
+      <button class="hit btn" type="button" data-sim="upload">Choisir</button>
+    </div>
+  `
+  return wrap(
+    `
+    <h2 class="sec">Nouveau signalement</h2>
+    <label class="field"><span>Objet</span><input type="text" placeholder="Objet du signalement" /></label>
+    <label class="field"><span>Catégorie</span>
+      <select>
+        ${SIGNAL_CATEGORIES.map((c) => `<option>${c}</option>`).join('')}
+      </select>
+    </label>
+    <label class="field"><span>Lieu</span><input type="text" placeholder="Adresse ou lieu précis" /></label>
+    <label class="field"><span>Message</span><textarea placeholder="Décrivez le problème…" rows="4"></textarea></label>
+    ${uploadSlot}
+    <button class="hit btn primary block" type="button" data-sim="signal-create">Envoyer</button>
+    `,
+    {
+      header: phoneHeader({ title: 'Nouveau', backTo: 'signalements' }),
+      footer: phoneFooter('menu'),
+    }
+  )
+}
+
+function signalementConversation() {
+  const admin = isAdminRole()
+  const id = getOpenSignalId()
+  const s = id ? getSignalement(id) : null
+  if (!s) {
+    return wrap(
+      `
+      ${emptyState('Aucun signalement sélectionné.')}
+      <button class="hit btn primary block" data-go="signalements" type="button">Retour à la boîte</button>
+      `,
+      {
+        header: phoneHeader({ title: 'Signalement', backTo: 'signalements' }),
+        footer: phoneFooter('menu'),
+      }
+    )
+  }
+  markSignalRead(s.id)
+  const first = s.messages.find((m) => m.kind === 'user') || s.messages[0]
+  const rest = s.messages.filter((m) => m !== first)
+  const canReply = canReplyToSignal(s.status)
+  const extraRight = admin
+    ? `<button class="hit icon-btn" data-go="signalement-statut" title="Options" aria-label="Options">⋯</button>`
+    : ''
+
+  const thread = rest
+    .map((m) => {
+      if (m.kind === 'status') {
+        return `<p class="signal-status-line meta">${m.body}<br/><span>${m.at || ''}</span></p>`
+      }
+      const side = m.kind === 'mairie' ? 'in' : 'out'
+      return `
+        <div class="bubble ${side}">
+          <span class="meta">${m.authorLabel || ''}</span><br/>
+          ${m.body}
+          ${m.photos ? `<div class="meta">📷 Photo jointe</div>` : ''}
+          <div class="meta">${m.at || ''}</div>
+        </div>`
+    })
+    .join('')
+
+  const composer = canReply
+    ? `
+    <div class="composer-bar">
+      <input type="text" placeholder="Répondre…" />
+      <button class="hit btn primary" type="button" data-sim="signal-reply:${s.id}">Envoyer</button>
+    </div>`
+    : `
+    <p class="meta signal-status-line">Ce signalement est ${s.status}. La saisie est désactivée.</p>
+    <div class="composer-bar">
+      <input type="text" placeholder="Conversation clôturée" disabled />
+      <button class="hit btn" type="button" disabled>Envoyer</button>
+    </div>`
+
+  return wrap(
+    `
+    <div class="signal-conv-meta">
+      ${signalStatusBadge(s.status)}
+      ${admin ? `<p class="meta">${s.authorName}</p>` : ''}
+    </div>
+    <div class="signal-first">
+      <div class="signal-row-top">
+        <span class="badge">${s.category}</span>
+      </div>
+      <p class="meta"><strong>Lieu</strong> · ${s.place}</p>
+      <p>${first?.body || ''}</p>
+      ${first?.photos ? `<div class="upload-box"><span class="avatar lg upload-slot"></span><p class="meta">Photo jointe</p></div>` : ''}
+      <p class="meta">${first?.at || ''}</p>
+    </div>
+    <div class="chat signal-thread">${thread}</div>
+    ${composer}
+    `,
+    {
+      header: phoneHeader({
+        title: s.subject,
+        backTo: 'signalements',
+        extraRight,
+      }),
+      footer: phoneFooter('menu'),
+    }
+  )
+}
+
+function signalementStatut() {
+  if (!isAdminRole()) {
+    return wrap(
+      `
+      ${emptyState('Accès réservé à la mairie.')}
+      <button class="hit btn block" data-go="signalements" type="button">Retour</button>
+      `,
+      { header: phoneHeader({ title: 'Statut', backTo: 'signalements' }) }
+    )
+  }
+  const id = getOpenSignalId()
+  const s = id ? getSignalement(id) : null
+  if (!s) {
+    return wrap(
+      `${emptyState('Aucun signalement.')}`,
+      {
+        header: phoneHeader({ title: 'Statut', backTo: 'signalements' }),
+        overlay: modalShell(
+          'Changer le statut',
+          `<p class="meta">Ouvrez d’abord une conversation.</p>`,
+          `<button class="hit btn block" data-go="signalements" type="button">Boîte</button>`
+        ),
+      }
+    )
+  }
+  const transitions = statusTransitions(s.status)
+  const quick = transitions.filter((t) => t === 'Envoyé' || t === 'En cours')
+  const needsExplain = transitions.filter((t) => t === 'Résolu' || t === 'Clôturé')
+  const body = `
+    <p class="meta">Statut actuel · <strong>${s.status}</strong></p>
+    ${quick.map((t) => sheetOption(t, { sim: `signal-status:${s.id}:${t}` })).join('')}
+    ${
+      needsExplain.length
+        ? `
+      <div class="sheet-sep" aria-hidden="true"></div>
+      <p class="meta">Résolu / Clôturé — explication obligatoire (simulée)</p>
+      <label class="field"><span>Explication</span><textarea placeholder="Court message ou motif de clôture…" rows="3"></textarea></label>
+      ${needsExplain
+        .map(
+          (t) =>
+            `<button class="hit btn ${t === 'Résolu' ? 'primary' : ''} block" type="button" data-sim="signal-status:${s.id}:${t}">Enregistrer · ${t}</button>`
+        )
+        .join('')}`
+        : ''
+    }
+  `
+  return wrap(
+    `
+    <div class="signal-conv-meta">
+      <strong>${s.subject}</strong>
+      ${signalStatusBadge(s.status)}
+    </div>
+    `,
+    {
+      header: phoneHeader({ title: s.subject, backTo: 'signalement-conversation' }),
+      overlay: modalShell('Changer le statut', body),
+    }
+  )
 }
 
 /** Distributeur ATM — horaires = accessibilité ; Appeler seulement si contact */
@@ -3326,7 +3572,7 @@ function adminHome() {
     { label: 'Brouillons', meta: 'Publications & fiches en cours', count: 3, go: 'admin-mairie' },
     { label: 'Inscriptions à valider', meta: 'Événements · file d’attente', count: 2, go: 'evenement-validation' },
     { label: 'RDV du jour', meta: 'Accueil mairie', count: 1, go: 'admin-rdv' },
-    { label: 'Signalements', meta: 'Modération', count: 1, go: 'admin-moderation' },
+    { label: 'Signalements', meta: 'Modération contenus', count: 1, go: 'admin-moderation' },
   ]
   return wrap(
     `
@@ -3361,6 +3607,9 @@ function adminHome() {
     </button>
     <button class="hit row-link" data-go="admin-rdv" type="button">
       <span><strong>Rendez-vous</strong></span><span>›</span>
+    </button>
+    <button class="hit row-link" data-go="signalements" type="button">
+      <span><strong>Signalements reçus</strong><br/><span class="meta">Boîte quartier · ≠ modération</span></span><span>›</span>
     </button>
     <button class="hit row-link" data-go="admin-moderation" type="button">
       <span><strong>Modération</strong></span><span>›</span>
@@ -3542,8 +3791,12 @@ function adminModeration() {
   return wrap(
     `
     <h2 class="sec">Modération</h2>
+    <p class="meta">Contenus signalés (publications / profils) — distinct de la boîte quartier.</p>
     <button class="hit row-link" data-sim="signalement" type="button">
       <span><strong>Signalement #1</strong><br/><span class="meta">Publication · En attente</span></span><span>›</span>
+    </button>
+    <button class="hit row-link" data-go="signalements" type="button">
+      <span><strong>Signalements quartier</strong><br/><span class="meta">Boîte mairie · Voirie, éclairage…</span></span><span>›</span>
     </button>
     ${emptyState('File courte — wireframe')}
     `,
@@ -4819,51 +5072,30 @@ export const SCREENS = {
       }),
   },
 
-  /* —— Signalement (annuaire) —— */
-  'page-signalement': { title: 'Signalement — À valider', side: 'user', group: 'Vie locale', render: pageSignalement },
-  'dir-signalement-voirie': {
-    title: 'Voirie — À valider',
+  /* —— Signalements (mailbox) —— */
+  signalements: {
+    title: 'Signalements',
     side: 'user',
     group: 'Vie locale',
-    render: () =>
-      rubriqueListe('Voirie', 'page-signalement', {
-        ficheGo: 'dir-bibliotheques-mediatheques-fiche-infos',
-        filters: ['Tous', 'Ouverts', 'À proximité', 'Enregistrés'],
-        proposition: true,
-      }),
+    render: signalementsInbox,
   },
-  'dir-signalement-eclairage': {
-    title: 'Éclairage — À valider',
+  'signalement-nouveau': {
+    title: 'Nouveau signalement',
     side: 'user',
     group: 'Vie locale',
-    render: () =>
-      rubriqueListe('Éclairage', 'page-signalement', {
-        ficheGo: 'dir-bibliotheques-universitaires-fiche-infos',
-        filters: ['Tous', 'Ouverts', 'À proximité', 'Enregistrés'],
-        proposition: true,
-      }),
+    render: signalementNouveau,
   },
-  'dir-signalement-proprete': {
-    title: 'Propreté — À valider',
+  'signalement-conversation': {
+    title: 'Conversation signalement',
     side: 'user',
     group: 'Vie locale',
-    render: () =>
-      rubriqueListe('Propreté', 'page-signalement', {
-        ficheGo: 'dir-bibliotheques-salles-de-lecture-fiche-infos',
-        filters: ['Tous', 'Ouverts', 'À proximité', 'Enregistrés'],
-        proposition: true,
-      }),
+    render: signalementConversation,
   },
-  'dir-signalement-equipements': {
-    title: 'Équipements — À valider',
+  'signalement-statut': {
+    title: 'Changer statut (admin)',
     side: 'user',
     group: 'Vie locale',
-    render: () =>
-      rubriqueListe('Équipements', 'page-signalement', {
-        ficheGo: 'dir-permanences-administratives-fiche-infos',
-        filters: ['Tous', 'Ouverts', 'À proximité', 'Enregistrés'],
-        proposition: true,
-      }),
+    render: signalementStatut,
   },
 
   /* —— Météo (accueil synthèse + 4 destinations + 3 modèles) —— */
@@ -5831,110 +6063,6 @@ export const SCREENS = {
         idHoraires: 'dir-securite-secours-fiche-horaires',
       }),
   },
-  'dir-signalement-eclairage-fiche-infos': {
-    title: 'Éclairage — Détail',
-    side: 'user',
-    group: 'Vie locale',
-    render: () =>
-      dirFiche('infos', {
-        title: 'Éclairage — fiche…',
-        category: 'Éclairage',
-        backTo: 'dir-signalement-eclairage',
-        idInfos: 'dir-signalement-eclairage-fiche-infos',
-        idHoraires: 'dir-signalement-eclairage-fiche-horaires',
-      }),
-  },
-  'dir-signalement-eclairage-fiche-horaires': {
-    title: 'Éclairage — Horaires',
-    side: 'user',
-    group: 'Vie locale',
-    render: () =>
-      dirFiche('horaires', {
-        title: 'Éclairage — fiche…',
-        category: 'Éclairage',
-        backTo: 'dir-signalement-eclairage',
-        idInfos: 'dir-signalement-eclairage-fiche-infos',
-        idHoraires: 'dir-signalement-eclairage-fiche-horaires',
-      }),
-  },
-  'dir-signalement-equipements-fiche-infos': {
-    title: 'Équipements — Détail',
-    side: 'user',
-    group: 'Vie locale',
-    render: () =>
-      dirFiche('infos', {
-        title: 'Équipements — fiche…',
-        category: 'Équipements',
-        backTo: 'dir-signalement-equipements',
-        idInfos: 'dir-signalement-equipements-fiche-infos',
-        idHoraires: 'dir-signalement-equipements-fiche-horaires',
-      }),
-  },
-  'dir-signalement-equipements-fiche-horaires': {
-    title: 'Équipements — Horaires',
-    side: 'user',
-    group: 'Vie locale',
-    render: () =>
-      dirFiche('horaires', {
-        title: 'Équipements — fiche…',
-        category: 'Équipements',
-        backTo: 'dir-signalement-equipements',
-        idInfos: 'dir-signalement-equipements-fiche-infos',
-        idHoraires: 'dir-signalement-equipements-fiche-horaires',
-      }),
-  },
-  'dir-signalement-proprete-fiche-infos': {
-    title: 'Propreté — Détail',
-    side: 'user',
-    group: 'Vie locale',
-    render: () =>
-      dirFiche('infos', {
-        title: 'Propreté — fiche…',
-        category: 'Propreté',
-        backTo: 'dir-signalement-proprete',
-        idInfos: 'dir-signalement-proprete-fiche-infos',
-        idHoraires: 'dir-signalement-proprete-fiche-horaires',
-      }),
-  },
-  'dir-signalement-proprete-fiche-horaires': {
-    title: 'Propreté — Horaires',
-    side: 'user',
-    group: 'Vie locale',
-    render: () =>
-      dirFiche('horaires', {
-        title: 'Propreté — fiche…',
-        category: 'Propreté',
-        backTo: 'dir-signalement-proprete',
-        idInfos: 'dir-signalement-proprete-fiche-infos',
-        idHoraires: 'dir-signalement-proprete-fiche-horaires',
-      }),
-  },
-  'dir-signalement-voirie-fiche-infos': {
-    title: 'Voirie — Détail',
-    side: 'user',
-    group: 'Vie locale',
-    render: () =>
-      dirFiche('infos', {
-        title: 'Voirie — fiche…',
-        category: 'Voirie',
-        backTo: 'dir-signalement-voirie',
-        idInfos: 'dir-signalement-voirie-fiche-infos',
-        idHoraires: 'dir-signalement-voirie-fiche-horaires',
-      }),
-  },
-  'dir-signalement-voirie-fiche-horaires': {
-    title: 'Voirie — Horaires',
-    side: 'user',
-    group: 'Vie locale',
-    render: () =>
-      dirFiche('horaires', {
-        title: 'Voirie — fiche…',
-        category: 'Voirie',
-        backTo: 'dir-signalement-voirie',
-        idInfos: 'dir-signalement-voirie-fiche-infos',
-        idHoraires: 'dir-signalement-voirie-fiche-horaires',
-      }),
-  },
   'dir-transports-bus-fiche-infos': {
     title: 'Bus — Détail',
     side: 'user',
@@ -6823,41 +6951,12 @@ export const NAV_TREE = {
             ],
           },
           {
-            id: 'page-signalement',
-            label: 'Signalement',
+            id: 'signalements',
+            label: 'Signalements',
             children: [
-              {
-                id: 'dir-signalement-voirie',
-                label: 'Voirie',
-                children: [
-                  { id: 'dir-signalement-voirie-fiche-infos', label: 'Détail' },
-                  { id: 'dir-signalement-voirie-fiche-horaires', label: 'Horaires' },
-                ],
-              },
-              {
-                id: 'dir-signalement-eclairage',
-                label: 'Éclairage',
-                children: [
-                  { id: 'dir-signalement-eclairage-fiche-infos', label: 'Détail' },
-                  { id: 'dir-signalement-eclairage-fiche-horaires', label: 'Horaires' },
-                ],
-              },
-              {
-                id: 'dir-signalement-proprete',
-                label: 'Propreté',
-                children: [
-                  { id: 'dir-signalement-proprete-fiche-infos', label: 'Détail' },
-                  { id: 'dir-signalement-proprete-fiche-horaires', label: 'Horaires' },
-                ],
-              },
-              {
-                id: 'dir-signalement-equipements',
-                label: 'Équipements',
-                children: [
-                  { id: 'dir-signalement-equipements-fiche-infos', label: 'Détail' },
-                  { id: 'dir-signalement-equipements-fiche-horaires', label: 'Horaires' },
-                ],
-              },
+              { id: 'signalement-nouveau', label: 'Nouveau' },
+              { id: 'signalement-conversation', label: 'Conversation' },
+              { id: 'signalement-statut', label: 'Changer statut (admin)' },
             ],
           },
           { id: 'urgence-numeros', label: 'N° Urgence' },
@@ -6932,6 +7031,7 @@ export const NAV_TREE = {
             ],
           },
           { id: 'admin-rdv', label: 'Rendez-vous' },
+          { id: 'signalements', label: 'Signalements reçus' },
           { id: 'admin-moderation', label: 'Modération' },
           { id: 'admin-equipe', label: 'Équipe et permissions' },
           { id: 'admin-stats', label: 'Statistiques' },

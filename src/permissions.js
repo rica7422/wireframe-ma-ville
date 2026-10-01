@@ -475,6 +475,7 @@ export function canAccessManageRoute(screenId, role = getRole()) {
     'admin-moderation',
     'admin-equipe',
     'admin-stats',
+    'signalement-statut',
   ])
   if (!manageScreens.has(screenId)) return true
   return isAdminRole(role)
@@ -501,6 +502,7 @@ export const MENU_SCREEN_PARENTS = {
   'dir-fiche-menu': 'sante-pharmacie-infos',
   'annonce-options': 'annonce-details',
   'offre-options': 'emploi-details',
+  'signalement-statut': 'signalement-conversation',
 }
 
 export function parentForMenuScreen(screenId, fallbackParent) {

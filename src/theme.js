@@ -73,6 +73,7 @@ export function sectionFor(id) {
   )
     return 'tourisme'
   if (id.startsWith('page-meteo') || id.startsWith('meteo-')) return 'meteo'
+  if (id === 'signalements' || id.startsWith('signalement-')) return 'signalement'
   if (id.startsWith('page-signalement') || id.startsWith('dir-signalement')) return 'signalement'
   if (id.startsWith('dir-patrimoine')) return 'patrimoine'
   if (id.startsWith('dir-restaurants')) return 'restaurants'
