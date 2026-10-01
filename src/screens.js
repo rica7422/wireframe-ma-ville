@@ -21,6 +21,7 @@ import {
   errorState,
 } from './components.js'
 import { colorFor } from './theme.js'
+import { getRole, isAdminRole } from './role.js'
 
 /** Screen registry: id → { title, group, render(state) } */
 
@@ -379,6 +380,9 @@ function pharmacieDetails(tab = 'infos') {
       .join('')}
     ${tbd('Horaires manquants éventuels — À préciser')}
   `
+  const adminEdit = isAdminRole()
+    ? `<button class="hit btn block outline admin-shortcut" data-go="fiche-annuaire-form" type="button">Modifier cette fiche</button>`
+    : ''
   return wrap(
     `
     ${photo('Photo façade…', 'hero')}
@@ -391,6 +395,7 @@ function pharmacieDetails(tab = 'infos') {
       <button class="hit btn" data-sim="itineraire">Itinéraire</button>
       <button class="hit btn primary" data-sim="appeler">Appeler</button>
     </div>
+    ${adminEdit}
     ${tabs}
     ${tab === 'infos' ? infos : horaires}
     `,
@@ -516,6 +521,29 @@ function santeAmbulances() {
 
 /* ——— Ma mairie ——— */
 
+function lifecycleBar(active = 'brouillon') {
+  const steps = [
+    { id: 'brouillon', label: 'Brouillon' },
+    { id: 'preview', label: 'Prévisualiser' },
+    { id: 'publier', label: 'Publier' },
+  ]
+  return `
+    <div class="lifecycle-bar" aria-label="Cycle de vie">
+      ${steps
+        .map(
+          (s) =>
+            `<span class="chip ${active === s.id ? 'on' : ''}">${s.label}</span>`
+        )
+        .join('')}
+    </div>
+  `
+}
+
+function mairieAdminGerShortcut() {
+  if (!isAdminRole()) return ''
+  return `<button class="hit btn block outline admin-shortcut" data-go="mairie-gerer-page" type="button">Gérer la page</button>`
+}
+
 function mairieShellTop() {
   return `
     ${photo('Photo de la mairie…', 'hero')}
@@ -525,7 +553,7 @@ function mairieShellTop() {
       ${text('Présentation courte de la mairie…')}
     </div>
     <div class="members-row">
-      <button class="hit members-hit" data-go="mairie-communaute" type="button">
+      <button class="hit members-hit" data-go="mairie-apropos-communaute" type="button">
         <div class="avatars">${avatar(3)}</div>
         <span>3649 membres</span>
       </button>
@@ -586,27 +614,33 @@ function mairieRdvCta() {
   return `<button class="hit btn primary block rdv-cta" data-go="mairie-rdv">Prendre rendez-vous</button>`
 }
 
+function mairiePubOptionsGo() {
+  return isAdminRole() ? 'mairie-pub-options-admin' : 'mairie-pub-options-habitant'
+}
+
 function mairieAccueil() {
+  const admin = isAdminRole()
   return wrap(
     `
     ${mairieShellTop()}
     ${mairieSearchHit()}
     ${mairieAccesGrid()}
     ${mairieRdvCta()}
+    ${mairieAdminGerShortcut()}
     ${mairieTabs('publications')}
-    ${mairieComposer()}
+    ${admin ? mairieComposer() : ''}
     ${postCard({
       author: 'Mairie de Kapan',
       role: 'Publication',
       body: 'Informations et actualités de votre mairie.',
-      optionsGo: 'mairie-presentation-options',
+      optionsGo: mairiePubOptionsGo(),
     })}
     ${postCard({
       author: 'Mairie de Kapan',
       role: 'Publication',
       body: 'Rappel — démarches en mairie et horaires d’accueil.',
       multi: true,
-      optionsGo: 'mairie-presentation-options',
+      optionsGo: mairiePubOptionsGo(),
     })}
     `,
     {
@@ -623,6 +657,7 @@ function mairieAccueilEvenements() {
     ${mairieSearchHit()}
     ${mairieAccesGrid()}
     ${mairieRdvCta()}
+    ${mairieAdminGerShortcut()}
     ${mairieTabs('evenements')}
     ${evenementsListeBody({ detailsGo: 'evenement-details' })}
     `,
@@ -835,44 +870,137 @@ function mairiePresentation() {
 }
 
 function mairiePresentationOptions() {
-  return wrap(`${photo('Fond présentation…', 'dim')}`, {
-    header: phoneHeader({ title: 'Présentation de la ville', backTo: 'mairie-presentation' }),
+  return isAdminRole() ? mairiePubOptionsAdmin() : mairiePubOptionsHabitant()
+}
+
+function mairiePubOptionsHabitant() {
+  return wrap(`${photo('Fond publication…', 'dim')}`, {
+    header: phoneHeader({ title: 'Publication', backTo: 'mairie-accueil' }),
     footer: phoneFooter('mairie'),
     overlay: modalShell(
       'Plus d’options',
       `
       ${sheetOption('Afficher la liste des réactions', { go: 'infos-reactions' })}
-      ${sheetOption('Modifier la publication', { go: 'mairie-nouvelle-publication' })}
       ${sheetOption('Partager la publication', { go: 'infos-partage' })}
-      ${sheetOption('Supprimer la publication', { sim: 'supprimer' })}
+      ${sheetOption('Signaler', { sim: 'signalement' })}
       `
     ),
   })
 }
 
-function mairieNouvellePublication() {
+function mairiePubOptionsAdmin() {
+  return wrap(`${photo('Fond publication…', 'dim')}`, {
+    header: phoneHeader({ title: 'Publication', backTo: 'mairie-accueil' }),
+    footer: phoneFooter('mairie'),
+    overlay: modalShell(
+      'Plus d’options',
+      `
+      ${sheetOption('Afficher la liste des réactions', { go: 'infos-reactions' })}
+      ${sheetOption('Modifier', { go: 'mairie-pub-edit' })}
+      ${sheetOption('Archiver', { sim: 'archiver' })}
+      ${sheetOption('Partager la publication', { go: 'infos-partage' })}
+      ${sheetOption('Supprimer', { sim: 'supprimer' })}
+      `
+    ),
+  })
+}
+
+function mairieGererPage() {
   return wrap(
     `
-    <div class="compose-area">
-      ${text('Dire quelque chose…')}
+    <div class="form-card">
+      <h2 class="sec">Gérer la page Ma mairie</h2>
+      <p class="meta">Mairie de Kapan · formulaire partagé app / back-office</p>
+      <div class="field">
+        <span>Photo de couverture</span>
+        ${photo('Couverture…', 'wide')}
+        <button class="hit btn" data-sim="upload" type="button">Uploader (simulé)</button>
+      </div>
+      <label class="field"><span>Titre</span><input type="text" value="Mairie de Kapan" /></label>
+      <label class="field"><span>Présentation</span><textarea rows="4" placeholder="Présentation de la mairie…">Présentation courte de la mairie…</textarea></label>
+      ${lifecycleBar('brouillon')}
+      <div class="row-actions">
+        <button class="hit btn" data-sim="brouillon" type="button">Brouillon</button>
+        <button class="hit btn" data-go="mairie-accueil" type="button">Prévisualiser</button>
+        <button class="hit btn primary" data-sim="publier" type="button">Publier</button>
+      </div>
     </div>
-    <h2 class="sec">Médias ajoutés</h2>
-    <div class="photo-grid media-added">
-      ${photo('Photo…')}${photo('Photo…')}${photo('Photo…')}${photo('Photo…')}
-    </div>
-    <div class="row-link static">
-      <span>Activer les commentaires</span>
-      <span class="toggle on" aria-hidden="true"></span>
-    </div>
-    <h2 class="sec">Ajouter à la publication</h2>
-    <button class="hit media-add-btn" data-go="mairie-medias-sheet">
-      <span class="ico-box round"></span>
-      <span>Médias</span>
-    </button>
-    <button class="hit btn primary block" data-sim="publier">Publier (simulé)</button>
     `,
     {
-      header: phoneHeader({ title: 'Nouvelle publication', backTo: 'mairie-accueil' }),
+      header: phoneHeader({
+        title: 'Gérer la page',
+        backTo: 'mairie-accueil',
+      }),
+      footer: phoneFooter('mairie'),
+    }
+  )
+}
+
+function mairiePublicationForm({ mode = 'create' } = {}) {
+  const isEdit = mode === 'edit'
+  const title = isEdit ? 'Modifier la publication' : 'Nouvelle publication'
+  const backTo = isEdit ? 'mairie-accueil' : 'mairie-accueil'
+  return wrap(
+    `
+    <div class="form-card">
+      <p class="meta">Mairie de Kapan · ${isEdit ? 'édition' : 'création'}</p>
+      <label class="field"><span>Titre</span><input type="text" placeholder="Titre de la publication…" value="${isEdit ? 'Horaires d’accueil' : ''}" /></label>
+      <label class="field"><span>Corps</span><textarea rows="5" placeholder="Corps de la publication…">${isEdit ? 'Rappel — démarches en mairie et horaires d’accueil.' : ''}</textarea></label>
+      <h2 class="sec">Médias</h2>
+      <div class="photo-grid media-added">
+        ${photo('Photo…')}${photo('Photo…')}
+      </div>
+      <button class="hit media-add-btn" data-go="mairie-medias-sheet" type="button">
+        <span class="ico-box round"></span>
+        <span>Ajouter des médias</span>
+      </button>
+      <div class="row-link static">
+        <span>Activer les commentaires</span>
+        <span class="toggle on" aria-hidden="true"></span>
+      </div>
+      ${lifecycleBar('brouillon')}
+      <div class="row-actions">
+        <button class="hit btn" data-sim="brouillon" type="button">Brouillon</button>
+        <button class="hit btn" data-go="mairie-pub-preview" type="button">Prévisualiser</button>
+        <button class="hit btn primary" data-sim="publier" type="button">Publier</button>
+      </div>
+    </div>
+    `,
+    {
+      header: phoneHeader({ title, backTo }),
+      footer: phoneFooter('mairie'),
+    }
+  )
+}
+
+function mairieNouvellePublication() {
+  return mairiePublicationForm({ mode: 'create' })
+}
+
+function mairiePubEdit() {
+  return mairiePublicationForm({ mode: 'edit' })
+}
+
+function mairiePubPreview() {
+  return wrap(
+    `
+    <article class="card post-card">
+      <div class="pub-title-row">
+        <strong class="block-title">Horaires d’accueil</strong>
+        <span class="badge">Aperçu</span>
+      </div>
+      <p class="meta">Mairie de Kapan</p>
+      ${text('Rappel — démarches en mairie et horaires d’accueil.')}
+      ${photo('Média publication…', 'wide')}
+    </article>
+    ${lifecycleBar('preview')}
+    <div class="row-actions">
+      <button class="hit btn" data-go="mairie-pub-edit" type="button">Retour brouillon</button>
+      <button class="hit btn primary" data-sim="publier" type="button">Publier</button>
+    </div>
+    `,
+    {
+      header: phoneHeader({ title: 'Prévisualisation', backTo: 'mairie-nouvelle-publication' }),
       footer: phoneFooter('mairie'),
     }
   )
@@ -990,6 +1118,44 @@ function mairieConseilEdit() {
 }
 
 function mairieInfosInterior() {
+  return mairieAproposCommunauteInterior()
+}
+
+function mairieInfosPratiqueInterior() {
+  return `
+    <h2 class="sec">Coordonnées</h2>
+    <div class="row-link static"><span>Téléphone</span><span class="meta">+374 98 00 00 00</span></div>
+    <div class="row-link static"><span>E-mail</span><span class="meta">contact@kapan.am</span></div>
+    <h2 class="sec">Adresse</h2>
+    ${text('1 place de la Mairie, Kapan')}
+    ${photo('Carte mairie…', 'map')}
+    <h2 class="sec">Horaires d’accueil</h2>
+    ${['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi']
+      .map(
+        (d) => `
+      <div class="row-link static">
+        <span>${d}</span>
+        <span class="meta">09:00 – 17:00</span>
+      </div>`
+      )
+      .join('')}
+    <div class="row-link static"><span>Samedi / Dimanche</span><span class="meta">Fermé</span></div>
+    <h2 class="sec">Services municipaux</h2>
+    ${['État civil', 'Urbanisme', 'Social', 'Éducation']
+      .map(
+        (s) => `
+      <div class="row-link static"><span>${s}</span><span class="meta">›</span></div>`
+      )
+      .join('')}
+    <h2 class="sec">Démarches</h2>
+    <button class="hit btn primary block" data-go="mairie-rdv" type="button">Prendre rendez-vous</button>
+    <button class="hit row-link" data-go="mairie-apropos-communaute" type="button">
+      <span>À propos de la communauté</span><span>›</span>
+    </button>
+  `
+}
+
+function mairieAproposCommunauteInterior() {
   return `
     ${mairieShellTop()}
     <h2 class="sec">Informations</h2>
@@ -1033,8 +1199,8 @@ function mairieInfosInterior() {
 }
 
 function mairieInfos() {
-  return wrap(mairieInfosInterior(), {
-    header: mairieHeader('Ma mairie', 'mairie-accueil'),
+  return wrap(mairieInfosPratiqueInterior(), {
+    header: phoneHeader({ title: 'Infos Mairie', backTo: 'mairie-accueil' }),
     footer: phoneFooter('mairie'),
   })
 }
@@ -1074,11 +1240,15 @@ function mairieInfosApropos() {
   })
 }
 
-function mairieCommunaute() {
-  return wrap(mairieInfosInterior(), {
-    header: mairieHeader('Ma mairie', 'mairie-accueil'),
+function mairieAproposCommunaute() {
+  return wrap(mairieAproposCommunauteInterior(), {
+    header: phoneHeader({ title: 'À propos de la communauté', backTo: 'mairie-infos' }),
     footer: phoneFooter('mairie'),
   })
+}
+
+function mairieCommunaute() {
+  return mairieAproposCommunaute()
 }
 
 function mairiePlan() {
@@ -1502,6 +1672,41 @@ function evenementParticipantsBody() {
 }
 
 function evenementDetails() {
+  const admin = isAdminRole()
+  const actions = admin
+    ? `
+      <button class="hit btn primary block" data-go="evenement-gerer" type="button">Gérer l’événement</button>
+      <button class="hit btn block outline" data-go="evenement-validation" type="button">Gérer les inscriptions</button>
+    `
+    : `
+      <button class="hit btn primary block" data-sim="participation" type="button">Participer</button>
+      <section class="inscription-status">
+        <h2 class="sec">Mon inscription</h2>
+        <span class="badge">En attente</span>
+        <p class="meta">Demande envoyée · statut illustratif (en attente / acceptée / refusée)</p>
+      </section>
+    `
+  const plusInfos = `
+      <h2 class="sec">Plus d’informations</h2>
+      <div class="plus-infos">
+        <button class="hit row-link" data-go="evenement-participants">
+          <span>Participants · 12</span><span>›</span>
+        </button>
+        ${
+          admin
+            ? `<button class="hit row-link" data-go="evenement-validation">
+          <span>Validations des participants · 2</span><span>›</span>
+        </button>`
+            : ''
+        }
+        <button class="hit row-link" data-go="evenement-criteres">
+          <span>Critères de participation</span><span>›</span>
+        </button>
+        <button class="hit row-link" data-go="evenement-conditions">
+          <span>Conditions de participation</span><span>›</span>
+        </button>
+      </div>`
+
   return wrap(
     `
     <div class="event-detail">
@@ -1532,7 +1737,7 @@ function evenementDetails() {
         <span class="stat-cell"><strong>5</strong><span class="meta">Jours restants</span></span>
       </div>
       <p class="places-note"><strong>Nombres de places · 20</strong></p>
-      <button class="hit btn primary block" data-sim="participation">Participer</button>
+      ${actions}
       ${socialActions({
         likes: '200',
         comments: '15',
@@ -1570,25 +1775,45 @@ function evenementDetails() {
         </div>`
         )
         .join('')}
-      <h2 class="sec">Plus d’informations</h2>
-      <div class="plus-infos">
-        <button class="hit row-link" data-go="evenement-participants">
-          <span>Participants · 12</span><span>›</span>
-        </button>
-        <button class="hit row-link" data-go="evenement-validation">
-          <span>Validations des participants · 2</span><span>›</span>
-        </button>
-        <button class="hit row-link" data-go="evenement-criteres">
-          <span>Critères de participation</span><span>›</span>
-        </button>
-        <button class="hit row-link" data-go="evenement-conditions">
-          <span>Conditions de participation</span><span>›</span>
-        </button>
-      </div>
+      ${plusInfos}
     </div>
     `,
     {
       header: phoneHeader({ title: 'Détails', backTo: 'evenements-liste' }),
+      footer: phoneFooter('menu'),
+    }
+  )
+}
+
+function evenementGerer() {
+  return wrap(
+    `
+    <div class="form-card">
+      <h2 class="sec">Gérer l’événement</h2>
+      <p class="meta">Formulaire partagé · app / back-office</p>
+      <label class="field"><span>Titre</span><input type="text" value="Atelier créatif" /></label>
+      <label class="field"><span>Date</span><input type="text" value="16 juin 2026" /></label>
+      <label class="field"><span>Heure</span><input type="text" value="15:30" /></label>
+      <label class="field"><span>Lieu</span><input type="text" value="Camp Nou, Stade de Barcelone" /></label>
+      <label class="field"><span>Catégorie</span>
+        <select><option>Artistique / Créatif</option><option>Sport</option><option>Culture</option></select>
+      </label>
+      <label class="field"><span>Prix</span><input type="text" value="20 €" /></label>
+      <label class="field"><span>Description</span><textarea rows="4">Parfois, les mots ne suffisent pas…</textarea></label>
+      <label class="field"><span>Places</span><input type="text" value="20" /></label>
+      <label class="field"><span>État</span>
+        <select><option>Brouillon</option><option selected>Publié</option><option>Annulé</option></select>
+      </label>
+      ${lifecycleBar('brouillon')}
+      <div class="row-actions">
+        <button class="hit btn" data-sim="brouillon" type="button">Brouillon</button>
+        <button class="hit btn" data-go="evenement-details" type="button">Prévisualiser</button>
+        <button class="hit btn primary" data-sim="publier" type="button">Publier</button>
+      </div>
+    </div>
+    `,
+    {
+      header: phoneHeader({ title: 'Gérer l’événement', backTo: 'evenement-details' }),
       footer: phoneFooter('menu'),
     }
   )
@@ -2442,6 +2667,10 @@ function dirFiche(tab = 'infos', { title = 'Fiche détail…', category = 'Caté
          )
          .join('')}`
 
+  const adminEdit = isAdminRole()
+    ? `<button class="hit btn block outline admin-shortcut" data-go="fiche-annuaire-form" type="button">Modifier cette fiche</button>`
+    : ''
+
   return wrap(
     `
     ${photo('Photo…', 'hero')}
@@ -2455,6 +2684,7 @@ function dirFiche(tab = 'infos', { title = 'Fiche détail…', category = 'Caté
       <button class="hit btn" data-sim="itineraire">Itinéraire</button>
       <button class="hit btn primary" data-sim="appeler">Appeler</button>
     </div>
+    ${adminEdit}
     <div class="tabs">
       <button class="hit tab ${tab === 'infos' ? 'on' : ''}" data-go="${idInfos}">Informations</button>
       <button class="hit tab ${tab === 'horaires' ? 'on' : ''}" data-go="${idHoraires}">Horaires</button>
@@ -2467,6 +2697,43 @@ function dirFiche(tab = 'infos', { title = 'Fiche détail…', category = 'Caté
     `,
     {
       header: phoneHeader({ title: 'Détails', backTo }),
+      footer: phoneFooter('menu'),
+    }
+  )
+}
+
+function ficheAnnuaireForm({ title = 'Pharmacie centrale' } = {}) {
+  return wrap(
+    `
+    <div class="form-card">
+      <h2 class="sec">Fiche annuaire</h2>
+      <p class="meta">${title} · formulaire partagé</p>
+      <label class="field"><span>Nom</span><input type="text" value="${title}" /></label>
+      <label class="field"><span>Catégorie</span>
+        <select><option>Santé / Pharmacies</option><option>Tourisme</option><option>Éducation</option></select>
+      </label>
+      <label class="field"><span>Adresse</span><input type="text" placeholder="Adresse…" value="Centre-ville, Kapan" /></label>
+      <label class="field"><span>Téléphone</span><input type="text" placeholder="Tél…" value="+374 …" /></label>
+      <label class="field"><span>Horaires</span><input type="text" placeholder="Horaires…" value="08:00 – 20:00" /></label>
+      <label class="field"><span>Description</span><textarea rows="3" placeholder="Description…"></textarea></label>
+      <div class="field">
+        <span>Photo</span>
+        ${photo('Photo fiche…')}
+        <button class="hit btn" data-sim="upload" type="button">Ajouter photo (simulé)</button>
+      </div>
+      <label class="field"><span>Statut</span>
+        <select><option>Brouillon</option><option selected>Publié</option></select>
+      </label>
+      ${lifecycleBar('brouillon')}
+      <div class="row-actions">
+        <button class="hit btn" data-sim="brouillon" type="button">Brouillon</button>
+        <button class="hit btn" data-go="sante-pharmacie-infos" type="button">Prévisualiser</button>
+        <button class="hit btn primary" data-sim="publier" type="button">Publier</button>
+      </div>
+    </div>
+    `,
+    {
+      header: phoneHeader({ title: 'Modifier la fiche', backTo: 'sante-pharmacie-infos' }),
       footer: phoneFooter('menu'),
     }
   )
@@ -2813,91 +3080,268 @@ function communautesStub(title) {
 /* ——— Admin ——— */
 
 function adminHome() {
+  const dash = [
+    { label: 'Brouillons', meta: 'Publications & fiches en cours', count: 3, go: 'admin-mairie' },
+    { label: 'Inscriptions à valider', meta: 'Événements · file d’attente', count: 2, go: 'evenement-validation' },
+    { label: 'RDV du jour', meta: 'Accueil mairie', count: 1, go: 'admin-rdv' },
+    { label: 'Signalements', meta: 'Modération', count: 1, go: 'admin-moderation' },
+  ]
   return wrap(
     `
-    <h2 class="sec">Espace administrateur</h2>
-    ${tbd('Rôles & permissions — À préciser')}
-    <button class="hit row-link" data-go="admin-contenus">
-      <span><strong>Gestion contenus / fiches</strong><br/><span class="meta">Liste + édition (coquille)</span></span>
-      <span>›</span>
+    <h2 class="sec">Tableau de bord</h2>
+    <p class="meta">Mairie de Kapan · espace administrateur</p>
+    <div class="dash-grid">
+      ${dash
+        .map(
+          (d) => `
+        <button class="hit dash-card" data-go="${d.go}" type="button">
+          <span><strong>${d.label}</strong><br/><span class="meta">${d.meta}</span></span>
+          <span class="dash-count">${d.count}</span>
+        </button>`
+        )
+        .join('')}
+    </div>
+    <h2 class="sec">Rubriques</h2>
+    <button class="hit row-link" data-go="admin-mairie" type="button">
+      <span><strong>Ma mairie</strong><br/><span class="meta">Page & publications</span></span><span>›</span>
     </button>
-    <button class="hit row-link" data-go="admin-moderation">
-      <span><strong>Modération</strong><br/><span class="meta">À préciser</span></span>
-      <span>›</span>
+    <button class="hit row-link" data-go="admin-evenements" type="button">
+      <span><strong>Événements</strong><br/><span class="meta">Liste & création</span></span><span>›</span>
     </button>
-    <button class="hit row-link" data-go="admin-stats">
-      <span><strong>Statistiques</strong><br/><span class="meta">À préciser</span></span>
-      <span>›</span>
+    <button class="hit row-link" data-go="admin-annonces" type="button">
+      <span><strong>Annonces</strong><br/><span class="meta">Liste séparée</span></span><span>›</span>
     </button>
-    ${tbd('Autres workflows back-office — À préciser (ne pas inventer)')}
-    <button class="hit btn block" data-go="accueil-kapan">Basculer vue utilisateur</button>
+    <button class="hit row-link" data-go="admin-offres" type="button">
+      <span><strong>Offres d’emploi</strong><br/><span class="meta">Liste séparée</span></span><span>›</span>
+    </button>
+    <button class="hit row-link" data-go="admin-annuaires" type="button">
+      <span><strong>Annuaires</strong><br/><span class="meta">Vie locale → fiches</span></span><span>›</span>
+    </button>
+    <button class="hit row-link" data-go="admin-rdv" type="button">
+      <span><strong>Rendez-vous</strong></span><span>›</span>
+    </button>
+    <button class="hit row-link" data-go="admin-moderation" type="button">
+      <span><strong>Modération</strong></span><span>›</span>
+    </button>
+    <button class="hit row-link" data-go="admin-equipe" type="button">
+      <span><strong>Équipe et permissions</strong></span><span>›</span>
+    </button>
+    <button class="hit row-link" data-go="admin-stats" type="button">
+      <span><strong>Statistiques</strong><br/><span class="meta">Secondaire</span></span><span>›</span>
+    </button>
+    <button class="hit btn block" data-go="accueil-kapan" type="button">Basculer vue utilisateur</button>
     `,
     {
       header: phoneHeader({
-        title: 'Admin',
+        title: 'Tableau de bord',
         showBack: false,
       }),
     }
   )
 }
 
-function adminContenus() {
+function adminMairie() {
   return wrap(
     `
-    <div class="row-actions">
-      <button class="hit btn primary" data-go="admin-fiche-edit">+ Nouvelle fiche</button>
-      <button class="hit btn" data-sim="filtre-admin">Filtrer</button>
-    </div>
-    ${search('Rechercher un contenu…')}
-    ${chips(['Tous', 'Santé', 'Mairie', 'Annonces', 'À préciser'])}
-    ${['Pharmacie centrale', 'Hôpital de Kapan', 'Annonce mairie #12']
+    <h2 class="sec">Ma mairie</h2>
+    <button class="hit btn primary block" data-go="mairie-gerer-page" type="button">Gérer la page</button>
+    <h2 class="sec">Publications</h2>
+    <button class="hit btn block" data-go="mairie-nouvelle-publication" type="button">+ Créer une publication</button>
+    ${['Horaires d’accueil — brouillon', 'Routes — publié', 'Conseil municipal — archivé']
       .map(
         (t) => `
-      <button class="hit row-link" data-go="admin-fiche-edit">
-        <span><strong>${t}</strong><br/><span class="meta">Statut… · modifié…</span></span>
+      <button class="hit row-link" data-go="mairie-pub-edit" type="button">
+        <span><strong>${t}</strong><br/><span class="meta">Mairie de Kapan</span></span>
         <span>›</span>
       </button>`
       )
       .join('')}
-    <h2 class="sec">État vide</h2>
-    ${emptyState('Aucun contenu à gérer')}
-    ${tbd('Colonnes / workflow publication — À préciser')}
     `,
     {
-      header: phoneHeader({ title: 'Gestion contenus', backTo: 'admin-home' }),
+      header: phoneHeader({ title: 'Ma mairie', backTo: 'admin-home' }),
     }
   )
 }
 
-function adminFicheEdit() {
+function adminEvenements() {
   return wrap(
     `
-    <h2 class="sec">Édition fiche (coquille)</h2>
-    <label class="field"><span>Titre</span><input type="text" placeholder="Texte…" value="Pharmacie centrale" /></label>
-    <label class="field"><span>Catégorie</span>
-      <select><option>Santé / Pharmacies</option><option>À préciser</option></select>
-    </label>
-    <label class="field"><span>Statut</span>
-      <select><option>Brouillon</option><option>Publié</option><option>À préciser</option></select>
-    </label>
-    <label class="field"><span>Description</span><textarea rows="3" placeholder="Texte…"></textarea></label>
-    <div class="field">
-      <span>Photo</span>
-      ${photo('Slot photo…')}
-      <button class="hit btn" data-sim="upload">Ajouter photo (simulé)</button>
-    </div>
-    <label class="field"><span>Horaires</span><input type="text" placeholder="À préciser" /></label>
-    ${tbd('Champs métier manquants — À préciser')}
-    <div class="row-actions">
-      <button class="hit btn" data-back>Annuler</button>
-      <button class="hit btn primary" data-sim="sauver">Enregistrer (simulé)</button>
-    </div>
-    <button class="hit btn block" data-sim="publier-admin">Publier (simulé — À préciser)</button>
+    <h2 class="sec">Événements</h2>
+    <button class="hit btn primary block" data-go="evenement-gerer" type="button">+ Créer un événement</button>
+    ${['Atelier créatif — publié', 'Marché de Noël — brouillon', 'Concert municipal — annulé']
+      .map(
+        (t) => `
+      <button class="hit row-link" data-go="evenement-gerer" type="button">
+        <span><strong>${t}</strong></span><span>›</span>
+      </button>`
+      )
+      .join('')}
     `,
     {
-      header: phoneHeader({ title: 'Éditer fiche', backTo: 'admin-contenus' }),
+      header: phoneHeader({ title: 'Événements', backTo: 'admin-home' }),
     }
   )
+}
+
+function adminAnnonces() {
+  return wrap(
+    `
+    <h2 class="sec">Annonces</h2>
+    <button class="hit btn primary block" data-sim="ajouter" type="button">+ Nouvelle annonce</button>
+    ${['Appartement 3 pièces — publié', 'Vélo électrique — brouillon']
+      .map(
+        (t) => `
+      <button class="hit row-link" data-go="annonce-details" type="button">
+        <span><strong>${t}</strong></span><span>›</span>
+      </button>`
+      )
+      .join('')}
+    `,
+    {
+      header: phoneHeader({ title: 'Annonces', backTo: 'admin-home' }),
+    }
+  )
+}
+
+function adminOffres() {
+  return wrap(
+    `
+    <h2 class="sec">Offres d’emploi</h2>
+    <button class="hit btn primary block" data-sim="ajouter" type="button">+ Nouvelle offre</button>
+    ${['Agent d’accueil — publié', 'Chargé de mission — brouillon']
+      .map(
+        (t) => `
+      <button class="hit row-link" data-go="emploi-details" type="button">
+        <span><strong>${t}</strong></span><span>›</span>
+      </button>`
+      )
+      .join('')}
+    `,
+    {
+      header: phoneHeader({ title: 'Offres', backTo: 'admin-home' }),
+    }
+  )
+}
+
+function adminAnnuaires() {
+  return wrap(
+    `
+    <h2 class="sec">Annuaires · Vie locale</h2>
+    <button class="hit row-link" data-go="admin-annuaire-sante" type="button">
+      <span><strong>Santé</strong><br/><span class="meta">Pharmacies, hôpitaux…</span></span><span>›</span>
+    </button>
+    <button class="hit row-link" data-go="vie-locale-hub" type="button">
+      <span><strong>Autres rubriques</strong><br/><span class="meta">Tourisme, éducation…</span></span><span>›</span>
+    </button>
+    `,
+    {
+      header: phoneHeader({ title: 'Annuaires', backTo: 'admin-home' }),
+    }
+  )
+}
+
+function adminAnnuaireSante() {
+  return wrap(
+    `
+    <h2 class="sec">Santé</h2>
+    <button class="hit row-link" data-go="admin-annuaire-pharmacies" type="button">
+      <span><strong>Pharmacies</strong></span><span>›</span>
+    </button>
+    <button class="hit row-link" data-go="sante-hopitaux" type="button">
+      <span><strong>Hôpitaux</strong></span><span>›</span>
+    </button>
+    `,
+    {
+      header: phoneHeader({ title: 'Santé', backTo: 'admin-annuaires' }),
+    }
+  )
+}
+
+function adminAnnuairePharmacies() {
+  return wrap(
+    `
+    <h2 class="sec">Pharmacies</h2>
+    <button class="hit btn primary block" data-go="fiche-annuaire-form" type="button">+ Nouvelle fiche</button>
+    ${['Pharmacie centrale', 'Pharmacie du Parc', 'Pharmacie de nuit']
+      .map(
+        (t) => `
+      <button class="hit row-link" data-go="fiche-annuaire-form" type="button">
+        <span><strong>${t}</strong><br/><span class="meta">Publié</span></span><span>›</span>
+      </button>`
+      )
+      .join('')}
+    `,
+    {
+      header: phoneHeader({ title: 'Pharmacies', backTo: 'admin-annuaire-sante' }),
+    }
+  )
+}
+
+function adminRdv() {
+  return wrap(
+    `
+    <h2 class="sec">Rendez-vous</h2>
+    <article class="card rdv-en-cours">
+      <p class="meta">Aujourd’hui · 10:00</p>
+      <p><strong>Motif</strong> · Carte d’identité / Passeport</p>
+      <p class="meta">Habitant · Lilit A.</p>
+    </article>
+    <button class="hit row-link" data-go="mairie-rdv" type="button">
+      <span>Voir le parcours RDV (app)</span><span>›</span>
+    </button>
+    `,
+    {
+      header: phoneHeader({ title: 'Rendez-vous', backTo: 'admin-home' }),
+    }
+  )
+}
+
+function adminModeration() {
+  return wrap(
+    `
+    <h2 class="sec">Modération</h2>
+    <button class="hit row-link" data-sim="signalement" type="button">
+      <span><strong>Signalement #1</strong><br/><span class="meta">Publication · En attente</span></span><span>›</span>
+    </button>
+    ${emptyState('File courte — wireframe')}
+    `,
+    {
+      header: phoneHeader({ title: 'Modération', backTo: 'admin-home' }),
+    }
+  )
+}
+
+function adminEquipe() {
+  return wrap(
+    `
+    <h2 class="sec">Équipe et permissions</h2>
+    ${[
+      ['Rica Rakotoson', 'Administrateur de Kapan'],
+      ['Lilit Ameni', 'Gestionnaire · Événements'],
+      ['Rouben Sirunyan', 'Modérateur'],
+    ]
+      .map(
+        ([name, role]) => `
+      <div class="row-link static admin-row">
+        <span class="avatar"></span>
+        <span class="grow"><strong>${name}</strong><br/><span class="meta">${role}</span></span>
+      </div>`
+      )
+      .join('')}
+    <button class="hit btn block" data-sim="ajouter" type="button">Inviter un agent</button>
+    `,
+    {
+      header: phoneHeader({ title: 'Équipe', backTo: 'admin-home' }),
+    }
+  )
+}
+
+function adminContenus() {
+  return adminHome()
+}
+
+function adminFicheEdit() {
+  return ficheAnnuaireForm({ title: 'Pharmacie centrale' })
 }
 
 function adminStub(title) {
@@ -2990,11 +3434,41 @@ export const SCREENS = {
     group: 'Ma mairie',
     render: mairiePresentationOptions,
   },
+  'mairie-pub-options-habitant': {
+    title: 'Publication — Options habitant',
+    side: 'user',
+    group: 'Ma mairie',
+    render: mairiePubOptionsHabitant,
+  },
+  'mairie-pub-options-admin': {
+    title: 'Publication — Options admin',
+    side: 'user',
+    group: 'Ma mairie',
+    render: mairiePubOptionsAdmin,
+  },
+  'mairie-gerer-page': {
+    title: 'Gérer la page Ma mairie',
+    side: 'user',
+    group: 'Ma mairie',
+    render: mairieGererPage,
+  },
   'mairie-nouvelle-publication': {
     title: 'Nouvelle publication',
     side: 'user',
     group: 'Ma mairie',
     render: mairieNouvellePublication,
+  },
+  'mairie-pub-edit': {
+    title: 'Modifier publication',
+    side: 'user',
+    group: 'Ma mairie',
+    render: mairiePubEdit,
+  },
+  'mairie-pub-preview': {
+    title: 'Prévisualisation publication',
+    side: 'user',
+    group: 'Ma mairie',
+    render: mairiePubPreview,
   },
   'mairie-medias-sheet': {
     title: 'Médias (sheet)',
@@ -3032,11 +3506,23 @@ export const SCREENS = {
     group: 'Ma mairie',
     render: mairieInfosApropos,
   },
+  'mairie-apropos-communaute': {
+    title: 'À propos de la communauté',
+    side: 'user',
+    group: 'Ma mairie',
+    render: mairieAproposCommunaute,
+  },
   'mairie-communaute': {
     title: 'Communauté infos',
     side: 'user',
     group: 'Ma mairie',
     render: mairieCommunaute,
+  },
+  'fiche-annuaire-form': {
+    title: 'Fiche annuaire — Formulaire',
+    side: 'user',
+    group: 'Ma mairie',
+    render: () => ficheAnnuaireForm({ title: 'Pharmacie centrale' }),
   },
   'mairie-plan': {
     title: 'Plan de la ville',
@@ -3096,6 +3582,12 @@ export const SCREENS = {
     side: 'user',
     group: 'Social / contenus',
     render: evenementDetails,
+  },
+  'evenement-gerer': {
+    title: 'Événement — Gérer',
+    side: 'user',
+    group: 'Social / contenus',
+    render: evenementGerer,
   },
   'evenement-options': {
     title: 'Événement — Options',
@@ -5290,24 +5782,102 @@ export const SCREENS = {
   },
 
 
-  'admin-home': { title: 'Admin — Accueil', side: 'admin', group: 'Admin', render: adminHome },
+  'admin-home': { title: 'Admin — Tableau de bord', side: 'admin', group: 'Admin', render: adminHome },
   'admin-contenus': {
-    title: 'Gestion contenus / fiches',
+    title: 'Gestion contenus (redirige)',
     side: 'admin',
     group: 'Admin',
     render: adminContenus,
   },
   'admin-fiche-edit': {
-    title: 'Édition fiche (shell)',
+    title: 'Édition fiche (redirige)',
     side: 'admin',
     group: 'Admin',
     render: adminFicheEdit,
+  },
+  'admin-mairie': {
+    title: 'Admin — Ma mairie',
+    side: 'admin',
+    group: 'Admin',
+    render: adminMairie,
+  },
+  'admin-mairie-page': {
+    title: 'Admin — Gérer la page',
+    side: 'admin',
+    group: 'Admin',
+    render: mairieGererPage,
+  },
+  'admin-mairie-pub-form': {
+    title: 'Admin — Publication mairie',
+    side: 'admin',
+    group: 'Admin',
+    render: mairieNouvellePublication,
+  },
+  'admin-evenements': {
+    title: 'Admin — Événements',
+    side: 'admin',
+    group: 'Admin',
+    render: adminEvenements,
+  },
+  'admin-evenement-form': {
+    title: 'Admin — Formulaire événement',
+    side: 'admin',
+    group: 'Admin',
+    render: evenementGerer,
+  },
+  'admin-annonces': {
+    title: 'Admin — Annonces',
+    side: 'admin',
+    group: 'Admin',
+    render: adminAnnonces,
+  },
+  'admin-offres': {
+    title: 'Admin — Offres',
+    side: 'admin',
+    group: 'Admin',
+    render: adminOffres,
+  },
+  'admin-annuaires': {
+    title: 'Admin — Annuaires',
+    side: 'admin',
+    group: 'Admin',
+    render: adminAnnuaires,
+  },
+  'admin-annuaire-sante': {
+    title: 'Admin — Annuaire Santé',
+    side: 'admin',
+    group: 'Admin',
+    render: adminAnnuaireSante,
+  },
+  'admin-annuaire-pharmacies': {
+    title: 'Admin — Pharmacies',
+    side: 'admin',
+    group: 'Admin',
+    render: adminAnnuairePharmacies,
+  },
+  'admin-fiche-form': {
+    title: 'Admin — Fiche annuaire',
+    side: 'admin',
+    group: 'Admin',
+    render: () => ficheAnnuaireForm({ title: 'Pharmacie centrale' }),
+  },
+  'admin-rdv': {
+    title: 'Admin — RDV',
+    side: 'admin',
+    group: 'Admin',
+    render: adminRdv,
   },
   'admin-moderation': {
     title: 'Modération',
     side: 'admin',
     group: 'Admin',
-    render: () => adminStub('Modération'),
+    render: adminModeration,
+  },
+  'admin-equipe': {
+    title: 'Équipe et permissions',
+    side: 'admin',
+    group: 'Admin',
+    render: adminEquipe,
   },
   'admin-stats': {
     title: 'Statistiques',
@@ -5365,6 +5935,7 @@ export const NAV_TREE = {
               { id: 'mairie-menu', label: 'Menu ⋯' },
               { id: 'mairie-recherche', label: 'Recherche' },
               { id: 'mairie-accueil-evenements', label: 'Événements (onglet)' },
+              { id: 'mairie-gerer-page', label: 'Gérer la page' },
               {
                 id: 'mairie-rdv',
                 label: 'Prendre rendez-vous',
@@ -5378,8 +5949,14 @@ export const NAV_TREE = {
               {
                 id: 'mairie-nouvelle-publication',
                 label: 'Nouvelle publication',
-                children: [{ id: 'mairie-medias-sheet', label: 'Médias (sheet)' }],
+                children: [
+                  { id: 'mairie-medias-sheet', label: 'Médias (sheet)' },
+                  { id: 'mairie-pub-preview', label: 'Prévisualisation' },
+                ],
               },
+              { id: 'mairie-pub-edit', label: 'Modifier publication' },
+              { id: 'mairie-pub-options-habitant', label: 'Options pub · habitant' },
+              { id: 'mairie-pub-options-admin', label: 'Options pub · admin' },
               {
                 id: 'mairie-conseil',
                 label: 'Maire & Conseil',
@@ -5387,13 +5964,15 @@ export const NAV_TREE = {
               },
               {
                 id: 'mairie-infos',
-                label: 'Infos Mairie (communauté)',
+                label: 'Infos Mairie (pratiques)',
                 children: [
                   { id: 'mairie-infos-detail', label: 'Publication détail' },
                   { id: 'mairie-infos-apropos', label: 'À propos (sheet)' },
+                  { id: 'mairie-apropos-communaute', label: 'À propos communauté' },
                   { id: 'mairie-communaute', label: 'Communauté (alias)' },
                 ],
               },
+              { id: 'fiche-annuaire-form', label: 'Fiche annuaire (form)' },
               {
                 id: 'mairie-plan',
                 label: 'Plan de la ville',
@@ -5425,6 +6004,7 @@ export const NAV_TREE = {
                 id: 'evenement-details',
                 label: 'Détails',
                 children: [
+                  { id: 'evenement-gerer', label: 'Gérer l’événement' },
                   { id: 'evenement-options', label: 'Options (⋯)' },
                   {
                     id: 'evenement-participants',
@@ -5999,14 +6579,43 @@ export const NAV_TREE = {
     roots: [
       {
         id: 'admin-home',
-        label: 'Accueil admin',
+        label: 'Tableau de bord',
         children: [
           {
-            id: 'admin-contenus',
-            label: 'Gestion contenus',
-            children: [{ id: 'admin-fiche-edit', label: 'Éditer fiche' }],
+            id: 'admin-mairie',
+            label: 'Ma mairie',
+            children: [
+              { id: 'admin-mairie-page', label: 'Gérer la page' },
+              { id: 'admin-mairie-pub-form', label: 'Formulaire publication' },
+            ],
           },
+          {
+            id: 'admin-evenements',
+            label: 'Événements',
+            children: [{ id: 'admin-evenement-form', label: 'Créer / modifier' }],
+          },
+          { id: 'admin-annonces', label: 'Annonces' },
+          { id: 'admin-offres', label: 'Offres' },
+          {
+            id: 'admin-annuaires',
+            label: 'Annuaires',
+            children: [
+              {
+                id: 'admin-annuaire-sante',
+                label: 'Santé',
+                children: [
+                  {
+                    id: 'admin-annuaire-pharmacies',
+                    label: 'Pharmacies',
+                    children: [{ id: 'admin-fiche-form', label: 'Fiche formulaire' }],
+                  },
+                ],
+              },
+            ],
+          },
+          { id: 'admin-rdv', label: 'Rendez-vous' },
           { id: 'admin-moderation', label: 'Modération' },
+          { id: 'admin-equipe', label: 'Équipe et permissions' },
           { id: 'admin-stats', label: 'Statistiques' },
         ],
       },

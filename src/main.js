@@ -1,6 +1,14 @@
 import './style.css'
 import { SCREENS, NAV_TREE, navIdsForSide } from './screens.js'
 import { themeFor, colorFor, sectionFor } from './theme.js'
+import {
+  getRole,
+  setRole,
+  isAdminRole,
+  roleLabel,
+  ROLE_HABITANT,
+  ROLE_ADMIN_KAPAN,
+} from './role.js'
 
 const historyStack = []
 let currentId = 'ville-bienvenue'
@@ -74,6 +82,9 @@ function handleSim(kind) {
     media: 'Ajout média (simulé)',
     ajouter: 'Ajout (simulé)',
     agrandir: 'Agrandir la carte (simulé)',
+    archiver: 'Archivage simulé',
+    brouillon: 'Brouillon enregistré (simulé)',
+    previsualiser: 'Prévisualisation (simulé)',
   }
   toast(map[action] || `Action simulée : ${kind}`)
 }
@@ -131,6 +142,20 @@ function scrollActiveIntoNavPanel() {
   scroll.scrollTop += aRect.top - sRect.top - sRect.height / 2 + aRect.height / 2
 }
 
+function roleSimulatorHtml() {
+  const role = getRole()
+  return `
+    <div class="role-sim" role="group" aria-label="Simulation de rôle">
+      <span class="role-sim-label">Rôle simulé</span>
+      <div class="role-sim-btns">
+        <button type="button" class="role-sim-btn ${role === ROLE_HABITANT ? 'on' : ''}" data-sim-role="${ROLE_HABITANT}">Habitant</button>
+        <button type="button" class="role-sim-btn ${role === ROLE_ADMIN_KAPAN ? 'on' : ''}" data-sim-role="${ROLE_ADMIN_KAPAN}">Administrateur de Kapan</button>
+      </div>
+      <p class="role-sim-hint">Change les boutons dans le téléphone — pas l’arbre gauche</p>
+    </div>
+  `
+}
+
 function render({ focusActive = false, resetNavScroll = false } = {}) {
   const prevScroll = document.querySelector('.proto-scroll')
   if (prevScroll && !resetNavScroll) savedNavScroll = prevScroll.scrollTop
@@ -138,12 +163,13 @@ function render({ focusActive = false, resetNavScroll = false } = {}) {
   const screen = SCREENS[currentId]
   const theme = themeFor(currentId)
   const app = document.getElementById('app')
+  const role = getRole()
   app.innerHTML = `
     <div class="shell">
       <aside class="proto-nav">
         <header class="proto-brand">
           <strong>Ma Ville</strong>
-          <span class="proto-tag">Wireframe · build 1001-b2 · meta fix</span>
+          <span class="proto-tag">Wireframe · build 1001-c · roles</span>
         </header>
         <p class="proto-hint">Navigation du prototype (≠ nav dans le téléphone)</p>
         <div class="nav-tabs" role="tablist" aria-label="Côté prototype">
@@ -153,13 +179,15 @@ function render({ focusActive = false, resetNavScroll = false } = {}) {
         <footer class="proto-meta">
           <span>${Object.keys(SCREENS).length} écrans</span>
           <span>390 px</span>
+          <span>${isAdminRole(role) ? 'Admin Kapan' : 'Habitant'}</span>
         </footer>
       </aside>
       <main class="stage">
+        ${roleSimulatorHtml()}
         <div class="stage-label">
           <span>${screen.side === 'admin' ? 'Admin' : 'Utilisateur'} · ${screen.group}${
             theme !== 'neutral' ? ` · ${theme}` : ''
-          }</span>
+          } · ${roleLabel(role)}</span>
           <strong>${screen.title}</strong>
         </div>
         <div class="phone" id="phone" data-theme="${theme}">
@@ -212,7 +240,7 @@ function render({ focusActive = false, resetNavScroll = false } = {}) {
       return
     }
     const chip = e.target.closest('.chip')
-    if (chip && chip.closest('.chips')) {
+    if (chip && chip.closest('.chips') && !chip.closest('.lifecycle-bar')) {
       e.preventDefault()
       chip.parentElement.querySelectorAll('.chip').forEach((c) => c.classList.remove('on'))
       chip.classList.add('on')
@@ -234,6 +262,13 @@ function render({ focusActive = false, resetNavScroll = false } = {}) {
 }
 
 document.getElementById('app').addEventListener('click', (e) => {
+  const simRole = e.target.closest('[data-sim-role]')
+  if (simRole) {
+    e.preventDefault()
+    setRole(simRole.dataset.simRole)
+    render()
+    return
+  }
   const tab = e.target.closest('[data-nav-tab]')
   if (tab) {
     e.preventDefault()
@@ -252,6 +287,11 @@ document.getElementById('app').addEventListener('click', (e) => {
 
 function resolveScreenId(id) {
   if (id === 'infos-citoyen') return 'infos-feed'
+  if (id === 'admin-contenus') return 'admin-home'
+  if (id === 'admin-fiche-edit') return 'fiche-annuaire-form'
+  if (id === 'admin-bo-mairie') return 'admin-mairie'
+  if (id === 'admin-bo-evenements-creer') return 'evenement-gerer'
+  if (id === 'admin-bo-annuaire-form') return 'fiche-annuaire-form'
   return id
 }
 

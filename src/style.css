@@ -2637,3 +2637,77 @@ button.tree-node:hover .tree-label {
   gap: 12px;
   padding: 16px;
 }
+
+/* Roles 1001-c */
+.role-sim {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 16px;
+  margin: 0 0 12px;
+  border: 1px solid var(--line-soft);
+  border-radius: 12px;
+  background: #fff;
+  max-width: 390px;
+  width: 100%;
+}
+.role-sim-label { font-size: 0.75rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.role-sim-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+.role-sim-btn {
+  flex: 1;
+  min-height: 40px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.role-sim-btn.on {
+  border-color: var(--accent, #29676D);
+  background: color-mix(in srgb, var(--accent, #29676D) 12%, #fff);
+  color: var(--accent, #29676D);
+  font-weight: 600;
+}
+.role-sim-hint { margin: 0; font-size: 0.72rem; color: var(--muted); }
+.admin-shortcut { margin: 8px 0 12px; }
+.inscription-status { display:flex; flex-direction:column; gap:8px; padding:12px 0; }
+.inscription-status .badge { align-self: flex-start; }
+.lifecycle-bar { display:flex; gap:8px; flex-wrap:wrap; margin: 12px 0; }
+.lifecycle-bar .chip { pointer-events: none; }
+.lifecycle-bar .chip.on {
+  border-color: var(--accent, #29676D);
+  background: color-mix(in srgb, var(--accent, #29676D) 14%, #fff);
+  color: var(--accent, #29676D);
+  font-weight: 600;
+}
+.form-card { display:flex; flex-direction:column; gap:12px; padding: 4px 0 16px; }
+.dash-grid { display: flex; flex-direction: column; gap: 8px; margin: 8px 0 16px; }
+.dash-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--line-soft);
+  border-radius: 12px;
+  background: #fff;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  width: 100%;
+}
+.dash-card strong { display: block; }
+.dash-card .meta { font-size: 0.8rem; }
+.dash-count {
+  min-width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, var(--accent, #29676D) 14%, #fff);
+  color: var(--accent, #29676D);
+  font-weight: 700;
+  font-size: 0.85rem;
+}
