@@ -13,6 +13,7 @@ import {
   infoFeedCard,
   socialActions,
   sheetOption,
+  sheetActions,
   modalShell,
   evenementsListeBody,
   tbd,
@@ -22,6 +23,23 @@ import {
 } from './components.js'
 import { colorFor } from './theme.js'
 import { isAdminRole } from './role.js'
+import { getMenuContext, setMenuContext } from './menu-context.js'
+import {
+  publicationMenuActions,
+  directoryMenuActions,
+  eventMenuActions,
+  participantMenuActions,
+  annonceMenuActions,
+  offreMenuActions,
+  eventInscriptionUi,
+  isHidden,
+} from './permissions.js'
+import {
+  getPublication,
+  getDirectory,
+  getEvent,
+  getParticipant,
+} from './demo-data.js'
 
 /** Screen registry: id → { title, group, render(state) } */
 
@@ -351,7 +369,27 @@ function santePharmacies() {
   )
 }
 
-function pharmacieDetails(tab = 'infos') {
+function dirUnavailable(title = 'Cette fiche n’est plus disponible') {
+  return wrap(
+    `
+    <div class="menu-unavailable">
+      <strong>${title}</strong>
+      <p class="meta">La fiche n’est pas publiée ou a été retirée. Accessible uniquement à l’équipe.</p>
+      <button class="hit btn primary" data-go="sante-pharmacies" type="button">Retour aux pharmacies</button>
+    </div>
+    `,
+    {
+      header: phoneHeader({ title: 'Fiche', backTo: 'sante-pharmacies' }),
+      footer: phoneFooter('menu'),
+    }
+  )
+}
+
+function pharmacieDetails(tab = 'infos', contentId = 'dir-pharmacie-centrale') {
+  const dir = getDirectory(contentId)
+  if (dir && dir.state !== 'published' && !isAdminRole()) {
+    return dirUnavailable()
+  }
   const tabs = `
     <div class="tabs">
       <button class="hit tab ${tab === 'infos' ? 'on' : ''}" data-go="sante-pharmacie-infos">Informations</button>
@@ -383,12 +421,19 @@ function pharmacieDetails(tab = 'infos') {
   const adminEdit = isAdminRole()
     ? `<button class="hit btn block outline admin-shortcut" data-go="fiche-annuaire-form" type="button">Modifier cette fiche</button>`
     : ''
+  const stateBadge =
+    dir && dir.state !== 'published'
+      ? `<span class="badge">${dir.state === 'draft' ? 'Brouillon' : 'Non publiée'}</span>`
+      : `<span class="badge">Ouvert 24h/24</span>`
   return wrap(
     `
     ${photo('Photo façade…', 'hero')}
     <div class="detail-head">
-      <strong>Pharmacie centrale</strong>
-      <span class="badge">Ouvert 24h/24</span>
+      <div class="event-title-row">
+        <strong>${dir?.title || 'Pharmacie centrale'}</strong>
+        <button class="hit icon-btn" data-open-menu="directory" data-content-id="${contentId}" data-menu-parent="sante-pharmacie-infos" title="Plus d’options" aria-label="Plus d’options">⋯</button>
+      </div>
+      ${stateBadge}
       <p class="meta">Pharmacie · 1,2 km</p>
     </div>
     <div class="row-actions">
@@ -614,10 +659,6 @@ function mairieRdvCta() {
   return `<button class="hit btn primary block rdv-cta" data-go="mairie-rdv">Prendre rendez-vous</button>`
 }
 
-function mairiePubOptionsGo() {
-  return isAdminRole() ? 'mairie-pub-options-admin' : 'mairie-pub-options-habitant'
-}
-
 function mairieAccueil() {
   const admin = isAdminRole()
   return wrap(
@@ -633,14 +674,16 @@ function mairieAccueil() {
       author: 'Mairie de Kapan',
       role: 'Publication',
       body: 'Informations et actualités de votre mairie.',
-      optionsGo: mairiePubOptionsGo(),
+      contentId: 'pub-mairie-1',
+      menuParent: 'mairie-accueil',
     })}
     ${postCard({
       author: 'Mairie de Kapan',
       role: 'Publication',
       body: 'Rappel — démarches en mairie et horaires d’accueil.',
       multi: true,
-      optionsGo: mairiePubOptionsGo(),
+      contentId: 'pub-mairie-2',
+      menuParent: 'mairie-accueil',
     })}
     `,
     {
@@ -853,13 +896,15 @@ function mairiePresentation() {
     ${publicationCard({
       title: 'À propos de la ville de KAPAN',
       body: 'Texte de présentation de la ville…',
-      optionsGo: 'mairie-presentation-options',
+      contentId: 'pub-mairie-1',
+      menuParent: 'mairie-presentation',
     })}
     ${publicationCard({
       title: 'Kapan, entre ville et nature',
       body: 'Texte…',
       multi: true,
-      optionsGo: 'mairie-presentation-options',
+      contentId: 'pub-mairie-2',
+      menuParent: 'mairie-presentation',
     })}
     `,
     {
@@ -869,37 +914,184 @@ function mairiePresentation() {
   )
 }
 
+/** Legacy nav leaves → open content-menu with forced context */
+function openContentMenuAlias(type, contentId, parent, participantId) {
+  setMenuContext({ type, contentId, parent, participantId })
+  return contentMenu()
+}
+
 function mairiePresentationOptions() {
-  return isAdminRole() ? mairiePubOptionsAdmin() : mairiePubOptionsHabitant()
+  return openContentMenuAlias('publication', 'pub-mairie-1', 'mairie-presentation')
 }
 
 function mairiePubOptionsHabitant() {
-  return wrap(`${photo('Fond publication…', 'dim')}`, {
-    header: phoneHeader({ title: 'Publication', backTo: 'mairie-accueil' }),
-    footer: phoneFooter('mairie'),
+  return openContentMenuAlias('publication', 'pub-mairie-1', 'mairie-accueil')
+}
+
+function mairiePubOptionsAdmin() {
+  return openContentMenuAlias('publication', 'pub-mairie-1', 'mairie-accueil')
+}
+
+function contentMenuTitle(ctx) {
+  if (!ctx) return 'Plus d’options'
+  if (ctx.type === 'publication') {
+    const p = getPublication(ctx.contentId)
+    return p?.authorLabel ? `Publication · ${p.authorLabel}` : 'Publication'
+  }
+  if (ctx.type === 'directory') {
+    return getDirectory(ctx.contentId)?.title || 'Fiche'
+  }
+  if (ctx.type === 'event') {
+    return getEvent(ctx.contentId)?.title || 'Événement'
+  }
+  if (ctx.type === 'participant') {
+    return getParticipant(ctx.participantId)?.name || 'Participant'
+  }
+  if (ctx.type === 'annonce') return 'Annonce'
+  if (ctx.type === 'offre') return 'Offre'
+  return 'Plus d’options'
+}
+
+function contentMenuActions(ctx) {
+  if (!ctx) return []
+  switch (ctx.type) {
+    case 'publication':
+      return publicationMenuActions(ctx.contentId)
+    case 'directory':
+      return directoryMenuActions(ctx.contentId)
+    case 'event':
+      return eventMenuActions(ctx.contentId)
+    case 'participant':
+      return participantMenuActions(ctx.participantId)
+    case 'annonce':
+      return annonceMenuActions({ official: true })
+    case 'offre':
+      return offreMenuActions()
+    default:
+      return []
+  }
+}
+
+function contentMenu() {
+  const ctx = getMenuContext() || { type: 'publication', contentId: 'pub-mairie-1', parent: 'mairie-accueil' }
+  const parent = ctx.parent || 'mairie-accueil'
+  const actions = contentMenuActions(ctx)
+  const dimLabel =
+    ctx.type === 'directory'
+      ? 'Fond fiche…'
+      : ctx.type === 'event'
+        ? 'Détail événement…'
+        : ctx.type === 'participant'
+          ? 'Liste participants…'
+          : 'Fond publication…'
+  return wrap(`${photo(dimLabel, 'dim')}<p class="meta menu-parent-hint">← ${parent}</p>`, {
+    header: phoneHeader({ title: contentMenuTitle(ctx), backTo: parent }),
+    footer: phoneFooter(parent.includes('infos') ? 'infos' : parent.includes('mairie') ? 'mairie' : 'menu'),
+    overlay: modalShell('Plus d’options', sheetActions(actions)),
+  })
+}
+
+function menuConfirmShell({ title, body, confirmSim, confirmLabel = 'Confirmer', backTo }) {
+  const parent = getMenuContext()?.parent || backTo || 'mairie-accueil'
+  return wrap(`${photo('Fond…', 'dim')}`, {
+    header: phoneHeader({ title, backTo: parent }),
+    footer: phoneFooter('menu'),
     overlay: modalShell(
-      'Plus d’options',
+      title,
+      `<p>${body}</p>`,
       `
-      ${sheetOption('Afficher la liste des réactions', { go: 'infos-reactions' })}
-      ${sheetOption('Partager la publication', { go: 'infos-partage' })}
-      ${sheetOption('Signaler', { sim: 'signalement' })}
+      <div class="row-actions confirm-actions">
+        <button class="hit btn" data-back type="button">Annuler</button>
+        <button class="hit btn primary" data-sim="${confirmSim}" type="button">${confirmLabel}</button>
+      </div>
+      `,
+      { center: true }
+    ),
+  })
+}
+
+function menuConfirmDeletePub() {
+  const id = getMenuContext()?.contentId || 'pub-mairie-1'
+  const p = getPublication(id)
+  return menuConfirmShell({
+    title: 'Supprimer la publication',
+    body: `Supprimer « ${p?.body?.slice(0, 48) || id}… » ? Cette action retire la publication de la démo. Annuler = aucun changement.`,
+    confirmSim: 'supprimer',
+    confirmLabel: 'Supprimer',
+    backTo: 'mairie-accueil',
+  })
+}
+
+function menuConfirmDeleteDir() {
+  const id = getMenuContext()?.contentId || 'dir-pharmacie-centrale'
+  const d = getDirectory(id)
+  return menuConfirmShell({
+    title: 'Supprimer la fiche',
+    body: `Supprimer la fiche « ${d?.title || id} » ? Elle ne sera plus consultable. Annuler = aucun changement.`,
+    confirmSim: 'supprimer',
+    confirmLabel: 'Supprimer',
+    backTo: 'sante-pharmacie-infos',
+  })
+}
+
+function menuConfirmDeleteEvt() {
+  const id = getMenuContext()?.contentId || 'evt-atelier'
+  const e = getEvent(id)
+  return menuConfirmShell({
+    title: 'Supprimer l’événement',
+    body: `Supprimer « ${e?.title || id} » (brouillon) ? L’événement disparaît de la liste. Annuler = aucun changement.`,
+    confirmSim: 'supprimer',
+    confirmLabel: 'Supprimer',
+    backTo: 'evenement-details',
+  })
+}
+
+function menuConfirmCancelEvt() {
+  const id = getMenuContext()?.contentId || 'evt-atelier'
+  const e = getEvent(id)
+  return menuConfirmShell({
+    title: 'Annuler l’événement',
+    body: `Annuler « ${e?.title || id} » ? La fiche est conservée, les inscrits sont notifiés (simulé). Annuler = aucun changement.`,
+    confirmSim: 'cancel-evt',
+    confirmLabel: 'Annuler l’événement',
+    backTo: 'evenement-details',
+  })
+}
+
+function menuModeratePub() {
+  const id = getMenuContext()?.contentId || 'pub-citoyen-other'
+  const p = getPublication(id)
+  return wrap(`${photo('Fond feed…', 'dim')}`, {
+    header: phoneHeader({ title: 'Modérer', backTo: getMenuContext()?.parent || 'infos-feed' }),
+    footer: phoneFooter('infos'),
+    overlay: modalShell(
+      'Modérer la publication',
+      `
+      <p class="meta">Post de ${p?.authorLabel || 'citoyen'} — l’admin ne réécrit pas le texte.</p>
+      ${sheetOption('Masquer publiquement', { sim: 'moderer-masquer' })}
+      ${sheetOption('Retirer avec motif', { sim: 'moderer-retirer', danger: true })}
+      ${sheetOption('Signalements (simulé)', { sim: 'signalement' })}
       `
     ),
   })
 }
 
-function mairiePubOptionsAdmin() {
-  return wrap(`${photo('Fond publication…', 'dim')}`, {
-    header: phoneHeader({ title: 'Publication', backTo: 'mairie-accueil' }),
-    footer: phoneFooter('mairie'),
+function menuSignalFicheInfo() {
+  return wrap(`${photo('Fond fiche…', 'dim')}`, {
+    header: phoneHeader({
+      title: 'Signaler info',
+      backTo: getMenuContext()?.parent || 'sante-pharmacie-infos',
+    }),
+    footer: phoneFooter('menu'),
     overlay: modalShell(
-      'Plus d’options',
+      'Signaler info incorrecte',
       `
-      ${sheetOption('Afficher la liste des réactions', { go: 'infos-reactions' })}
-      ${sheetOption('Modifier', { go: 'mairie-pub-edit' })}
-      ${sheetOption('Archiver', { sim: 'archiver' })}
-      ${sheetOption('Partager la publication', { go: 'infos-partage' })}
-      ${sheetOption('Supprimer', { sim: 'supprimer' })}
+      <p class="meta">Le signalement ne modifie pas la fiche.</p>
+      ${sheetOption('Horaires', { sim: 'signal-info' })}
+      ${sheetOption('Adresse', { sim: 'signal-info' })}
+      ${sheetOption('Téléphone', { sim: 'signal-info' })}
+      ${sheetOption('Description', { sim: 'signal-info' })}
+      ${sheetOption('Autre', { sim: 'signal-info' })}
       `
     ),
   })
@@ -1345,6 +1537,57 @@ function mairieStub(title, note) {
 /* ——— Social / contenus ——— */
 
 function infosFeed() {
+  const posts = [
+    {
+      id: 'pub-citoyen-own',
+      author: 'Arman Petrosyan',
+      role: 'Mairie',
+      time: 'il y a 2 h',
+      body: 'Collecte des déchets verts renforcée ce week-end dans les quartiers sud et centre. Merci de sortir vos bacs avant 7 h.',
+      media: 'none',
+      identified: 0,
+      likes: '128',
+      comments: '18',
+      shares: '12',
+    },
+    {
+      id: 'pub-citoyen-other',
+      author: 'Liana Avetisyan',
+      role: 'Délégué',
+      time: 'il y a 5 h',
+      body: 'Marché du samedi — producteurs locaux sur la place centrale dès 8 h. Venez nombreux !',
+      media: 'photo',
+      identified: 5,
+      likes: '86',
+      comments: '24',
+      shares: '9',
+    },
+    {
+      id: 'pub-citoyen-other-0',
+      author: 'Hovhannes Mkrtchyan',
+      role: 'Membre',
+      time: 'il y a 1 j',
+      body: 'Retour en images du festival de musique au parc municipal.',
+      media: 'multi',
+      identified: 12,
+      likes: '0',
+      comments: '41',
+      shares: '33',
+    },
+    {
+      id: 'pub-mairie-feed',
+      author: 'Mairie de Kapan',
+      role: 'Mairie',
+      time: 'il y a 2 j',
+      body: 'Replay du conseil municipal du 24 septembre — points budgétaires et travaux voirie.',
+      media: 'video',
+      identified: 3,
+      likes: '64',
+      comments: '11',
+      shares: '27',
+    },
+  ]
+  const visible = posts.filter((p) => !isHidden(p.id))
   return wrap(
     `
     <div class="compose-card">
@@ -1359,57 +1602,23 @@ function infosFeed() {
     </div>
     <p class="meta sort-row">Classer par · <button class="hit linkish" type="button">Récent ▾</button></p>
 
-    ${feedPostCard({
-      author: 'Arman Petrosyan',
-      role: 'Mairie',
-      time: 'il y a 2 h',
-      body: 'Collecte des déchets verts renforcée ce week-end dans les quartiers sud et centre. Merci de sortir vos bacs avant 7 h.',
-      media: 'none',
-      identified: 0,
-      likes: '128',
-      comments: '18',
-      shares: '12',
-      optionsGo: 'infos-post-options',
-    })}
-
-    ${feedPostCard({
-      author: 'Liana Avetisyan',
-      role: 'Délégué',
-      time: 'il y a 5 h',
-      body: 'Marché du samedi — producteurs locaux sur la place centrale dès 8 h. Venez nombreux !',
-      media: 'photo',
-      identified: 5,
-      likes: '86',
-      comments: '24',
-      shares: '9',
-      optionsGo: 'infos-post-options-other',
-    })}
-
-    ${feedPostCard({
-      author: 'Hovhannes Mkrtchyan',
-      role: 'Membre',
-      time: 'il y a 1 j',
-      body: 'Retour en images du festival de musique au parc municipal.',
-      media: 'multi',
-      identified: 12,
-      likes: '210',
-      comments: '41',
-      shares: '33',
-      optionsGo: 'infos-post-options-other',
-    })}
-
-    ${feedPostCard({
-      author: 'Mairie de Kapan',
-      role: 'Mairie',
-      time: 'il y a 2 j',
-      body: 'Replay du conseil municipal du 24 septembre — points budgétaires et travaux voirie.',
-      media: 'video',
-      identified: 3,
-      likes: '64',
-      comments: '11',
-      shares: '27',
-      optionsGo: 'infos-post-options',
-    })}
+    ${visible
+      .map((p) =>
+        feedPostCard({
+          author: p.author,
+          role: p.role,
+          time: p.time,
+          body: p.body,
+          media: p.media,
+          identified: p.identified,
+          likes: p.likes,
+          comments: p.comments,
+          shares: p.shares,
+          contentId: p.id,
+          menuParent: 'infos-feed',
+        })
+      )
+      .join('')}
     `,
     {
       header: phoneHeader({ title: 'Infos Feed', backTo: 'accueil-kapan' }),
@@ -1419,22 +1628,8 @@ function infosFeed() {
 }
 
 function infosPostOptions(own = true) {
-  return wrap(`${photo('Fond feed…', 'dim')}`, {
-    header: phoneHeader({ title: 'Infos Feed', backTo: 'infos-feed' }),
-    footer: phoneFooter('infos'),
-    overlay: modalShell(
-      'Options de la publication',
-      own
-        ? `
-        ${sheetOption('Modifier', { sim: 'modifier' })}
-        ${sheetOption('Supprimer', { sim: 'supprimer' })}
-        `
-        : `
-        ${sheetOption('Signaler', { sim: 'signaler' })}
-        ${sheetOption('Masquer la publication', { sim: 'masquer' })}
-        `
-    ),
-  })
+  const contentId = own ? 'pub-citoyen-own' : 'pub-citoyen-other'
+  return openContentMenuAlias('publication', contentId, 'infos-feed')
 }
 
 function infosReactions() {
@@ -1633,8 +1828,8 @@ function evenementsListe() {
 }
 
 const EVENT_PARTICIPANTS = [
-  { name: 'Lilit Ameni', since: 'Membre depuis 1 h' },
-  { name: 'Rouben Sirunyan', since: 'Membre depuis 2 h' },
+  { id: 'part-rouben', name: 'Rouben Sirunyan', since: 'Membre depuis 2 h' },
+  { id: 'part-lilit', name: 'Lilit Ameni', since: 'Membre depuis 1 h' },
   { name: 'Aris Margaryan', since: 'Membre depuis 1 j' },
   { name: 'Hakob Hakobyan', since: 'Membre depuis 3 j' },
   { name: 'Anahit S.', since: 'Membre depuis 1 sem.' },
@@ -1649,12 +1844,51 @@ const EVENT_VALIDATION_PEOPLE = [
   { name: 'Yester Sullivan', joined: 'A rejoint il y a 4 mois' },
 ]
 
+function renderInscriptionBlock(eventId = 'evt-atelier') {
+  const ui = eventInscriptionUi(eventId)
+  if (ui.kind === 'admin') {
+    return `
+      <button class="hit btn primary block" data-go="evenement-gerer" type="button">Gérer l’événement</button>
+      <button class="hit btn block outline" data-go="evenement-validation" type="button">Gérer les inscriptions</button>
+    `
+  }
+  if (ui.kind === 'join') {
+    return `<button class="hit btn primary block" data-sim="${ui.sim}" type="button">${ui.label}</button>`
+  }
+  if (ui.kind === 'pending' || ui.kind === 'confirmed') {
+    return `
+      <section class="inscription-status">
+        <h2 class="sec">Mon inscription</h2>
+        <span class="badge">${ui.badge}</span>
+        <button class="hit btn block outline" data-sim="${ui.sim}" type="button">${ui.cancelLabel}</button>
+      </section>
+    `
+  }
+  if (ui.kind === 'refused') {
+    return `
+      <section class="inscription-status">
+        <h2 class="sec">Mon inscription</h2>
+        <span class="badge">${ui.badge}</span>
+        <p class="meta">${ui.explanation}</p>
+      </section>
+    `
+  }
+  if (ui.kind === 'full' || ui.kind === 'closed' || ui.kind === 'cancelled' || ui.kind === 'ended') {
+    return `<p class="meta inscription-status"><strong>${ui.label}</strong></p>`
+  }
+  return ''
+}
+
 function evenementParticipantsBody() {
+  const admin = isAdminRole()
   return `
     ${search('Rechercher un ami…')}
     <div class="participant-list">
-      ${EVENT_PARTICIPANTS.map(
-        (p) => `
+      ${EVENT_PARTICIPANTS.map((p) => {
+        const menuBtn = p.id
+          ? `<button class="hit icon-btn" data-open-menu="participant" data-participant-id="${p.id}" data-menu-parent="evenement-participants" title="Plus d’options" aria-label="Plus d’options">⋯</button>`
+          : `<button class="hit icon-btn" type="button" title="Plus d’options" aria-label="Plus d’options">⋯</button>`
+        return `
         <div class="participant-row">
           <span class="avatar"></span>
           <div class="participant-meta grow">
@@ -1663,29 +1897,21 @@ function evenementParticipantsBody() {
             <span class="meta">5 ami(e)s en commun · 2 hobbies similaires</span>
           </div>
           <button class="hit action-circle" data-go="messages-thread" title="Message" aria-label="Message">💬</button>
-          <button class="hit icon-btn" data-go="evenement-participant-menu" title="Plus d’options" aria-label="Plus d’options">⋯</button>
+          ${menuBtn}
         </div>`
-      ).join('')}
+      }).join('')}
     </div>
-    <button class="hit btn block outline" data-go="evenement-discussion">Envoyer un message groupé</button>
+    ${
+      admin
+        ? `<button class="hit btn block outline" data-go="evenement-discussion">Envoyer un message groupé</button>`
+        : `<p class="meta">Pas de diffusion collective pour les habitants.</p>`
+    }
   `
 }
 
 function evenementDetails() {
   const admin = isAdminRole()
-  const actions = admin
-    ? `
-      <button class="hit btn primary block" data-go="evenement-gerer" type="button">Gérer l’événement</button>
-      <button class="hit btn block outline" data-go="evenement-validation" type="button">Gérer les inscriptions</button>
-    `
-    : `
-      <button class="hit btn primary block" data-sim="participation" type="button">Participer</button>
-      <section class="inscription-status">
-        <h2 class="sec">Mon inscription</h2>
-        <span class="badge">En attente</span>
-        <p class="meta">Demande envoyée · statut illustratif (en attente / acceptée / refusée)</p>
-      </section>
-    `
+  const actions = renderInscriptionBlock('evt-atelier')
   const plusInfos = `
       <h2 class="sec">Plus d’informations</h2>
       <div class="plus-infos">
@@ -1717,7 +1943,7 @@ function evenementDetails() {
       <div class="event-detail-head">
         <div class="event-title-row">
           <strong class="block-title">Atelier créatif</strong>
-          <button class="hit icon-btn" data-go="evenement-options" title="Plus d’options" aria-label="Plus d’options">⋯</button>
+          <button class="hit icon-btn" data-open-menu="event" data-content-id="evt-atelier" data-menu-parent="evenement-details" title="Plus d’options" aria-label="Plus d’options">⋯</button>
         </div>
         <p class="meta event-lieu">📍 Camp Nou, Stade de Barcelone</p>
         <p class="meta">Paris, France</p>
@@ -1820,20 +2046,7 @@ function evenementGerer() {
 }
 
 function evenementOptions() {
-  return wrap(`${photo('Détail événement…', 'dim')}`, {
-    header: phoneHeader({ title: 'Détails', backTo: 'evenement-details' }),
-    footer: phoneFooter('menu'),
-    overlay: modalShell(
-      'Plus d’options',
-      `
-      ${sheetOption('Partager', { sim: 'partager' })}
-      ${sheetOption('Ajouter au calendrier', { sim: 'calendrier' })}
-      ${sheetOption('Enregistrer', { go: 'enregistrements' })}
-      ${sheetOption('Signaler l’événement', { go: 'evenement-signaler' })}
-      ${sheetOption('Masquer cet événement', { sim: 'masquer' })}
-      `
-    ),
-  })
+  return openContentMenuAlias('event', 'evt-atelier', 'evenement-details')
 }
 
 function evenementParticipants() {
@@ -1844,34 +2057,22 @@ function evenementParticipants() {
 }
 
 function evenementParticipantMenu() {
-  return wrap(evenementParticipantsBody(), {
-    header: phoneHeader({ title: 'Liste des participants', backTo: 'evenement-participants' }),
-    footer: phoneFooter('menu'),
-    overlay: modalShell(
-      'Rouben Sirunyan',
-      `
-      ${sheetOption('Voir son profil', { sim: 'profil' })}
-      ${sheetOption('Envoyer un message', { go: 'messages-thread' })}
-      ${sheetOption('Supprimer de la liste', { go: 'evenement-supprimer-confirm' })}
-      ${sheetOption('Signaler', { go: 'evenement-signaler' })}
-      `
-    ),
-  })
+  return openContentMenuAlias('participant', null, 'evenement-participants', 'part-rouben')
 }
 
 function evenementSupprimerConfirm() {
   return wrap(evenementParticipantsBody(), {
-    header: phoneHeader({ title: 'Liste des participants', backTo: 'evenement-participant-menu' }),
+    header: phoneHeader({ title: 'Liste des participants', backTo: 'evenement-participants' }),
     footer: phoneFooter('menu'),
     overlay: modalShell(
-      'Supprimer de la liste',
+      'Retirer de l’événement',
       `
-      <p>Êtes-vous sûr(e) de vouloir supprimer Rouben Sirunyan de la liste des participants ?</p>
+      <p>Retirer Rouben Sirunyan de l’événement ? Le compte n’est pas supprimé. Annuler = aucun changement.</p>
       `,
       `
       <div class="row-actions confirm-actions">
         <button class="hit btn" data-back type="button">Annuler</button>
-        <button class="hit btn primary" data-sim="supprimer" type="button">Supprimer</button>
+        <button class="hit btn primary" data-sim="supprimer" type="button">Retirer</button>
       </div>
       `,
       { center: true }
@@ -2145,7 +2346,10 @@ function annonceDetails() {
     `
     ${photo('Photo principale…', 'hero')}
     <div class="h-scroll thumbs">${photo('1')}${photo('2')}${photo('3')}${photo('4')}</div>
-    <strong class="block-title">Appartement lumineux — 3 pièces</strong>
+    <div class="event-title-row">
+      <strong class="block-title">Appartement lumineux — 3 pièces</strong>
+      <button class="hit icon-btn" data-open-menu="annonce" data-content-id="annonce-1" data-menu-parent="annonce-details" title="Plus d’options" aria-label="Plus d’options">⋯</button>
+    </div>
     <p><strong>420 € / mois</strong> · <span class="badge">Annonce officielle</span></p>
     <p class="meta">Centre-ville Kapan</p>
     <h2 class="sec">Description</h2>
@@ -2240,7 +2444,10 @@ function emploisListe() {
 function emploiDetails() {
   return wrap(
     `
-    <strong class="block-title">Chargé(e) de communication</strong>
+    <div class="event-title-row">
+      <strong class="block-title">Chargé(e) de communication</strong>
+      <button class="hit icon-btn" data-open-menu="offre" data-content-id="offre-1" data-menu-parent="emploi-details" title="Plus d’options" aria-label="Plus d’options">⋯</button>
+    </div>
     <p class="meta">Mairie de Kapan · Kapan</p>
     <span class="badge">CDI</span>
     <h2 class="sec">Description</h2>
@@ -3445,6 +3652,54 @@ export const SCREENS = {
     side: 'user',
     group: 'Ma mairie',
     render: mairiePubOptionsAdmin,
+  },
+  'content-menu': {
+    title: 'Menu contenu (⋯)',
+    side: 'user',
+    group: 'Menus',
+    render: contentMenu,
+  },
+  'menu-confirm-delete-pub': {
+    title: 'Confirmer — Supprimer publication',
+    side: 'user',
+    group: 'Menus',
+    render: menuConfirmDeletePub,
+  },
+  'menu-confirm-delete-dir': {
+    title: 'Confirmer — Supprimer fiche',
+    side: 'user',
+    group: 'Menus',
+    render: menuConfirmDeleteDir,
+  },
+  'menu-confirm-delete-evt': {
+    title: 'Confirmer — Supprimer événement',
+    side: 'user',
+    group: 'Menus',
+    render: menuConfirmDeleteEvt,
+  },
+  'menu-confirm-cancel-evt': {
+    title: 'Confirmer — Annuler événement',
+    side: 'user',
+    group: 'Menus',
+    render: menuConfirmCancelEvt,
+  },
+  'menu-moderate-pub': {
+    title: 'Modérer publication',
+    side: 'user',
+    group: 'Menus',
+    render: menuModeratePub,
+  },
+  'menu-signal-fiche-info': {
+    title: 'Signaler info incorrecte',
+    side: 'user',
+    group: 'Menus',
+    render: menuSignalFicheInfo,
+  },
+  'sante-pharmacie-unpublished': {
+    title: 'Pharmacie — Non publiée',
+    side: 'user',
+    group: 'Santé',
+    render: () => pharmacieDetails('infos', 'dir-pharmacie-unpublished'),
   },
   'mairie-gerer-page': {
     title: 'Gérer la page Ma mairie',
@@ -5915,6 +6170,7 @@ export const NAV_TREE = {
                 children: [
                   { id: 'sante-pharmacie-infos', label: 'Informations' },
                   { id: 'sante-pharmacie-horaires', label: 'Horaires' },
+                  { id: 'sante-pharmacie-unpublished', label: 'Fiche non publiée' },
                 ],
               },
               {
@@ -5957,6 +6213,18 @@ export const NAV_TREE = {
               { id: 'mairie-pub-edit', label: 'Modifier publication' },
               { id: 'mairie-pub-options-habitant', label: 'Options pub · habitant' },
               { id: 'mairie-pub-options-admin', label: 'Options pub · admin' },
+              {
+                label: 'Menus / permissions',
+                children: [
+                  { id: 'content-menu', label: 'content-menu' },
+                  { id: 'menu-confirm-delete-pub', label: 'Confirm delete pub' },
+                  { id: 'menu-confirm-delete-dir', label: 'Confirm delete fiche' },
+                  { id: 'menu-confirm-delete-evt', label: 'Confirm delete evt' },
+                  { id: 'menu-confirm-cancel-evt', label: 'Confirm cancel evt' },
+                  { id: 'menu-moderate-pub', label: 'Modérer pub' },
+                  { id: 'menu-signal-fiche-info', label: 'Signaler info fiche' },
+                ],
+              },
               {
                 id: 'mairie-conseil',
                 label: 'Maire & Conseil',

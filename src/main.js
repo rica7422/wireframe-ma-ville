@@ -9,6 +9,16 @@ import {
   ROLE_HABITANT,
   ROLE_ADMIN_KAPAN,
 } from './role.js'
+import {
+  canAccessManageRoute,
+  isMenuScreen,
+  parentForMenuScreen,
+  toggleSaved,
+  toggleHidden,
+  setInscription,
+} from './permissions.js'
+import { setMenuContext, getMenuContext, clearMenuContext } from './menu-context.js'
+import { getDirectory } from './demo-data.js'
 
 const historyStack = []
 let currentId = 'ville-bienvenue'
@@ -28,10 +38,25 @@ function toast(msg) {
   }, 2200)
 }
 
+function refuseManage(id) {
+  toast('Accès refusé pour ce rôle (simulé)')
+  const publicFallback =
+    id?.startsWith('evenement-') ? 'evenement-details' : id?.startsWith('mairie-') ? 'mairie-accueil' : 'mairie-accueil'
+  if (SCREENS[publicFallback] && publicFallback !== currentId) {
+    go(publicFallback, { push: false })
+  } else {
+    render()
+  }
+}
+
 function go(id, { push = true } = {}) {
   id = resolveScreenId(id)
   if (!SCREENS[id]) {
     toast(`Écran inconnu : ${id}`)
+    return
+  }
+  if (!canAccessManageRoute(id)) {
+    refuseManage(id)
     return
   }
   if (push && currentId && currentId !== id) historyStack.push(currentId)
@@ -46,8 +71,16 @@ function go(id, { push = true } = {}) {
 function back() {
   const prev = historyStack.pop()
   if (prev) {
+    if (!canAccessManageRoute(prev)) {
+      clearMenuContext()
+      go('mairie-accueil', { push: false })
+      return
+    }
     currentId = prev
     navTab = ADMIN_IDS.has(prev) ? 'admin' : 'user'
+    if (location.hash.slice(1) !== prev) {
+      history.replaceState(null, '', `#${prev}`)
+    }
     render({ focusActive: true })
   } else {
     go('ville-bienvenue', { push: false })
@@ -56,6 +89,80 @@ function back() {
 
 function handleSim(kind) {
   const [action, arg] = String(kind).split(':')
+
+  if (action === 'save' && arg) {
+    const on = toggleSaved(arg)
+    toast(on ? 'Ajouté aux enregistrements (simulé)' : 'Retiré des enregistrements (simulé)')
+    if (isMenuScreen(currentId)) render()
+    return
+  }
+  if (action === 'hide' && arg) {
+    toggleHidden(arg)
+    toast('Masqué pour vous (simulé)')
+    const parent = getMenuContext()?.parent || parentForMenuScreen(currentId) || 'infos-feed'
+    clearMenuContext()
+    go(parent, { push: false })
+    return
+  }
+  if (action === 'inscription-join' && arg) {
+    setInscription(arg, 'pending')
+    toast('Demande envoyée (simulé)')
+    render()
+    return
+  }
+  if (action === 'inscription-cancel' && arg) {
+    setInscription(arg, 'none')
+    toast('Inscription annulée (simulé)')
+    render()
+    return
+  }
+  if (action === 'publish' && arg) {
+    const d = getDirectory(arg)
+    if (d) d.state = 'published'
+    toast('Fiche publiée (simulé)')
+    render()
+    return
+  }
+  if (action === 'unpublish' && arg) {
+    const d = getDirectory(arg)
+    if (d) d.state = 'unpublished'
+    toast('Fiche dépubliée (simulé)')
+    render()
+    return
+  }
+  if (action === 'republish' && arg) {
+    const d = getDirectory(arg)
+    if (d) d.state = 'published'
+    toast('Fiche republiée (simulé)')
+    render()
+    return
+  }
+  if (action === 'menu-close') {
+    back()
+    return
+  }
+  if (action === 'accept' && arg) {
+    toast('Participant accepté (simulé)')
+    render()
+    return
+  }
+  if (action === 'supprimer' || action === 'delete-confirm') {
+    toast('Suppression (simulée)')
+    const parent = getMenuContext()?.parent || parentForMenuScreen(currentId) || 'mairie-accueil'
+    clearMenuContext()
+    // After delete confirm → go list / parent
+    const list =
+      parent === 'evenement-details' || parent === 'evenement-participants'
+        ? 'evenements-liste'
+        : parent === 'sante-pharmacie-infos'
+          ? 'sante-pharmacies'
+          : parent === 'infos-feed'
+            ? 'infos-feed'
+            : 'mairie-accueil'
+    go(list, { push: false })
+    return
+  }
+
   const map = {
     miasin: 'Retour MIASIN (simulé) — MIASIN hors scope',
     appeler: arg ? `Appel simulé → ${arg}` : 'Appel simulé',
@@ -66,6 +173,7 @@ function handleSim(kind) {
     publier: 'Publication simulée',
     commentaire: 'Commentaire envoyé (simulé)',
     partage: 'Partage simulé',
+    partager: 'Partage simulé',
     suivre: 'Suivi simulé',
     participation: 'Participation mise à jour (simulé)',
     rdv: 'Rendez-vous — suite À préciser (simulé)',
@@ -77,14 +185,37 @@ function handleSim(kind) {
     'filtre-admin': 'Filtres admin — À préciser',
     enregistrer: 'Ajout aux enregistrements (simulé)',
     signalement: 'Signalement envoyé (simulé — À préciser)',
+    signaler: 'Signalement envoyé (simulé)',
     quitter: 'Quitter Ma Mairie (simulé — À préciser)',
-    supprimer: 'Suppression (simulée — À préciser)',
     media: 'Ajout média (simulé)',
     ajouter: 'Ajout (simulé)',
     agrandir: 'Agrandir la carte (simulé)',
-    archiver: 'Archivage simulé',
     brouillon: 'Brouillon enregistré (simulé)',
     previsualiser: 'Prévisualisation (simulé)',
+    calendrier: 'Ajout au calendrier (simulé)',
+    profil: 'Profil (simulé)',
+    'consulter-demande': 'Demande consultée (simulé)',
+    'consulter-inscription': 'Inscription consultée (simulé)',
+    'consulter-refus': 'Refus consulté (simulé)',
+    dispo: 'Disponibilité mise à jour (simulé)',
+    depublier: 'Dépublier (simulé)',
+    cloturer: 'Offre clôturée (simulé)',
+    masquer: 'Masqué pour vous (simulé)',
+    modifier: 'Modification (simulée)',
+    visio: 'Visio (simulée)',
+    'raison-inapproprie': 'Signalement : contenu inapproprié (simulé)',
+    'raison-harcelement': 'Signalement : harcèlement (simulé)',
+    'raison-faux': 'Signalement : fausse information (simulé)',
+    'raison-autre': 'Signalement : autre (simulé)',
+    'moderer-masquer': 'Contenu masqué publiquement (simulé)',
+    'moderer-retirer': 'Contenu retiré avec motif (simulé)',
+    'signal-info': 'Info incorrecte signalée (simulé) — la fiche n’est pas modifiée',
+    'cancel-evt': 'Événement annulé (simulé)',
+  }
+  // Never honor archiver / épingler
+  if (action === 'archiver' || action === 'epingler' || action === 'desarchiver' || action === 'desepingler') {
+    toast('Action non disponible dans ce prototype')
+    return
   }
   toast(map[action] || `Action simulée : ${kind}`)
 }
@@ -156,6 +287,23 @@ function roleSimulatorHtml() {
   `
 }
 
+function applyRoleSwitch(nextRole) {
+  const wasMenu = isMenuScreen(currentId)
+  const parent = parentForMenuScreen(currentId, getMenuContext()?.parent)
+  clearMenuContext()
+  setRole(nextRole)
+  if (wasMenu && parent && SCREENS[parent]) {
+    go(parent, { push: false })
+    return
+  }
+  if (!canAccessManageRoute(currentId)) {
+    toast('Accès refusé pour ce rôle (simulé)')
+    go('mairie-accueil', { push: false })
+    return
+  }
+  render()
+}
+
 function render({ focusActive = false, resetNavScroll = false } = {}) {
   const prevScroll = document.querySelector('.proto-scroll')
   if (prevScroll && !resetNavScroll) savedNavScroll = prevScroll.scrollTop
@@ -169,7 +317,7 @@ function render({ focusActive = false, resetNavScroll = false } = {}) {
       <aside class="proto-nav">
         <header class="proto-brand">
           <strong>Ma Ville</strong>
-          <span class="proto-tag">Wireframe · build 1001-c · roles</span>
+          <span class="proto-tag">Wireframe · build 1001-d · menus-permissions</span>
         </header>
         <p class="proto-hint">Navigation du prototype (≠ nav dans le téléphone)</p>
         <div class="nav-tabs" role="tablist" aria-label="Côté prototype">
@@ -207,6 +355,18 @@ function render({ focusActive = false, resetNavScroll = false } = {}) {
 
   const phone = document.getElementById('phone-inner')
   phone.addEventListener('click', (e) => {
+    const openMenu = e.target.closest('[data-open-menu]')
+    if (openMenu) {
+      e.preventDefault()
+      setMenuContext({
+        type: openMenu.dataset.openMenu,
+        contentId: openMenu.dataset.contentId,
+        parent: openMenu.dataset.menuParent || currentId,
+        participantId: openMenu.dataset.participantId,
+      })
+      go('content-menu')
+      return
+    }
     const day = e.target.closest('.cal-day')
     if (day && day.closest('.calendar') && !day.classList.contains('closed')) {
       e.preventDefault()
@@ -265,8 +425,7 @@ document.getElementById('app').addEventListener('click', (e) => {
   const simRole = e.target.closest('[data-sim-role]')
   if (simRole) {
     e.preventDefault()
-    setRole(simRole.dataset.simRole)
-    render()
+    applyRoleSwitch(simRole.dataset.simRole)
     return
   }
   const tab = e.target.closest('[data-nav-tab]')

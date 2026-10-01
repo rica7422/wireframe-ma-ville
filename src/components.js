@@ -192,10 +192,11 @@ export function infoFeedCard({
   `
 }
 
-export function sheetOption(label, { go, sim, toggle = false, on = false } = {}) {
+export function sheetOption(label, { go, sim, toggle = false, on = false, danger = false } = {}) {
   const attrs = go ? `data-go="${go}"` : sim ? `data-sim="${sim}"` : 'type="button"'
+  const dangerCls = danger ? ' danger' : ''
   return `
-    <button class="hit sheet-option" ${attrs}>
+    <button class="hit sheet-option${dangerCls}" ${attrs}>
       <span class="sheet-ico"></span>
       <span class="grow">${label}</span>
       ${
@@ -207,6 +208,58 @@ export function sheetOption(label, { go, sim, toggle = false, on = false } = {})
   `
 }
 
+/** Map permission action objects → sheetOption HTML, with separators before manage/danger. */
+export function sheetActions(actions = []) {
+  let seenManage = false
+  let seenDanger = false
+  return actions
+    .map((a) => {
+      let sep = ''
+      if ((a.section === 'manage' || a.section === 'danger') && !seenManage && !seenDanger) {
+        if (a.section === 'manage') seenManage = true
+        if (a.section === 'danger') seenDanger = true
+        sep = `<div class="sheet-sep" aria-hidden="true"></div>`
+      } else if (a.section === 'danger' && !seenDanger) {
+        seenDanger = true
+        sep = `<div class="sheet-sep" aria-hidden="true"></div>`
+      } else if (a.section === 'manage' && !seenManage) {
+        seenManage = true
+        sep = `<div class="sheet-sep" aria-hidden="true"></div>`
+      }
+      return (
+        sep +
+        sheetOption(a.label, {
+          go: a.go,
+          sim: a.sim,
+          toggle: a.toggle,
+          on: a.on,
+          danger: a.danger,
+        })
+      )
+    })
+    .join('')
+}
+
+function optionsButtonAttrs({
+  contentId = null,
+  menuType = 'publication',
+  menuParent = null,
+  participantId = null,
+  optionsGo = null,
+} = {}) {
+  if (contentId || participantId) {
+    const parts = [
+      `data-open-menu="${menuType}"`,
+      contentId ? `data-content-id="${contentId}"` : '',
+      participantId ? `data-participant-id="${participantId}"` : '',
+      menuParent ? `data-menu-parent="${menuParent}"` : '',
+    ].filter(Boolean)
+    return parts.join(' ')
+  }
+  if (optionsGo) return `data-go="${optionsGo}"`
+  return 'type="button"'
+}
+
 export function postCard({
   author = 'Auteur…',
   role = 'Rôle…',
@@ -216,6 +269,9 @@ export function postCard({
   time = 'il y a 2 h',
   identified = 0,
   optionsGo = null,
+  contentId = null,
+  menuType = 'publication',
+  menuParent = null,
   likes,
   comments,
   shares,
@@ -231,15 +287,16 @@ export function postCard({
   } else {
     mediaBlock = photo('Photo…', 'wide')
   }
+  const opts = optionsButtonAttrs({ contentId, menuType, menuParent, optionsGo })
   return `
-    <article class="card post-card">
+    <article class="card post-card" ${contentId ? `data-content-id="${contentId}"` : ''}>
       <header class="post-head">
         <span class="avatar"></span>
         <div class="grow">
           <strong>${author}</strong>
           <div class="meta"><span class="role-pill">${role}</span> · ${time}</div>
         </div>
-        <button class="hit icon-btn" ${optionsGo ? `data-go="${optionsGo}"` : 'type="button"'} title="Options" aria-label="Options">⋯</button>
+        <button class="hit icon-btn" ${opts} title="Options" aria-label="Options">⋯</button>
       </header>
       ${text(body)}
       <div class="post-meta-links">
@@ -260,7 +317,7 @@ export function postCard({
 /** Infos Feed post — all media variants (text / photo / multi / video) */
 export function feedPostCard(opts = {}) {
   return postCard({
-    optionsGo: opts.optionsGo || 'infos-post-options',
+    menuParent: opts.menuParent || 'infos-feed',
     ...opts,
   })
 }
@@ -270,10 +327,19 @@ export function publicationCard({
   title = 'Titre…',
   body = 'Texte…',
   multi = false,
-  optionsGo = 'mairie-presentation-options',
+  optionsGo = null,
+  contentId = null,
+  menuType = 'publication',
+  menuParent = 'mairie-presentation',
 } = {}) {
+  const opts = optionsButtonAttrs({
+    contentId,
+    menuType,
+    menuParent,
+    optionsGo: optionsGo || (contentId ? null : 'mairie-presentation-options'),
+  })
   return `
-    <article class="card post-card publication-card">
+    <article class="card post-card publication-card" ${contentId ? `data-content-id="${contentId}"` : ''}>
       ${
         multi
           ? `<div class="photo-grid">${photo('Photo…')}${photo('Photo…')}${photo('Photo…')}${photo('+5')}</div>`
@@ -281,7 +347,7 @@ export function publicationCard({
       }
       <div class="pub-title-row">
         <strong>${title}</strong>
-        <button class="hit icon-btn" data-go="${optionsGo}" title="Plus d’options" aria-label="Plus d’options">⋯</button>
+        <button class="hit icon-btn" ${opts} title="Plus d’options" aria-label="Plus d’options">⋯</button>
       </div>
       ${text(body)}
       <button class="hit linkish" type="button">Plus</button>

@@ -1290,6 +1290,25 @@ button.tree-node:hover .tree-label {
   color: inherit;
 }
 
+.sheet-option.danger {
+  color: #b42318;
+}
+
+.sheet-sep {
+  height: 1px;
+  background: var(--line-soft);
+  margin: 8px 0;
+}
+
+.menu-unavailable {
+  padding: 24px 16px;
+  text-align: center;
+}
+
+.menu-parent-hint {
+  padding: 0 12px 8px;
+}
+
 .sheet-ico {
   width: 22px;
   height: 22px;
