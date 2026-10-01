@@ -21,7 +21,7 @@ import {
   errorState,
 } from './components.js'
 import { colorFor } from './theme.js'
-import { getRole, isAdminRole } from './role.js'
+import { isAdminRole } from './role.js'
 
 /** Screen registry: id → { title, group, render(state) } */
 
