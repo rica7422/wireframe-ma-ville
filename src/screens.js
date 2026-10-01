@@ -40,6 +40,7 @@ import {
   getEvent,
   getParticipant,
 } from './demo-data.js'
+import { getCommentContext, getReactContext } from './content-context.js'
 
 /** Screen registry: id → { title, group, render(state) } */
 
@@ -1408,7 +1409,7 @@ function mairieInfosDetail() {
       </div>
       <p class="meta accent-text">Admin Kapan · <span class="badge">Transports</span></p>
       ${text('Corps complet de l’information mairie…')}
-      ${socialActions()}
+      ${socialActions({ contentId: 'pub-mairie-1' })}
     </article>
     `,
     {
@@ -1632,7 +1633,34 @@ function infosPostOptions(own = true) {
   return openContentMenuAlias('publication', contentId, 'infos-feed')
 }
 
+function footerTabForParent(parent) {
+  if (!parent) return 'infos'
+  if (parent.includes('infos') || parent === 'infos-feed') return 'infos'
+  if (parent.includes('mairie')) return 'mairie'
+  if (parent.includes('message')) return 'messages'
+  if (parent === 'accueil-kapan') return 'accueil'
+  return 'menu'
+}
+
+function contentLabelFromId(id, ctx) {
+  const pub = id && getPublication?.(id)
+  const evt = id && getEvent?.(id)
+  const dir = id && getDirectory?.(id)
+  return (
+    pub?.authorLabel ||
+    pub?.body?.slice(0, 40) ||
+    evt?.title ||
+    dir?.title ||
+    ctx?.label ||
+    'Publication'
+  )
+}
+
 function infosReactions() {
+  const ctx = getReactContext()
+  const id = ctx?.contentId
+  const label = contentLabelFromId(id, ctx)
+  const parent = ctx?.parent || 'infos-feed'
   const people = [
     { name: 'Anahit Mkrtchyan', role: 'Membre', react: '♥', follow: false },
     { name: 'Armen Sargsyan', role: 'Mairie de Kapan', react: '♥', follow: true },
@@ -1642,6 +1670,7 @@ function infosReactions() {
   ]
   return wrap(
     `
+    <p class="meta content-bound-meta">Réactions · ${label}${id ? ` · ${id}` : ''}</p>
     <div class="tabs react-tabs">
       <button class="hit tab on" type="button">Tous (146)</button>
       <button class="hit tab" type="button">J’aime (128)</button>
@@ -1671,8 +1700,8 @@ function infosReactions() {
     </div>
     `,
     {
-      header: phoneHeader({ title: 'Réactions', backTo: 'infos-feed' }),
-      footer: phoneFooter('infos'),
+      header: phoneHeader({ title: 'Réactions' }),
+      footer: phoneFooter(footerTabForParent(parent)),
     }
   )
 }
@@ -1710,8 +1739,13 @@ function infosAjouterAmi() {
 }
 
 function infosCommentaires() {
+  const ctx = getCommentContext()
+  const id = ctx?.contentId
+  const label = contentLabelFromId(id, ctx)
+  const parent = ctx?.parent || 'infos-feed'
   return wrap(
     `
+    <p class="meta content-bound-meta">Commentaires · ${label}${id ? ` · ${id}` : ''}</p>
     <h2 class="sec">Commentaires (2)</h2>
     <article class="card comment-thread">
       <div class="comment">
@@ -1771,8 +1805,8 @@ function infosCommentaires() {
     </div>
     `,
     {
-      header: phoneHeader({ title: 'Commentaires', backTo: 'infos-feed' }),
-      footer: phoneFooter('infos'),
+      header: phoneHeader({ title: 'Commentaires' }),
+      footer: phoneFooter(footerTabForParent(parent)),
     }
   )
 }
@@ -1969,6 +2003,7 @@ function evenementDetails() {
         comments: '15',
         shares: '200',
         reactors: 'Rupen Danielian et 10 autres personnes',
+        contentId: 'evt-atelier',
       })}
       <h2 class="sec">Hobbies concernés</h2>
       <div class="h-scroll hobbies">

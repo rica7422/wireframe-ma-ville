@@ -31,7 +31,8 @@ export function phoneHeader({
   showHome = true,
   showMiasin = true,
 } = {}) {
-  const backAttr = backTo ? `data-go="${backTo}"` : 'data-back'
+  // Always history-back; `backTo` kept for API compat but ignored on the button.
+  const backAttr = 'data-back'
   return `
     ${statusBar()}
     <div class="phone-header">
@@ -141,21 +142,28 @@ export function socialActions({
   likes = '128',
   comments = '18',
   shares = '12',
+  contentId = null,
   reactGo = 'infos-reactions',
   commentGo = 'infos-commentaires',
   shareGo = 'infos-partage',
   reactors = 'Rupen D. et 32 autres',
 } = {}) {
+  const commentAttrs = contentId
+    ? `data-open-comments="${contentId}"`
+    : `data-go="${commentGo}"`
+  const reactAttrs = contentId
+    ? `data-open-reactions="${contentId}"`
+    : `data-go="${reactGo}"`
   return `
     <div class="post-social">
-      <button class="hit linkish social-reactors" data-go="${reactGo}" type="button">
+      <button class="hit linkish social-reactors" ${reactAttrs} type="button">
         <span class="react-badges" aria-hidden="true"><span class="rb like">👍</span><span class="rb love">♥</span></span>
         <span class="meta">${reactors}</span>
       </button>
     </div>
     <div class="post-actions">
-      <button class="hit btn" data-go="${reactGo}">♡ ${likes}</button>
-      <button class="hit btn" data-go="${commentGo}">💬 ${comments}</button>
+      <button class="hit btn" ${reactAttrs}>♡ ${likes}</button>
+      <button class="hit btn" ${commentAttrs}>💬 ${comments}</button>
       <button class="hit btn" data-go="${shareGo}">↗ ${shares}</button>
     </div>
   `
@@ -169,6 +177,7 @@ export function infoFeedCard({
   excerpt = 'Extrait…',
   detailGo = 'mairie-infos-detail',
   optionsGo = 'mairie-infos-apropos',
+  contentId = null,
 } = {}) {
   return `
     <article class="card info-feed-card">
@@ -187,7 +196,7 @@ export function infoFeedCard({
         <span class="meta">⋯</span>
         <button class="hit icon-btn" data-go="${optionsGo}" title="À propos" aria-label="À propos">⋯</button>
       </div>
-      ${socialActions()}
+      ${socialActions({ contentId })}
     </article>
   `
 }
@@ -309,7 +318,7 @@ export function postCard({
           : ''
       }
       ${mediaBlock}
-      ${socialActions({ likes, comments, shares })}
+      ${socialActions({ likes, comments, shares, contentId })}
     </article>
   `
 }
@@ -351,7 +360,7 @@ export function publicationCard({
       </div>
       ${text(body)}
       <button class="hit linkish" type="button">Plus</button>
-      ${socialActions()}
+      ${socialActions({ contentId })}
     </article>
   `
 }

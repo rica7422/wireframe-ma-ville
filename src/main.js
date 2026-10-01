@@ -18,6 +18,11 @@ import {
   setInscription,
 } from './permissions.js'
 import { setMenuContext, getMenuContext, clearMenuContext } from './menu-context.js'
+import {
+  setCommentContext,
+  setReactContext,
+  getCommentContext,
+} from './content-context.js'
 import { getDirectory } from './demo-data.js'
 
 const historyStack = []
@@ -27,6 +32,13 @@ let navTab = 'user' // 'user' | 'admin'
 let savedNavScroll = 0
 
 const ADMIN_IDS = new Set(navIdsForSide('admin'))
+const ROOTS = new Set([
+  'accueil-kapan',
+  'mairie-accueil',
+  'infos-feed',
+  'messages',
+  'menu-plus',
+])
 
 function toast(msg) {
   const el = document.getElementById('toast')
@@ -56,7 +68,7 @@ function refuseManage(id) {
   }
 }
 
-function go(id, { push = true } = {}) {
+function go(id, { push = true, resetStack = false } = {}) {
   id = resolveScreenId(id)
   if (!SCREENS[id]) {
     toast(`Écran inconnu : ${id}`)
@@ -66,6 +78,7 @@ function go(id, { push = true } = {}) {
     refuseManage(id)
     return
   }
+  if (resetStack) historyStack.length = 0
   if (push && currentId && currentId !== id) historyStack.push(currentId)
   currentId = id
   navTab = ADMIN_IDS.has(id) ? 'admin' : 'user'
@@ -90,7 +103,7 @@ function back() {
     }
     render({ focusActive: true })
   } else {
-    go('ville-bienvenue', { push: false })
+    go('accueil-kapan', { push: false })
   }
 }
 
@@ -324,7 +337,7 @@ function render({ focusActive = false, resetNavScroll = false } = {}) {
       <aside class="proto-nav">
         <header class="proto-brand">
           <strong>Ma Ville</strong>
-          <span class="proto-tag">Wireframe · build 1001-e · nav-order</span>
+          <span class="proto-tag">Wireframe · build 1001-f · nav-stack</span>
         </header>
         <p class="proto-hint">Navigation du prototype (≠ nav dans le téléphone)</p>
         <div class="nav-tabs" role="tablist" aria-label="Côté prototype">
@@ -374,6 +387,26 @@ function render({ focusActive = false, resetNavScroll = false } = {}) {
       go('content-menu')
       return
     }
+    const openComments = e.target.closest('[data-open-comments]')
+    if (openComments) {
+      e.preventDefault()
+      setCommentContext({
+        contentId: openComments.dataset.openComments,
+        parent: currentId,
+      })
+      go('infos-commentaires')
+      return
+    }
+    const openReact = e.target.closest('[data-open-reactions]')
+    if (openReact) {
+      e.preventDefault()
+      setReactContext({
+        contentId: openReact.dataset.openReactions,
+        parent: currentId,
+      })
+      go('infos-reactions')
+      return
+    }
     const day = e.target.closest('.cal-day')
     if (day && day.closest('.calendar') && !day.classList.contains('closed')) {
       e.preventDefault()
@@ -416,9 +449,35 @@ function render({ focusActive = false, resetNavScroll = false } = {}) {
     const t = e.target.closest('[data-go], [data-back], [data-sim]')
     if (!t) return
     e.preventDefault()
-    if (t.hasAttribute('data-back')) back()
-    else if (t.dataset.go) go(t.dataset.go)
-    else if (t.dataset.sim) {
+    if (t.hasAttribute('data-back')) {
+      back()
+      return
+    }
+    if (t.dataset.go) {
+      const target = resolveScreenId(t.dataset.go)
+      const menu = getMenuContext()
+      if (target === 'infos-commentaires' && !getCommentContext()?.contentId && menu?.contentId) {
+        setCommentContext({
+          contentId: menu.contentId,
+          parent: menu.parent || currentId,
+        })
+      }
+      if (target === 'infos-reactions' && menu?.contentId) {
+        setReactContext({
+          contentId: menu.contentId,
+          parent: menu.parent || currentId,
+        })
+      }
+      const isRootJump =
+        ROOTS.has(target) && t.closest('.phone-footer, .header-right, .phone-header')
+      if (isRootJump) {
+        go(target, { push: false, resetStack: true })
+      } else {
+        go(target)
+      }
+      return
+    }
+    if (t.dataset.sim) {
       handleSim(t.dataset.sim)
       if (t.dataset.sim === 'rdv-annuler') {
         const card = t.closest('.rdv-en-cours')
@@ -447,7 +506,7 @@ document.getElementById('app').addEventListener('click', (e) => {
   const nav = e.target.closest('[data-nav]')
   if (nav && nav.closest('.proto-nav')) {
     e.preventDefault()
-    go(nav.dataset.nav, { push: false })
+    go(nav.dataset.nav, { push: false, resetStack: true })
   }
 })
 
