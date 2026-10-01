@@ -2400,3 +2400,219 @@ button.tree-node:hover .tree-label {
   gap: 12px;
   padding: 14px;
 }
+
+/* Events polish 1001-b */
+.event-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.event-detail-head {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.event-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.event-title-row .block-title {
+  margin: 0;
+}
+.event-detail .meta-grid {
+  gap: 12px 16px;
+  margin: 4px 0;
+}
+.event-detail .stats-row {
+  gap: 12px;
+  padding: 16px 0;
+  margin: 4px 0;
+}
+.event-detail .places-note {
+  margin: 0 0 8px;
+}
+.event-detail .hobbies {
+  margin: 8px 0 16px;
+  gap: 12px;
+}
+.event-detail .orga-row {
+  display: flex;
+  align-items: center;
+  min-height: 56px;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+.event-detail .orga-name {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0 4px;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.event-detail .sec {
+  margin-top: 8px;
+  margin-bottom: 12px;
+}
+.plus-infos {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.plus-infos .row-link {
+  min-height: 48px;
+}
+.participant-list {
+  display: flex;
+  flex-direction: column;
+}
+.participant-row {
+  display: flex;
+  min-height: 64px;
+  gap: 12px;
+  padding: 12px 0;
+  align-items: center;
+  border-bottom: 1px solid var(--line-soft);
+  width: 100%;
+  background: none;
+  border-left: none;
+  border-right: none;
+  border-top: none;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+}
+.participant-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.validation-tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.validation-tabs .tab {
+  flex: 1;
+  min-height: 44px;
+}
+.validation-list {
+  display: flex;
+  flex-direction: column;
+}
+.validation-row {
+  display: flex;
+  align-items: center;
+  min-height: 60px;
+  gap: 10px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+.action-circle {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: 0;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.action-circle.on {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+.selected-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 12px 0 16px;
+}
+.person-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+}
+.person-chip .chip-x {
+  width: 28px;
+  height: 28px;
+}
+.avatar.sm {
+  width: 28px;
+  height: 28px;
+}
+.criteria-list {
+  display: flex;
+  flex-direction: column;
+}
+.criteria-row {
+  padding: 16px 0;
+  border-bottom: 1px solid var(--line-soft);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.confirm-modal .modal-body {
+  gap: 12px;
+}
+.confirm-actions {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+.confirm-actions .btn {
+  flex: 1;
+}
+.btn.outline {
+  background: #fff;
+  border: 1px solid var(--accent, var(--line));
+  color: var(--accent, var(--ink));
+}
+.btn.outline:active,
+.btn.outline:focus-visible {
+  background: var(--accent-soft, #f5f5f7);
+}
+.event-card-hit {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+  padding: 0;
+  margin: 0;
+  border: none;
+  background: none;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.events-list {
+  gap: 24px;
+}
+.event-card {
+  gap: 16px;
+  padding: 16px;
+}
+.conditions-card {
+  gap: 12px;
+  padding: 16px;
+}

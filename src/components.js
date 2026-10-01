@@ -290,11 +290,11 @@ export function publicationCard({
   `
 }
 
-export function modalShell(title, body, footer = '') {
+export function modalShell(title, body, footer = '', { center = false } = {}) {
   return `
-    <div class="modal-layer">
-      <div class="modal-sheet">
-        <div class="modal-handle" aria-hidden="true"></div>
+    <div class="modal-layer${center ? ' confirm-modal' : ''}">
+      <div class="modal-sheet${center ? ' center-card' : ''}">
+        ${center ? '' : '<div class="modal-handle" aria-hidden="true"></div>'}
         <header class="modal-head">
           <strong>${title}</strong>
           <button class="hit icon-btn" data-back title="Fermer" aria-label="Fermer">✕</button>
@@ -381,24 +381,26 @@ export function evenementsListeBody({
         .map(
           (ev) => `
         <article class="card event-card">
-          <div class="event-photo-wrap">
-            ${photo('Photo événement…', 'wide')}
-            <span class="badge event-places">Places limitées</span>
-          </div>
-          <div class="event-card-body">
-            <div class="event-date-block">
-              <span class="meta">${ev.when.split(' ')[0]}</span>
-              <strong>${ev.when.split(' ')[1] || ''}</strong>
+          <button class="hit event-card-hit" data-go="${detailsGo}" type="button" aria-label="Voir ${ev.title}">
+            <div class="event-photo-wrap">
+              ${photo('Photo événement…', 'wide')}
+              <span class="badge event-places">Places limitées</span>
             </div>
-            <div class="event-card-main">
-              <strong class="event-title">${ev.title}</strong>
-              <p class="meta event-when">${ev.time} · ${ev.countdown}</p>
-              <p class="meta event-lieu">📍 ${ev.lieu}</p>
-              <div class="chips event-tags">
-                ${(ev.tags || []).map((t) => `<span class="badge">${t}</span>`).join('')}
+            <div class="event-card-body">
+              <div class="event-date-block">
+                <span class="meta">${ev.when.split(' ')[0]}</span>
+                <strong>${ev.when.split(' ')[1] || ''}</strong>
+              </div>
+              <div class="event-card-main">
+                <strong class="event-title">${ev.title}</strong>
+                <p class="meta event-when">${ev.time} · ${ev.countdown}</p>
+                <p class="meta event-lieu">📍 ${ev.lieu}</p>
+                <div class="chips event-tags">
+                  ${(ev.tags || []).map((t) => `<span class="badge">${t}</span>`).join('')}
+                </div>
               </div>
             </div>
-          </div>
+          </button>
           <button class="hit btn primary block" data-go="${detailsGo}">Voir les détails</button>
         </article>`
         )

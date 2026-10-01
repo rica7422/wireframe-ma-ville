@@ -1462,6 +1462,45 @@ function evenementsListe() {
   )
 }
 
+const EVENT_PARTICIPANTS = [
+  { name: 'Lilit Ameni', since: 'Membre depuis 1 h' },
+  { name: 'Rouben Sirunyan', since: 'Membre depuis 2 h' },
+  { name: 'Aris Margaryan', since: 'Membre depuis 1 j' },
+  { name: 'Hakob Hakobyan', since: 'Membre depuis 3 j' },
+  { name: 'Anahit S.', since: 'Membre depuis 1 sem.' },
+]
+
+const EVENT_VALIDATION_PEOPLE = [
+  { name: 'Lilit Ameni', joined: 'A rejoint il y a 4 mn' },
+  { name: 'Rouben Sirunyan', joined: 'A rejoint il y a 1 h' },
+  { name: 'Yester Sullivan', joined: 'A rejoint il y a 23 h' },
+  { name: 'Lilit Ameni', joined: 'A rejoint il y a 1 j' },
+  { name: 'Rouben Sirunyan', joined: 'A rejoint il y a 2 sem.' },
+  { name: 'Yester Sullivan', joined: 'A rejoint il y a 4 mois' },
+]
+
+function evenementParticipantsBody() {
+  return `
+    ${search('Rechercher un ami…')}
+    <div class="participant-list">
+      ${EVENT_PARTICIPANTS.map(
+        (p) => `
+        <div class="participant-row">
+          <span class="avatar"></span>
+          <div class="participant-meta grow">
+            <strong>${p.name}</strong>
+            <span class="meta">${p.since}</span>
+            <span class="meta">5 ami(e)s en commun · 2 hobbies similaires</span>
+          </div>
+          <button class="hit action-circle" data-go="messages-thread" title="Message" aria-label="Message">💬</button>
+          <button class="hit icon-btn" data-go="evenement-participant-menu" title="Plus d’options" aria-label="Plus d’options">⋯</button>
+        </div>`
+      ).join('')}
+    </div>
+    <button class="hit btn block outline" data-go="evenement-discussion">Envoyer un message groupé</button>
+  `
+}
+
 function evenementDetails() {
   return wrap(
     `
@@ -1471,24 +1510,35 @@ function evenementDetails() {
         <span class="badge event-places">Places limitées</span>
       </div>
       <div class="event-detail-head">
-        <strong class="block-title">Atelier créatif</strong>
-        <p class="meta event-lieu">📍 Centre culturel · Kapan</p>
+        <div class="event-title-row">
+          <strong class="block-title">Atelier créatif</strong>
+          <button class="hit icon-btn" data-go="evenement-options" title="Plus d’options" aria-label="Plus d’options">⋯</button>
+        </div>
+        <p class="meta event-lieu">📍 Camp Nou, Stade de Barcelone</p>
+        <p class="meta">Paris, France</p>
       </div>
       <div class="meta-grid meta-grid-4">
-        <div class="meta-cell"><span class="meta">Date</span><strong>Ven. 16 juin 2026</strong></div>
+        <div class="meta-cell"><span class="meta">Date</span><strong>Vendredi 16 Juin 2026</strong></div>
         <div class="meta-cell"><span class="meta">Heure</span><strong>15:30</strong></div>
-        <div class="meta-cell"><span class="meta">Catégorie</span><strong>Artistique</strong></div>
+        <div class="meta-cell"><span class="meta">Catégorie</span><strong><span class="badge">Artistique / Créatif</span></strong></div>
         <div class="meta-cell"><span class="meta">Prix</span><strong>20 €</strong></div>
       </div>
-      ${text('Description de l’atelier créatif…')}
+      ${text(
+        'Parfois, les mots ne suffisent pas à exprimer ce qui nous habite. Cet atelier créatif vous invite à explorer d’autres langages — couleurs, formes, matières — pour laisser parler votre sensibilité.'
+      )}
       <div class="stats-row">
         <span class="stat-cell"><strong>12</strong><span class="meta">Participants</span></span>
         <span class="stat-cell"><strong>10</strong><span class="meta">Billets restants</span></span>
         <span class="stat-cell"><strong>5</strong><span class="meta">Jours restants</span></span>
       </div>
-      <p class="meta places-note">Nombre de places · 20</p>
+      <p class="places-note"><strong>Nombres de places · 20</strong></p>
       <button class="hit btn primary block" data-sim="participation">Participer</button>
-      ${socialActions()}
+      ${socialActions({
+        likes: '200',
+        comments: '15',
+        shares: '200',
+        reactors: 'Rupen Danielian et 10 autres personnes',
+      })}
       <h2 class="sec">Hobbies concernés</h2>
       <div class="h-scroll hobbies">
         ${['Beatboxing', 'Chant', 'Saxophone', 'Violon', 'Piano']
@@ -1498,26 +1548,43 @@ function evenementDetails() {
           )
           .join('')}
       </div>
-      <button class="hit row-link" data-go="messages"><span>Centre de Messagerie</span><span>›</span></button>
+      <button class="hit row-link" data-go="evenement-discussion">
+        <span>Centre de Messagerie</span><span>›</span>
+      </button>
       <h2 class="sec">Organisateurs</h2>
-      ${['Lilit Ameni · Administrateur', 'Rouben Sirunyan · Créateur', 'Aris Margaryan · Organisateur']
+      ${[
+        ['Lilit Ameni', 'Administrateur'],
+        ['Rouben Sirunyan', 'Créateur'],
+        ['Aris Margaryan', 'Administrateur'],
+      ]
         .map(
-          (n) => `
-        <div class="row-link static orga-row">
+          ([name, role]) => `
+        <div class="orga-row">
           <span class="avatar"></span>
-          <span class="grow truncate">${n}</span>
-          <button class="hit icon-btn" data-sim="message" title="Message">💬</button>
-          <button class="hit icon-btn" data-sim="appeler" title="Appeler">☎</button>
+          <button class="hit grow truncate orga-name" data-go="messages-thread" type="button">
+            <strong>${name}</strong><span class="meta"> · ${role}</span>
+          </button>
+          <button class="hit icon-btn" data-go="messages-thread" title="Message" aria-label="Message">💬</button>
+          <button class="hit icon-btn" data-sim="appeler" title="Appeler" aria-label="Appeler">☎</button>
+          <button class="hit icon-btn" data-sim="visio" title="Visio" aria-label="Visio">📹</button>
         </div>`
         )
         .join('')}
       <h2 class="sec">Plus d’informations</h2>
-      <button class="hit row-link" data-go="evenement-participants">
-        <span>Participants · 12</span><span>›</span>
-      </button>
-      <button class="hit row-link" type="button"><span>Validations des participants · 2</span><span>›</span></button>
-      <button class="hit row-link" type="button"><span>Critères de participation</span><span>›</span></button>
-      <button class="hit row-link" type="button"><span>Conditions de participation</span><span>›</span></button>
+      <div class="plus-infos">
+        <button class="hit row-link" data-go="evenement-participants">
+          <span>Participants · 12</span><span>›</span>
+        </button>
+        <button class="hit row-link" data-go="evenement-validation">
+          <span>Validations des participants · 2</span><span>›</span>
+        </button>
+        <button class="hit row-link" data-go="evenement-criteres">
+          <span>Critères de participation</span><span>›</span>
+        </button>
+        <button class="hit row-link" data-go="evenement-conditions">
+          <span>Conditions de participation</span><span>›</span>
+        </button>
+      </div>
     </div>
     `,
     {
@@ -1527,31 +1594,289 @@ function evenementDetails() {
   )
 }
 
+function evenementOptions() {
+  return wrap(`${photo('Détail événement…', 'dim')}`, {
+    header: phoneHeader({ title: 'Détails', backTo: 'evenement-details' }),
+    footer: phoneFooter('menu'),
+    overlay: modalShell(
+      'Plus d’options',
+      `
+      ${sheetOption('Partager', { sim: 'partager' })}
+      ${sheetOption('Ajouter au calendrier', { sim: 'calendrier' })}
+      ${sheetOption('Enregistrer', { go: 'enregistrements' })}
+      ${sheetOption('Signaler l’événement', { go: 'evenement-signaler' })}
+      ${sheetOption('Masquer cet événement', { sim: 'masquer' })}
+      `
+    ),
+  })
+}
+
 function evenementParticipants() {
+  return wrap(evenementParticipantsBody(), {
+    header: phoneHeader({ title: 'Liste des participants', backTo: 'evenement-details' }),
+    footer: phoneFooter('menu'),
+  })
+}
+
+function evenementParticipantMenu() {
+  return wrap(evenementParticipantsBody(), {
+    header: phoneHeader({ title: 'Liste des participants', backTo: 'evenement-participants' }),
+    footer: phoneFooter('menu'),
+    overlay: modalShell(
+      'Rouben Sirunyan',
+      `
+      ${sheetOption('Voir son profil', { sim: 'profil' })}
+      ${sheetOption('Envoyer un message', { go: 'messages-thread' })}
+      ${sheetOption('Supprimer de la liste', { go: 'evenement-supprimer-confirm' })}
+      ${sheetOption('Signaler', { go: 'evenement-signaler' })}
+      `
+    ),
+  })
+}
+
+function evenementSupprimerConfirm() {
+  return wrap(evenementParticipantsBody(), {
+    header: phoneHeader({ title: 'Liste des participants', backTo: 'evenement-participant-menu' }),
+    footer: phoneFooter('menu'),
+    overlay: modalShell(
+      'Supprimer de la liste',
+      `
+      <p>Êtes-vous sûr(e) de vouloir supprimer Rouben Sirunyan de la liste des participants ?</p>
+      `,
+      `
+      <div class="row-actions confirm-actions">
+        <button class="hit btn" data-back type="button">Annuler</button>
+        <button class="hit btn primary" data-sim="supprimer" type="button">Supprimer</button>
+      </div>
+      `,
+      { center: true }
+    ),
+  })
+}
+
+function evenementSignaler() {
+  return wrap(evenementParticipantsBody(), {
+    header: phoneHeader({ title: 'Liste des participants', backTo: 'evenement-participant-menu' }),
+    footer: phoneFooter('menu'),
+    overlay: modalShell(
+      'Signaler',
+      `
+      ${sheetOption('Contenu inapproprié', { sim: 'raison-inapproprie' })}
+      ${sheetOption('Harcèlement', { sim: 'raison-harcelement' })}
+      ${sheetOption('Fausse information', { sim: 'raison-faux' })}
+      ${sheetOption('Autre', { sim: 'raison-autre' })}
+      <label class="field"><span>Raison</span>
+        <textarea rows="3" placeholder="Décrire ici les raisons"></textarea>
+      </label>
+      `,
+      `<button class="hit btn primary block" data-sim="envoyer-signalement">Envoyer</button>`
+    ),
+  })
+}
+
+function evenementValidationTabs(active) {
+  const tabs = [
+    { id: 'evenement-validation', key: 'attente', label: 'En attente' },
+    { id: 'evenement-validation-valide', key: 'valide', label: 'Validé' },
+    { id: 'evenement-validation-refuse', key: 'refuse', label: 'Refusé' },
+  ]
+  return `
+    <div class="tabs validation-tabs">
+      ${tabs
+        .map(
+          (t) => `
+        <button class="hit tab ${active === t.key ? 'on' : ''}" data-go="${t.id}" type="button">${t.label}</button>`
+        )
+        .join('')}
+    </div>
+  `
+}
+
+function evenementValidationRows(active) {
+  return EVENT_VALIDATION_PEOPLE.map((p) => {
+    let refuseGo = 'evenement-validation-refuse'
+    let refuseSim = ''
+    let refuseClass = ''
+    let valideGo = 'evenement-validation-valide'
+    let valideClass = ''
+
+    if (active === 'attente') {
+      refuseGo = 'evenement-validation-refuse'
+      valideGo = 'evenement-validation-valide'
+    } else if (active === 'valide') {
+      refuseGo = 'evenement-validation-refuse'
+      valideGo = null
+      valideClass = 'on'
+    } else {
+      refuseGo = null
+      refuseClass = 'on'
+      valideGo = 'evenement-annuler-refus'
+    }
+
+    const refuseAttrs = refuseGo
+      ? `data-go="${refuseGo}"`
+      : refuseSim
+        ? `data-sim="${refuseSim}"`
+        : 'data-sim="deja-refuse"'
+    const valideAttrs = valideGo ? `data-go="${valideGo}"` : 'data-sim="deja-valide"'
+
+    return `
+      <div class="validation-row">
+        <span class="avatar"></span>
+        <div class="participant-meta grow">
+          <strong>${p.name}</strong>
+          <span class="meta">${p.joined}</span>
+        </div>
+        <button class="hit action-circle" data-go="messages-thread" title="Message" aria-label="Message">💬</button>
+        <button class="hit action-circle ${refuseClass}" ${refuseAttrs} title="Refuser" aria-label="Refuser">✕</button>
+        <button class="hit action-circle ${valideClass}" ${valideAttrs} title="Valider" aria-label="Valider">✓</button>
+      </div>`
+  }).join('')
+}
+
+function evenementValidation(active = 'attente') {
   return wrap(
     `
-    <div class="banner-box">
-      <span class="badge">Artistique / Créatif</span>
-      <strong>Atelier Créatif de Kapan</strong>
-      <p class="meta">JUN 26 · 16:30–18:30</p>
+    ${evenementValidationTabs(active)}
+    <div class="validation-list">
+      ${evenementValidationRows(active)}
     </div>
-    <h2 class="sec">Participants <span class="badge">11 inscrits</span></h2>
-    ${search('Rechercher un membre…')}
-    ${['Marie Dupont', 'Anahit S.', 'Rupen D.', 'Karen A.']
-      .map(
-        (n, i) => `
-      <div class="row-link static">
-        <span class="avatar"></span>
-        <span><strong>${n}</strong><br/><span class="meta">Actif(ve) il y a 1h</span>
-        ${i === 0 ? '<span class="badge">Nouveau</span>' : ''}</span>
-        <button class="hit icon-btn" data-sim="message">💬</button>
-      </div>`
-      )
-      .join('')}
-    <button class="hit btn primary block" data-sim="message-groupe">Envoyer un message groupé</button>
     `,
     {
-      header: phoneHeader({ title: 'Liste des participants', backTo: 'evenement-details' }),
+      header: phoneHeader({ title: 'Validation des participants', backTo: 'evenement-details' }),
+      footer: phoneFooter('menu'),
+    }
+  )
+}
+
+function evenementAnnulerRefus() {
+  return wrap(
+    `
+    ${evenementValidationTabs('refuse')}
+    <div class="validation-list">
+      ${evenementValidationRows('refuse')}
+    </div>
+    `,
+    {
+      header: phoneHeader({ title: 'Validation des participants', backTo: 'evenement-validation-refuse' }),
+      footer: phoneFooter('menu'),
+      overlay: modalShell(
+        'Annuler le refus !',
+        `
+        <p>Êtes-vous sûr(e) de vouloir annuler le refus de participation pour Lilit Ameni ?</p>
+        <label class="field"><span>Raisons</span>
+          <textarea rows="4" placeholder="Décrire ici les raisons"></textarea>
+        </label>
+        `,
+        `<button class="hit btn primary block" data-sim="enregistrer">Enregistrer</button>`,
+        { center: true }
+      ),
+    }
+  )
+}
+
+function evenementDiscussionBody() {
+  const selected = ['Aris Margaryan', 'Hakob Hakobyan', 'Anahit S.']
+  const others = ['Lilit Ameni', 'Rouben Sirunyan', 'Yester Sullivan']
+  return `
+    ${search('Rechercher un(e) participant(e)')}
+    <h2 class="sec">Participant(e)s sélectionné(e)s</h2>
+    <div class="selected-chips">
+      ${selected
+        .map(
+          (n) => `
+        <div class="person-chip">
+          <span class="avatar sm"></span>
+          <span>${n}</span>
+          <button class="hit icon-btn chip-x" data-sim="retirer" title="Retirer" aria-label="Retirer">✕</button>
+        </div>`
+        )
+        .join('')}
+    </div>
+    <div class="participant-list">
+      ${others
+        .map(
+          (n) => `
+        <button class="hit participant-row select-row" data-sim="select-participant" type="button">
+          <span class="avatar"></span>
+          <span class="grow"><strong>${n}</strong></span>
+          <span class="meta">+</span>
+        </button>`
+        )
+        .join('')}
+    </div>
+    <button class="hit btn primary block" data-go="evenement-groupe-modal">Ajouter</button>
+  `
+}
+
+function evenementDiscussion() {
+  return wrap(evenementDiscussionBody(), {
+    header: phoneHeader({ title: 'Démarrer une discussion', backTo: 'evenement-participants' }),
+    footer: phoneFooter('menu'),
+  })
+}
+
+function evenementGroupeModal() {
+  return wrap(evenementDiscussionBody(), {
+    header: phoneHeader({ title: 'Démarrer une discussion', backTo: 'evenement-discussion' }),
+    footer: phoneFooter('menu'),
+    overlay: modalShell(
+      'Groupe de discussion',
+      `
+      <p>Voulez-vous créer un groupe de discussion lié à l’événement « Atelier créatif » ou un autre groupe de discussion ?</p>
+      `,
+      `
+      <div class="row-actions confirm-actions">
+        <button class="hit btn" data-sim="autre-groupe" type="button">Autre groupe</button>
+        <button class="hit btn primary" data-go="messages-thread" type="button">Lié à l’événement</button>
+      </div>
+      `,
+      { center: true }
+    ),
+  })
+}
+
+function evenementCriteres() {
+  return wrap(
+    `
+    <div class="criteria-list">
+      <div class="criteria-row">
+        <strong>Destiné à</strong>
+        <span class="meta">Tout le monde</span>
+      </div>
+      <div class="criteria-row">
+        <strong>Tranche d’âge</strong>
+        <span class="meta">20 à 50 ans</span>
+      </div>
+      <div class="criteria-row">
+        <strong>Pays spécifique</strong>
+        <span class="meta">Seulement : France</span>
+      </div>
+    </div>
+    `,
+    {
+      header: phoneHeader({ title: 'Critères de participation', backTo: 'evenement-details' }),
+      footer: phoneFooter('menu'),
+    }
+  )
+}
+
+function evenementConditions() {
+  return wrap(
+    `
+    <article class="card conditions-card">
+      <h2 class="sec">Conditions de participation</h2>
+      ${text(
+        'En participant à cet événement, vous acceptez de respecter les consignes des organisateurs, d’arriver à l’heure indiquée et de ne pas céder votre place sans validation préalable.'
+      )}
+      ${text(
+        'Les mineurs doivent être accompagnés. La mairie se réserve le droit de refuser l’accès en cas de non-respect des règles de sécurité ou de civilité.'
+      )}
+      <p class="meta">Structure wireframe — texte indicatif.</p>
+    </article>
+    `,
+    {
+      header: phoneHeader({ title: 'Conditions de participation', backTo: 'evenement-details' }),
       footer: phoneFooter('menu'),
     }
   )
@@ -2772,11 +3097,83 @@ export const SCREENS = {
     group: 'Social / contenus',
     render: evenementDetails,
   },
+  'evenement-options': {
+    title: 'Événement — Options',
+    side: 'user',
+    group: 'Social / contenus',
+    render: evenementOptions,
+  },
   'evenement-participants': {
     title: 'Événement — Participants',
     side: 'user',
     group: 'Social / contenus',
     render: evenementParticipants,
+  },
+  'evenement-participant-menu': {
+    title: 'Participant — Menu',
+    side: 'user',
+    group: 'Social / contenus',
+    render: evenementParticipantMenu,
+  },
+  'evenement-supprimer-confirm': {
+    title: 'Participant — Supprimer',
+    side: 'user',
+    group: 'Social / contenus',
+    render: evenementSupprimerConfirm,
+  },
+  'evenement-signaler': {
+    title: 'Participant — Signaler',
+    side: 'user',
+    group: 'Social / contenus',
+    render: evenementSignaler,
+  },
+  'evenement-discussion': {
+    title: 'Événement — Discussion',
+    side: 'user',
+    group: 'Social / contenus',
+    render: evenementDiscussion,
+  },
+  'evenement-groupe-modal': {
+    title: 'Discussion — Groupe',
+    side: 'user',
+    group: 'Social / contenus',
+    render: evenementGroupeModal,
+  },
+  'evenement-validation': {
+    title: 'Validation — En attente',
+    side: 'user',
+    group: 'Social / contenus',
+    render: () => evenementValidation('attente'),
+  },
+  'evenement-validation-valide': {
+    title: 'Validation — Validé',
+    side: 'user',
+    group: 'Social / contenus',
+    render: () => evenementValidation('valide'),
+  },
+  'evenement-validation-refuse': {
+    title: 'Validation — Refusé',
+    side: 'user',
+    group: 'Social / contenus',
+    render: () => evenementValidation('refuse'),
+  },
+  'evenement-annuler-refus': {
+    title: 'Validation — Annuler le refus',
+    side: 'user',
+    group: 'Social / contenus',
+    render: evenementAnnulerRefus,
+  },
+  'evenement-criteres': {
+    title: 'Événement — Critères',
+    side: 'user',
+    group: 'Social / contenus',
+    render: evenementCriteres,
+  },
+  'evenement-conditions': {
+    title: 'Événement — Conditions',
+    side: 'user',
+    group: 'Social / contenus',
+    render: evenementConditions,
   },
   'annonces-liste': {
     title: 'Petites annonces — Liste',
@@ -5027,7 +5424,34 @@ export const NAV_TREE = {
               {
                 id: 'evenement-details',
                 label: 'Détails',
-                children: [{ id: 'evenement-participants', label: 'Participants' }],
+                children: [
+                  { id: 'evenement-options', label: 'Options (⋯)' },
+                  {
+                    id: 'evenement-participants',
+                    label: 'Participants',
+                    children: [
+                      { id: 'evenement-participant-menu', label: 'Menu participant' },
+                      { id: 'evenement-supprimer-confirm', label: 'Supprimer (confirm)' },
+                      { id: 'evenement-signaler', label: 'Signaler' },
+                      {
+                        id: 'evenement-discussion',
+                        label: 'Discussion',
+                        children: [{ id: 'evenement-groupe-modal', label: 'Groupe modal' }],
+                      },
+                    ],
+                  },
+                  {
+                    id: 'evenement-validation',
+                    label: 'Validation',
+                    children: [
+                      { id: 'evenement-validation-valide', label: 'Validé' },
+                      { id: 'evenement-validation-refuse', label: 'Refusé' },
+                      { id: 'evenement-annuler-refus', label: 'Annuler le refus' },
+                    ],
+                  },
+                  { id: 'evenement-criteres', label: 'Critères' },
+                  { id: 'evenement-conditions', label: 'Conditions' },
+                ],
               },
             ],
           },
