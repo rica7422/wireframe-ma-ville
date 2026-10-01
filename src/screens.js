@@ -6160,31 +6160,6 @@ export const NAV_TREE = {
         label: 'Accueil Ma Ville',
         children: [
           {
-            id: 'sante-accueil',
-            label: 'Santé',
-            children: [
-              { id: 'sante-urgences', label: 'Urgences' },
-              {
-                id: 'sante-pharmacies',
-                label: 'Pharmacies',
-                children: [
-                  { id: 'sante-pharmacie-infos', label: 'Informations' },
-                  { id: 'sante-pharmacie-horaires', label: 'Horaires' },
-                  { id: 'sante-pharmacie-unpublished', label: 'Fiche non publiée' },
-                ],
-              },
-              {
-                id: 'sante-hopitaux',
-                label: 'Hôpitaux',
-                children: [
-                  { id: 'sante-hopital-details', label: 'Informations' },
-                  { id: 'sante-hopital-horaires', label: 'Horaires' },
-                ],
-              },
-              { id: 'sante-ambulances', label: 'Ambulances' },
-            ],
-          },
-          {
             id: 'mairie-accueil',
             label: 'Ma mairie',
             children: [
@@ -6195,12 +6170,16 @@ export const NAV_TREE = {
               {
                 id: 'mairie-rdv',
                 label: 'Prendre rendez-vous',
-                children: [{ id: 'mairie-rdv-suite', label: 'Confirmation' }],
+                children: [
+                  { id: 'mairie-rdv-suite', label: 'Confirmation' },
+                ],
               },
               {
                 id: 'mairie-presentation',
                 label: 'Présentation de la ville',
-                children: [{ id: 'mairie-presentation-options', label: 'Plus d’options' }],
+                children: [
+                  { id: 'mairie-presentation-options', label: 'Plus d’options' },
+                ],
               },
               {
                 id: 'mairie-nouvelle-publication',
@@ -6228,7 +6207,9 @@ export const NAV_TREE = {
               {
                 id: 'mairie-conseil',
                 label: 'Maire & Conseil',
-                children: [{ id: 'mairie-conseil-edit', label: 'Édition admin' }],
+                children: [
+                  { id: 'mairie-conseil-edit', label: 'Édition admin' },
+                ],
               },
               {
                 id: 'mairie-infos',
@@ -6284,7 +6265,9 @@ export const NAV_TREE = {
                       {
                         id: 'evenement-discussion',
                         label: 'Discussion',
-                        children: [{ id: 'evenement-groupe-modal', label: 'Groupe modal' }],
+                        children: [
+                          { id: 'evenement-groupe-modal', label: 'Groupe modal' },
+                        ],
                       },
                     ],
                   },
@@ -6314,7 +6297,533 @@ export const NAV_TREE = {
           {
             id: 'emplois-liste',
             label: 'Offres d’emploi',
-            children: [{ id: 'emploi-details', label: 'Détail offre' }],
+            children: [
+              { id: 'emploi-details', label: 'Détail offre' },
+            ],
+          },
+          { id: 'communautes-groupes', label: 'Groupes' },
+          { id: 'communautes-clubs', label: 'Clubs' },
+          { id: 'communautes-rencontres', label: 'Mes rencontres' },
+          {
+            id: 'dir-education',
+            label: 'Éducation',
+            children: [
+              {
+                id: 'dir-education-ecoles',
+                label: 'Écoles',
+                children: [
+                  { id: 'dir-education-ecoles-fiche-infos', label: 'Détail' },
+                  { id: 'dir-education-ecoles-fiche-horaires', label: 'Horaires' },
+                ],
+              },
+              {
+                id: 'dir-education-formations',
+                label: 'Formations',
+                children: [
+                  { id: 'dir-education-formations-fiche-infos', label: 'Détail' },
+                  { id: 'dir-education-formations-fiche-horaires', label: 'Horaires' },
+                ],
+              },
+              {
+                id: 'dir-education-universites',
+                label: 'Universités',
+                children: [
+                  { id: 'dir-education-universites-fiche-infos', label: 'Détail' },
+                  { id: 'dir-education-universites-fiche-horaires', label: 'Horaires' },
+                ],
+              },
+              {
+                id: 'dir-education-activites',
+                label: 'Activités',
+                children: [
+                  { id: 'dir-education-activites-fiche-infos', label: 'Détail' },
+                  { id: 'dir-education-activites-fiche-horaires', label: 'Horaires' },
+                ],
+              },
+              { id: 'dir-education-inscriptions', label: 'Inscriptions' },
+              { id: 'dir-education-calendrier', label: 'Calendrier' },
+            ],
+          },
+          {
+            id: 'dir-economie',
+            label: 'Économie',
+            children: [
+              {
+                id: 'dir-economie-commerces',
+                label: 'Commerces',
+                children: [
+                  { id: 'dir-economie-commerces-fiche-infos', label: 'Détail' },
+                  { id: 'dir-economie-commerces-fiche-horaires', label: 'Horaires' },
+                ],
+              },
+              {
+                id: 'dir-economie-entreprises',
+                label: 'Entreprises',
+                children: [
+                  { id: 'dir-economie-entreprises-fiche-infos', label: 'Détail' },
+                  { id: 'dir-economie-entreprises-fiche-horaires', label: 'Horaires' },
+                ],
+              },
+              {
+                id: 'dir-economie-artisans',
+                label: 'Artisans',
+                children: [
+                  { id: 'dir-economie-artisans-fiche-infos', label: 'Détail' },
+                  { id: 'dir-economie-artisans-fiche-horaires', label: 'Horaires' },
+                ],
+              },
+              {
+                id: 'dir-economie-services',
+                label: 'Services',
+                children: [
+                  { id: 'dir-economie-services-fiche-infos', label: 'Détail' },
+                  { id: 'dir-economie-services-fiche-horaires', label: 'Horaires' },
+                ],
+              },
+              { id: 'dir-economie-actus', label: 'Actus' },
+              { id: 'dir-economie-marches', label: 'Marchés' },
+            ],
+          },
+          {
+            id: 'dir-cinemas',
+            label: 'Cinéma & Théâtres',
+            children: [
+              {
+                id: 'dir-cinemas-cinemas',
+                label: 'Cinémas',
+                children: [
+                  { id: 'dir-cinemas-cinemas-fiche-infos', label: 'Détail' },
+                  { id: 'dir-cinemas-cinemas-fiche-horaires', label: 'Horaires' },
+                ],
+              },
+              {
+                id: 'dir-cinemas-theatres',
+                label: 'Théâtres',
+                children: [
+                  { id: 'dir-cinemas-theatres-fiche-infos', label: 'Détail' },
+                  { id: 'dir-cinemas-theatres-fiche-horaires', label: 'Horaires' },
+                ],
+              },
+              {
+                id: 'dir-cinemas-programmes',
+                label: 'Programmes',
+                children: [
+                  { id: 'dir-cinemas-programme-semaine', label: 'Programme semaine' },
+                ],
+              },
+              {
+                id: 'dir-cinemas-spectacles',
+                label: 'Spectacles',
+                children: [
+                  { id: 'dir-cinemas-spectacles-fiche-infos', label: 'Détail' },
+                  { id: 'dir-cinemas-spectacles-fiche-horaires', label: 'Horaires' },
+                ],
+              },
+            ],
+          },
+          { id: 'dir-patrimoine', label: 'Patrimoine' },
+          {
+            id: 'dir-aide-sociale',
+            label: 'Aide sociale',
+            children: [
+              {
+                id: 'dir-aide-familles',
+                label: 'Familles',
+                children: [
+                  { id: 'dir-aide-familles-fiche-infos', label: 'Détail' },
+                  { id: 'dir-aide-familles-fiche-horaires', label: 'Horaires' },
+                ],
+              },
+              {
+                id: 'dir-aide-seniors',
+                label: 'Seniors',
+                children: [
+                  { id: 'dir-aide-seniors-fiche-infos', label: 'Détail' },
+                  { id: 'dir-aide-seniors-fiche-horaires', label: 'Horaires' },
+                ],
+              },
+              {
+                id: 'dir-aide-handicap',
+                label: 'Handicap',
+                children: [
+                  { id: 'dir-aide-handicap-fiche-infos', label: 'Détail' },
+                  { id: 'dir-aide-handicap-fiche-horaires', label: 'Horaires' },
+                ],
+              },
+              {
+                id: 'dir-aide-accompagnement',
+                label: 'Accompagnement',
+                children: [
+                  { id: 'dir-aide-accompagnement-fiche-infos', label: 'Détail' },
+                  { id: 'dir-aide-accompagnement-fiche-horaires', label: 'Horaires' },
+                ],
+              },
+            ],
+          },
+          {
+            id: 'dir-associations',
+            label: 'Associations',
+            children: [
+              {
+                id: 'dir-associations-solidarite',
+                label: 'Solidarité',
+                children: [
+                  { id: 'dir-associations-solidarite-fiche-infos', label: 'Détail' },
+                  { id: 'dir-associations-solidarite-fiche-horaires', label: 'Horaires' },
+                ],
+              },
+              {
+                id: 'dir-associations-culture',
+                label: 'Culture',
+                children: [
+                  { id: 'dir-associations-culture-fiche-infos', label: 'Détail' },
+                  { id: 'dir-associations-culture-fiche-horaires', label: 'Horaires' },
+                ],
+              },
+              {
+                id: 'dir-associations-sport',
+                label: 'Sport',
+                children: [
+                  { id: 'dir-associations-sport-fiche-infos', label: 'Détail' },
+                  { id: 'dir-associations-sport-fiche-horaires', label: 'Horaires' },
+                ],
+              },
+              {
+                id: 'dir-associations-environnement',
+                label: 'Environnement',
+                children: [
+                  { id: 'dir-associations-environnement-fiche-infos', label: 'Détail' },
+                  { id: 'dir-associations-environnement-fiche-horaires', label: 'Horaires' },
+                ],
+              },
+            ],
+          },
+          {
+            id: 'dir-banques',
+            label: 'Banques & Assurances',
+            children: [
+              {
+                id: 'dir-banques-banques',
+                label: 'Banques',
+                children: [
+                  { id: 'dir-banques-banques-fiche-infos', label: 'Détail' },
+                  { id: 'dir-banques-banques-fiche-horaires', label: 'Horaires' },
+                ],
+              },
+              {
+                id: 'dir-banques-assurances',
+                label: 'Assurances',
+                children: [
+                  { id: 'dir-banques-assurances-fiche-infos', label: 'Détail' },
+                  { id: 'dir-banques-assurances-fiche-horaires', label: 'Horaires' },
+                ],
+              },
+              {
+                id: 'dir-banques-distributeurs',
+                label: 'Distributeurs',
+                children: [
+                  { id: 'dir-banques-distributeur-infos', label: 'Détail' },
+                  { id: 'dir-banques-distributeur-horaires', label: 'Horaires' },
+                ],
+              },
+              {
+                id: 'dir-banques-change',
+                label: 'Change',
+                children: [
+                  { id: 'dir-banques-change-fiche-infos', label: 'Détail' },
+                  { id: 'dir-banques-change-fiche-horaires', label: 'Horaires' },
+                ],
+              },
+            ],
+          },
+          { id: 'dir-restaurants', label: 'Restaurants' },
+          {
+            id: 'dir-transports',
+            label: 'Transports',
+            children: [
+              {
+                id: 'dir-transports-bus',
+                label: 'Bus',
+                children: [
+                  { id: 'dir-transports-bus-fiche-infos', label: 'Détail' },
+                  { id: 'dir-transports-bus-fiche-horaires', label: 'Horaires' },
+                ],
+              },
+              {
+                id: 'dir-transports-taxis',
+                label: 'Taxis',
+                children: [
+                  { id: 'dir-transports-taxis-fiche-infos', label: 'Détail' },
+                  { id: 'dir-transports-taxis-fiche-horaires', label: 'Horaires' },
+                ],
+              },
+              {
+                id: 'dir-transports-gares',
+                label: 'Gares',
+                children: [
+                  { id: 'dir-transports-gares-fiche-infos', label: 'Détail' },
+                  { id: 'dir-transports-gares-fiche-horaires', label: 'Horaires' },
+                ],
+              },
+              {
+                id: 'dir-transports-location',
+                label: 'Location',
+                children: [
+                  { id: 'dir-transports-location-fiche-infos', label: 'Détail' },
+                  { id: 'dir-transports-location-fiche-horaires', label: 'Horaires' },
+                ],
+              },
+            ],
+          },
+          {
+            id: 'dir-bibliotheques',
+            label: 'Bibliothèque',
+            children: [
+              {
+                id: 'dir-bibliotheques-bibliotheques',
+                label: 'Bibliothèques',
+                children: [
+                  { id: 'dir-bibliotheques-bibliotheques-fiche-infos', label: 'Détail' },
+                  { id: 'dir-bibliotheques-bibliotheques-fiche-horaires', label: 'Horaires' },
+                ],
+              },
+              {
+                id: 'dir-bibliotheques-mediatheques',
+                label: 'Médiathèques',
+                children: [
+                  { id: 'dir-bibliotheques-mediatheques-fiche-infos', label: 'Détail' },
+                  { id: 'dir-bibliotheques-mediatheques-fiche-horaires', label: 'Horaires' },
+                ],
+              },
+              {
+                id: 'dir-bibliotheques-universitaires',
+                label: 'Universitaires',
+                children: [
+                  { id: 'dir-bibliotheques-universitaires-fiche-infos', label: 'Détail' },
+                  { id: 'dir-bibliotheques-universitaires-fiche-horaires', label: 'Horaires' },
+                ],
+              },
+              {
+                id: 'dir-bibliotheques-salles-de-lecture',
+                label: 'Salles de lecture',
+                children: [
+                  { id: 'dir-bibliotheques-salles-de-lecture-fiche-infos', label: 'Détail' },
+                  { id: 'dir-bibliotheques-salles-de-lecture-fiche-horaires', label: 'Horaires' },
+                ],
+              },
+            ],
+          },
+          {
+            id: 'dir-permanences',
+            label: 'Permanences',
+            children: [
+              {
+                id: 'dir-permanences-administratives',
+                label: 'Administratives',
+                children: [
+                  { id: 'dir-permanences-administratives-fiche-infos', label: 'Détail' },
+                  { id: 'dir-permanences-administratives-fiche-horaires', label: 'Horaires' },
+                ],
+              },
+              {
+                id: 'dir-permanences-sociales',
+                label: 'Sociales',
+                children: [
+                  { id: 'dir-permanences-sociales-fiche-infos', label: 'Détail' },
+                  { id: 'dir-permanences-sociales-fiche-horaires', label: 'Horaires' },
+                ],
+              },
+              {
+                id: 'dir-permanences-juridiques',
+                label: 'Juridiques',
+                children: [
+                  { id: 'dir-permanences-juridiques-fiche-infos', label: 'Détail' },
+                  { id: 'dir-permanences-juridiques-fiche-horaires', label: 'Horaires' },
+                ],
+              },
+              {
+                id: 'dir-permanences-medicales',
+                label: 'Médicales',
+                children: [
+                  { id: 'dir-permanences-medicales-fiche-infos', label: 'Détail' },
+                  { id: 'dir-permanences-medicales-fiche-horaires', label: 'Horaires' },
+                ],
+              },
+            ],
+          },
+          {
+            id: 'sante-accueil',
+            label: 'Santé',
+            children: [
+              { id: 'sante-urgences', label: 'Urgences' },
+              {
+                id: 'sante-pharmacies',
+                label: 'Pharmacies',
+                children: [
+                  { id: 'sante-pharmacie-infos', label: 'Informations' },
+                  { id: 'sante-pharmacie-horaires', label: 'Horaires' },
+                  { id: 'sante-pharmacie-unpublished', label: 'Fiche non publiée' },
+                ],
+              },
+              {
+                id: 'sante-hopitaux',
+                label: 'Hôpitaux',
+                children: [
+                  { id: 'sante-hopital-details', label: 'Informations' },
+                  { id: 'sante-hopital-horaires', label: 'Horaires' },
+                ],
+              },
+              { id: 'sante-ambulances', label: 'Ambulances' },
+            ],
+          },
+          {
+            id: 'dir-securite',
+            label: 'Sécurité',
+            children: [
+              {
+                id: 'dir-securite-police',
+                label: 'Police',
+                children: [
+                  { id: 'dir-securite-police-fiche-infos', label: 'Détail' },
+                  { id: 'dir-securite-police-fiche-horaires', label: 'Horaires' },
+                ],
+              },
+              {
+                id: 'dir-securite-secours',
+                label: 'Secours',
+                children: [
+                  { id: 'dir-securite-secours-fiche-infos', label: 'Détail' },
+                  { id: 'dir-securite-secours-fiche-horaires', label: 'Horaires' },
+                ],
+              },
+              {
+                id: 'dir-securite-prevention',
+                label: 'Prévention',
+                children: [
+                  { id: 'dir-securite-prevention-fiche-infos', label: 'Détail' },
+                  { id: 'dir-securite-prevention-fiche-horaires', label: 'Horaires' },
+                ],
+              },
+              {
+                id: 'dir-securite-assistance',
+                label: 'Assistance',
+                children: [
+                  { id: 'dir-securite-assistance-fiche-infos', label: 'Détail' },
+                  { id: 'dir-securite-assistance-fiche-horaires', label: 'Horaires' },
+                ],
+              },
+            ],
+          },
+          {
+            id: 'dir-tourisme',
+            label: 'Tourisme',
+            children: [
+              {
+                id: 'dir-tourisme-patrimoine',
+                label: 'Patrimoine',
+                children: [
+                  { id: 'dir-tourisme-fiche-infos', label: 'Détail' },
+                  { id: 'dir-tourisme-fiche-horaires', label: 'Horaires' },
+                ],
+              },
+              {
+                id: 'dir-tourisme-nature',
+                label: 'Nature',
+                children: [
+                  { id: 'dir-nature-fiche-infos', label: 'Détail' },
+                  { id: 'dir-nature-fiche-horaires', label: 'Horaires' },
+                ],
+              },
+              {
+                id: 'dir-tourisme-culture',
+                label: 'Culture',
+                children: [
+                  { id: 'dir-tourisme-fiche-infos', label: 'Détail' },
+                  { id: 'dir-tourisme-fiche-horaires', label: 'Horaires' },
+                ],
+              },
+              {
+                id: 'dir-tourisme-activites',
+                label: 'Activités',
+                children: [
+                  { id: 'dir-activites-fiche-infos', label: 'Détail' },
+                  { id: 'dir-activites-fiche-horaires', label: 'Horaires' },
+                ],
+              },
+              { id: 'dir-tourisme-plan', label: 'Plan touristique' },
+            ],
+          },
+          {
+            id: 'page-meteo',
+            label: 'Météo',
+            children: [
+              {
+                id: 'meteo-maintenant',
+                label: 'Maintenant',
+                children: [
+                  { label: 'Conditions actuelles détaillées' },
+                ],
+              },
+              {
+                id: 'meteo-aujourdhui',
+                label: 'Aujourd’hui',
+                children: [
+                  { label: 'Prévisions horaires + filtres de période' },
+                ],
+              },
+              {
+                id: 'meteo-demain',
+                label: 'Demain',
+                children: [
+                  { label: 'Prévisions horaires + filtres de période' },
+                ],
+              },
+              {
+                id: 'meteo-7jours',
+                label: '7 jours',
+                children: [
+                  { id: 'meteo-jour', label: 'Jour choisi' },
+                ],
+              },
+            ],
+          },
+          {
+            id: 'page-signalement',
+            label: 'Signalement',
+            children: [
+              {
+                id: 'dir-signalement-voirie',
+                label: 'Voirie',
+                children: [
+                  { id: 'dir-signalement-voirie-fiche-infos', label: 'Détail' },
+                  { id: 'dir-signalement-voirie-fiche-horaires', label: 'Horaires' },
+                ],
+              },
+              {
+                id: 'dir-signalement-eclairage',
+                label: 'Éclairage',
+                children: [
+                  { id: 'dir-signalement-eclairage-fiche-infos', label: 'Détail' },
+                  { id: 'dir-signalement-eclairage-fiche-horaires', label: 'Horaires' },
+                ],
+              },
+              {
+                id: 'dir-signalement-proprete',
+                label: 'Propreté',
+                children: [
+                  { id: 'dir-signalement-proprete-fiche-infos', label: 'Détail' },
+                  { id: 'dir-signalement-proprete-fiche-horaires', label: 'Horaires' },
+                ],
+              },
+              {
+                id: 'dir-signalement-equipements',
+                label: 'Équipements',
+                children: [
+                  { id: 'dir-signalement-equipements-fiche-infos', label: 'Détail' },
+                  { id: 'dir-signalement-equipements-fiche-horaires', label: 'Horaires' },
+                ],
+              },
+            ],
           },
           { id: 'urgence-numeros', label: 'N° Urgence' },
           {
@@ -6343,501 +6852,7 @@ export const NAV_TREE = {
               { id: 'a-preciser', label: 'À préciser' },
             ],
           },
-          {
-            id: 'vie-locale-hub',
-            label: 'Vie locale',
-            children: [
-              {
-                id: 'dir-tourisme',
-                label: 'Tourisme',
-                children: [
-                  {
-                    id: 'dir-tourisme-patrimoine',
-                    label: 'Patrimoine',
-                    children: [
-                      { id: 'dir-tourisme-fiche-infos', label: 'Détail' },
-                      { id: 'dir-tourisme-fiche-horaires', label: 'Horaires' },
-                    ],
-                  },
-                  {
-                    id: 'dir-tourisme-nature',
-                    label: 'Nature',
-                    children: [
-                      { id: 'dir-nature-fiche-infos', label: 'Détail' },
-                      { id: 'dir-nature-fiche-horaires', label: 'Horaires' },
-                    ],
-                  },
-                  {
-                    id: 'dir-tourisme-culture',
-                    label: 'Culture',
-                    children: [
-                      { id: 'dir-tourisme-fiche-infos', label: 'Détail' },
-                      { id: 'dir-tourisme-fiche-horaires', label: 'Horaires' },
-                    ],
-                  },
-                  {
-                    id: 'dir-tourisme-activites',
-                    label: 'Activités',
-                    children: [
-                      { id: 'dir-activites-fiche-infos', label: 'Détail' },
-                      { id: 'dir-activites-fiche-horaires', label: 'Horaires' },
-                    ],
-                  },
-                  { id: 'dir-tourisme-plan', label: 'Plan touristique' },
-                ],
-              },
-              {
-                id: 'dir-education',
-                label: 'Éducation',
-                children: [
-                  {
-                    id: 'dir-education-ecoles',
-                    label: 'Écoles',
-                    children: [
-                      { id: 'dir-education-ecoles-fiche-infos', label: 'Détail' },
-                      { id: 'dir-education-ecoles-fiche-horaires', label: 'Horaires' },
-                    ],
-                  },
-                  {
-                    id: 'dir-education-formations',
-                    label: 'Formations',
-                    children: [
-                      { id: 'dir-education-formations-fiche-infos', label: 'Détail' },
-                      { id: 'dir-education-formations-fiche-horaires', label: 'Horaires' },
-                    ],
-                  },
-                  {
-                    id: 'dir-education-universites',
-                    label: 'Universités',
-                    children: [
-                      { id: 'dir-education-universites-fiche-infos', label: 'Détail' },
-                      { id: 'dir-education-universites-fiche-horaires', label: 'Horaires' },
-                    ],
-                  },
-                  {
-                    id: 'dir-education-activites',
-                    label: 'Activités',
-                    children: [
-                      { id: 'dir-education-activites-fiche-infos', label: 'Détail' },
-                      { id: 'dir-education-activites-fiche-horaires', label: 'Horaires' },
-                    ],
-                  },
-                  { id: 'dir-education-inscriptions', label: 'Inscriptions' },
-                  { id: 'dir-education-calendrier', label: 'Calendrier' },
-                ],
-              },
-              {
-                id: 'dir-cinemas',
-                label: 'Cinémas & Théâtres',
-                children: [
-                  {
-                    id: 'dir-cinemas-cinemas',
-                    label: 'Cinémas',
-                    children: [
-                      { id: 'dir-cinemas-cinemas-fiche-infos', label: 'Détail' },
-                      { id: 'dir-cinemas-cinemas-fiche-horaires', label: 'Horaires' },
-                    ],
-                  },
-                  {
-                    id: 'dir-cinemas-theatres',
-                    label: 'Théâtres',
-                    children: [
-                      { id: 'dir-cinemas-theatres-fiche-infos', label: 'Détail' },
-                      { id: 'dir-cinemas-theatres-fiche-horaires', label: 'Horaires' },
-                    ],
-                  },
-                  {
-                    id: 'dir-cinemas-programmes',
-                    label: 'Programmes',
-                    children: [{ id: 'dir-cinemas-programme-semaine', label: 'Programme semaine' }],
-                  },
-                  {
-                    id: 'dir-cinemas-spectacles',
-                    label: 'Spectacles',
-                    children: [
-                      { id: 'dir-cinemas-spectacles-fiche-infos', label: 'Détail' },
-                      { id: 'dir-cinemas-spectacles-fiche-horaires', label: 'Horaires' },
-                    ],
-                  },
-                ],
-              },
-              {
-                id: 'dir-economie',
-                label: 'Économie',
-                children: [
-                  {
-                    id: 'dir-economie-commerces',
-                    label: 'Commerces',
-                    children: [
-                      { id: 'dir-economie-commerces-fiche-infos', label: 'Détail' },
-                      { id: 'dir-economie-commerces-fiche-horaires', label: 'Horaires' },
-                    ],
-                  },
-                  {
-                    id: 'dir-economie-entreprises',
-                    label: 'Entreprises',
-                    children: [
-                      { id: 'dir-economie-entreprises-fiche-infos', label: 'Détail' },
-                      { id: 'dir-economie-entreprises-fiche-horaires', label: 'Horaires' },
-                    ],
-                  },
-                  {
-                    id: 'dir-economie-artisans',
-                    label: 'Artisans',
-                    children: [
-                      { id: 'dir-economie-artisans-fiche-infos', label: 'Détail' },
-                      { id: 'dir-economie-artisans-fiche-horaires', label: 'Horaires' },
-                    ],
-                  },
-                  {
-                    id: 'dir-economie-services',
-                    label: 'Services',
-                    children: [
-                      { id: 'dir-economie-services-fiche-infos', label: 'Détail' },
-                      { id: 'dir-economie-services-fiche-horaires', label: 'Horaires' },
-                    ],
-                  },
-                  { id: 'dir-economie-actus', label: 'Actus' },
-                  { id: 'dir-economie-marches', label: 'Marchés' },
-                ],
-              },
-              {
-                id: 'dir-aide-sociale',
-                label: 'Aide sociale',
-                children: [
-                  {
-                    id: 'dir-aide-familles',
-                    label: 'Familles',
-                    children: [
-                      { id: 'dir-aide-familles-fiche-infos', label: 'Détail' },
-                      { id: 'dir-aide-familles-fiche-horaires', label: 'Horaires' },
-                    ],
-                  },
-                  {
-                    id: 'dir-aide-seniors',
-                    label: 'Seniors',
-                    children: [
-                      { id: 'dir-aide-seniors-fiche-infos', label: 'Détail' },
-                      { id: 'dir-aide-seniors-fiche-horaires', label: 'Horaires' },
-                    ],
-                  },
-                  {
-                    id: 'dir-aide-handicap',
-                    label: 'Handicap',
-                    children: [
-                      { id: 'dir-aide-handicap-fiche-infos', label: 'Détail' },
-                      { id: 'dir-aide-handicap-fiche-horaires', label: 'Horaires' },
-                    ],
-                  },
-                  {
-                    id: 'dir-aide-accompagnement',
-                    label: 'Accompagnement',
-                    children: [
-                      { id: 'dir-aide-accompagnement-fiche-infos', label: 'Détail' },
-                      { id: 'dir-aide-accompagnement-fiche-horaires', label: 'Horaires' },
-                    ],
-                  },
-                ],
-              },
-              {
-                id: 'dir-associations',
-                label: 'Associations',
-                children: [
-                  {
-                    id: 'dir-associations-solidarite',
-                    label: 'Solidarité',
-                    children: [
-                      { id: 'dir-associations-solidarite-fiche-infos', label: 'Détail' },
-                      { id: 'dir-associations-solidarite-fiche-horaires', label: 'Horaires' },
-                    ],
-                  },
-                  {
-                    id: 'dir-associations-culture',
-                    label: 'Culture',
-                    children: [
-                      { id: 'dir-associations-culture-fiche-infos', label: 'Détail' },
-                      { id: 'dir-associations-culture-fiche-horaires', label: 'Horaires' },
-                    ],
-                  },
-                  {
-                    id: 'dir-associations-sport',
-                    label: 'Sport',
-                    children: [
-                      { id: 'dir-associations-sport-fiche-infos', label: 'Détail' },
-                      { id: 'dir-associations-sport-fiche-horaires', label: 'Horaires' },
-                    ],
-                  },
-                  {
-                    id: 'dir-associations-environnement',
-                    label: 'Environnement',
-                    children: [
-                      { id: 'dir-associations-environnement-fiche-infos', label: 'Détail' },
-                      { id: 'dir-associations-environnement-fiche-horaires', label: 'Horaires' },
-                    ],
-                  },
-                ],
-              },
-              {
-                id: 'dir-banques',
-                label: 'Banques & Assurances',
-                children: [
-                  {
-                    id: 'dir-banques-banques',
-                    label: 'Banques',
-                    children: [
-                      { id: 'dir-banques-banques-fiche-infos', label: 'Détail' },
-                      { id: 'dir-banques-banques-fiche-horaires', label: 'Horaires' },
-                    ],
-                  },
-                  {
-                    id: 'dir-banques-assurances',
-                    label: 'Assurances',
-                    children: [
-                      { id: 'dir-banques-assurances-fiche-infos', label: 'Détail' },
-                      { id: 'dir-banques-assurances-fiche-horaires', label: 'Horaires' },
-                    ],
-                  },
-                  {
-                    id: 'dir-banques-distributeurs',
-                    label: 'Distributeurs',
-                    children: [
-                      { id: 'dir-banques-distributeur-infos', label: 'Détail' },
-                      { id: 'dir-banques-distributeur-horaires', label: 'Horaires' },
-                    ],
-                  },
-                  {
-                    id: 'dir-banques-change',
-                    label: 'Change',
-                    children: [
-                      { id: 'dir-banques-change-fiche-infos', label: 'Détail' },
-                      { id: 'dir-banques-change-fiche-horaires', label: 'Horaires' },
-                    ],
-                  },
-                ],
-              },
-              {
-                id: 'dir-transports',
-                label: 'Transports',
-                children: [
-                  {
-                    id: 'dir-transports-bus',
-                    label: 'Bus',
-                    children: [
-                      { id: 'dir-transports-bus-fiche-infos', label: 'Détail' },
-                      { id: 'dir-transports-bus-fiche-horaires', label: 'Horaires' },
-                    ],
-                  },
-                  {
-                    id: 'dir-transports-taxis',
-                    label: 'Taxis',
-                    children: [
-                      { id: 'dir-transports-taxis-fiche-infos', label: 'Détail' },
-                      { id: 'dir-transports-taxis-fiche-horaires', label: 'Horaires' },
-                    ],
-                  },
-                  {
-                    id: 'dir-transports-gares',
-                    label: 'Gares',
-                    children: [
-                      { id: 'dir-transports-gares-fiche-infos', label: 'Détail' },
-                      { id: 'dir-transports-gares-fiche-horaires', label: 'Horaires' },
-                    ],
-                  },
-                  {
-                    id: 'dir-transports-location',
-                    label: 'Location',
-                    children: [
-                      { id: 'dir-transports-location-fiche-infos', label: 'Détail' },
-                      { id: 'dir-transports-location-fiche-horaires', label: 'Horaires' },
-                    ],
-                  },
-                ],
-              },
-              {
-                id: 'dir-bibliotheques',
-                label: 'Bibliothèques',
-                children: [
-                  {
-                    id: 'dir-bibliotheques-bibliotheques',
-                    label: 'Bibliothèques',
-                    children: [
-                      { id: 'dir-bibliotheques-bibliotheques-fiche-infos', label: 'Détail' },
-                      { id: 'dir-bibliotheques-bibliotheques-fiche-horaires', label: 'Horaires' },
-                    ],
-                  },
-                  {
-                    id: 'dir-bibliotheques-mediatheques',
-                    label: 'Médiathèques',
-                    children: [
-                      { id: 'dir-bibliotheques-mediatheques-fiche-infos', label: 'Détail' },
-                      { id: 'dir-bibliotheques-mediatheques-fiche-horaires', label: 'Horaires' },
-                    ],
-                  },
-                  {
-                    id: 'dir-bibliotheques-universitaires',
-                    label: 'Universitaires',
-                    children: [
-                      { id: 'dir-bibliotheques-universitaires-fiche-infos', label: 'Détail' },
-                      { id: 'dir-bibliotheques-universitaires-fiche-horaires', label: 'Horaires' },
-                    ],
-                  },
-                  {
-                    id: 'dir-bibliotheques-salles-de-lecture',
-                    label: 'Salles de lecture',
-                    children: [
-                      { id: 'dir-bibliotheques-salles-de-lecture-fiche-infos', label: 'Détail' },
-                      { id: 'dir-bibliotheques-salles-de-lecture-fiche-horaires', label: 'Horaires' },
-                    ],
-                  },
-                ],
-              },
-              {
-                id: 'dir-permanences',
-                label: 'Permanences',
-                children: [
-                  {
-                    id: 'dir-permanences-administratives',
-                    label: 'Administratives',
-                    children: [
-                      { id: 'dir-permanences-administratives-fiche-infos', label: 'Détail' },
-                      { id: 'dir-permanences-administratives-fiche-horaires', label: 'Horaires' },
-                    ],
-                  },
-                  {
-                    id: 'dir-permanences-sociales',
-                    label: 'Sociales',
-                    children: [
-                      { id: 'dir-permanences-sociales-fiche-infos', label: 'Détail' },
-                      { id: 'dir-permanences-sociales-fiche-horaires', label: 'Horaires' },
-                    ],
-                  },
-                  {
-                    id: 'dir-permanences-juridiques',
-                    label: 'Juridiques',
-                    children: [
-                      { id: 'dir-permanences-juridiques-fiche-infos', label: 'Détail' },
-                      { id: 'dir-permanences-juridiques-fiche-horaires', label: 'Horaires' },
-                    ],
-                  },
-                  {
-                    id: 'dir-permanences-medicales',
-                    label: 'Médicales',
-                    children: [
-                      { id: 'dir-permanences-medicales-fiche-infos', label: 'Détail' },
-                      { id: 'dir-permanences-medicales-fiche-horaires', label: 'Horaires' },
-                    ],
-                  },
-                ],
-              },
-              {
-                id: 'dir-securite',
-                label: 'Sécurité',
-                children: [
-                  {
-                    id: 'dir-securite-police',
-                    label: 'Police',
-                    children: [
-                      { id: 'dir-securite-police-fiche-infos', label: 'Détail' },
-                      { id: 'dir-securite-police-fiche-horaires', label: 'Horaires' },
-                    ],
-                  },
-                  {
-                    id: 'dir-securite-secours',
-                    label: 'Secours',
-                    children: [
-                      { id: 'dir-securite-secours-fiche-infos', label: 'Détail' },
-                      { id: 'dir-securite-secours-fiche-horaires', label: 'Horaires' },
-                    ],
-                  },
-                  {
-                    id: 'dir-securite-prevention',
-                    label: 'Prévention',
-                    children: [
-                      { id: 'dir-securite-prevention-fiche-infos', label: 'Détail' },
-                      { id: 'dir-securite-prevention-fiche-horaires', label: 'Horaires' },
-                    ],
-                  },
-                  {
-                    id: 'dir-securite-assistance',
-                    label: 'Assistance',
-                    children: [
-                      { id: 'dir-securite-assistance-fiche-infos', label: 'Détail' },
-                      { id: 'dir-securite-assistance-fiche-horaires', label: 'Horaires' },
-                    ],
-                  },
-                ],
-              },
-              {
-                id: 'page-signalement',
-                label: 'Signalement',
-                children: [
-                  {
-                    id: 'dir-signalement-voirie',
-                    label: 'Voirie',
-                    children: [
-                      { id: 'dir-signalement-voirie-fiche-infos', label: 'Détail' },
-                      { id: 'dir-signalement-voirie-fiche-horaires', label: 'Horaires' },
-                    ],
-                  },
-                  {
-                    id: 'dir-signalement-eclairage',
-                    label: 'Éclairage',
-                    children: [
-                      { id: 'dir-signalement-eclairage-fiche-infos', label: 'Détail' },
-                      { id: 'dir-signalement-eclairage-fiche-horaires', label: 'Horaires' },
-                    ],
-                  },
-                  {
-                    id: 'dir-signalement-proprete',
-                    label: 'Propreté',
-                    children: [
-                      { id: 'dir-signalement-proprete-fiche-infos', label: 'Détail' },
-                      { id: 'dir-signalement-proprete-fiche-horaires', label: 'Horaires' },
-                    ],
-                  },
-                  {
-                    id: 'dir-signalement-equipements',
-                    label: 'Équipements',
-                    children: [
-                      { id: 'dir-signalement-equipements-fiche-infos', label: 'Détail' },
-                      { id: 'dir-signalement-equipements-fiche-horaires', label: 'Horaires' },
-                    ],
-                  },
-                ],
-              },
-              {
-                id: 'page-meteo',
-                label: 'Météo',
-                children: [
-                  {
-                    id: 'meteo-maintenant',
-                    label: 'Maintenant',
-                    children: [{ label: 'Conditions actuelles détaillées' }],
-                  },
-                  {
-                    id: 'meteo-aujourdhui',
-                    label: 'Aujourd’hui',
-                    children: [{ label: 'Prévisions horaires + filtres de période' }],
-                  },
-                  {
-                    id: 'meteo-demain',
-                    label: 'Demain',
-                    children: [{ label: 'Prévisions horaires + filtres de période' }],
-                  },
-                  {
-                    id: 'meteo-7jours',
-                    label: '7 jours',
-                    children: [{ id: 'meteo-jour', label: 'Jour choisi' }],
-                  },
-                ],
-              },
-              { id: 'dir-restaurants', label: 'Restaurants' },
-              { id: 'dir-patrimoine', label: 'Patrimoine' },
-              { id: 'communautes-groupes', label: 'Groupes' },
-              { id: 'communautes-clubs', label: 'Clubs' },
-              { id: 'communautes-rencontres', label: 'Rencontres' },
-            ],
-          },
+          { id: 'vie-locale-hub', label: 'Vie locale (hub)' },
         ],
       },
     ],
