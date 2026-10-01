@@ -28,6 +28,8 @@ export function phoneHeader({
   city = 'Kapan',
   backTo = null,
   extraRight = '',
+  showHome = true,
+  showMiasin = true,
 } = {}) {
   const backAttr = backTo ? `data-go="${backTo}"` : 'data-back'
   return `
@@ -48,12 +50,20 @@ export function phoneHeader({
         }
         <div class="header-right">
           ${extraRight}
-          <button class="hit icon-btn" data-go="accueil-kapan" title="Accueil Ma Ville" aria-label="Accueil Ma Ville">
-            <span class="ico-svg" aria-hidden="true">⌂</span>
-          </button>
-          <button class="hit icon-btn" data-sim="miasin" title="Accueil MIASIN (simulé)" aria-label="Accueil MIASIN">
-            <span class="ico-svg ico-miasin" aria-hidden="true">◎</span>
-          </button>
+          ${
+            showHome
+              ? `<button class="hit icon-btn" data-go="accueil-kapan" title="Accueil Ma Ville" aria-label="Accueil Ma Ville">
+                <span class="ico-svg" aria-hidden="true">⌂</span>
+              </button>`
+              : ''
+          }
+          ${
+            showMiasin
+              ? `<button class="hit icon-btn" data-sim="miasin" title="Accueil MIASIN (simulé)" aria-label="Accueil MIASIN">
+                <span class="ico-svg ico-miasin" aria-hidden="true">◎</span>
+              </button>`
+              : ''
+          }
         </div>
       </div>
     </div>
