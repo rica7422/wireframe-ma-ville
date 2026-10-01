@@ -603,6 +603,10 @@ const startId = resolveScreenId(location.hash.slice(1))
 go(SCREENS[startId] ? startId : 'ville-bienvenue', { push: false })
 
 window.addEventListener('hashchange', () => {
-  const id = resolveScreenId(location.hash.slice(1))
+  const raw = location.hash.slice(1)
+  const id = resolveScreenId(raw)
+  if (raw && raw !== id && SCREENS[id]) {
+    history.replaceState(null, '', `#${id}`)
+  }
   if (SCREENS[id] && id !== currentId) go(id, { push: false })
 })
