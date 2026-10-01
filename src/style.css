@@ -2731,12 +2731,16 @@ button.tree-node:hover .tree-label {
   font-size: 0.85rem;
 }
 
-/* —— Signalements mailbox —— */
+/* —— Signalements Q&A —— */
 .signal-list {
   display: flex;
   flex-direction: column;
   gap: 8px;
   margin: 12px 0 24px;
+}
+.signal-section-label {
+  margin: 16px 0 4px;
+  font-size: 0.95rem;
 }
 .signal-row {
   display: flex;
@@ -2780,15 +2784,34 @@ button.tree-node:hover .tree-label {
   background: var(--accent, #9f1239);
   margin-left: auto;
 }
-.signal-status-badge {
-  background: color-mix(in srgb, var(--accent, #9f1239) 12%, #fff);
-  color: var(--accent, #9f1239);
-  border-color: color-mix(in srgb, var(--accent, #9f1239) 30%, #fff);
+.signal-read-badge {
+  background: color-mix(in srgb, #64748b 12%, #fff);
+  color: #475569;
+  border-color: color-mix(in srgb, #64748b 25%, #fff);
 }
-.signal-status-line {
+.signal-reply-badge.waiting {
+  background: color-mix(in srgb, #b45309 10%, #fff);
+  color: #92400e;
+  border-color: color-mix(in srgb, #b45309 28%, #fff);
+}
+.signal-reply-badge.has-reply {
+  background: color-mix(in srgb, #047857 10%, #fff);
+  color: #065f46;
+  border-color: color-mix(in srgb, #047857 28%, #fff);
+}
+.signal-new-reply {
+  background: color-mix(in srgb, var(--accent, #9f1239) 14%, #fff);
+  color: var(--accent, #9f1239);
+  border-color: color-mix(in srgb, var(--accent, #9f1239) 32%, #fff);
+  font-weight: 600;
+}
+.signal-waiting {
   text-align: center;
-  margin: 12px 8px;
-  font-size: 0.8rem;
+  margin: 12px 8px 20px;
+  font-size: 0.85rem;
+  padding: 10px 12px;
+  background: color-mix(in srgb, #b45309 8%, #fff);
+  border-radius: 10px;
 }
 .signal-first {
   padding: 12px 14px;
@@ -2796,13 +2819,17 @@ button.tree-node:hover .tree-label {
   border-radius: 12px;
   background: color-mix(in srgb, var(--accent, #9f1239) 5%, #fff);
   margin-bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-start;
 }
 .signal-conv-meta {
   display: flex;
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
-  margin-bottom: 8px;
+  margin: 4px 0;
 }
 .signal-thread {
   min-height: 80px;

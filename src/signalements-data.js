@@ -1,6 +1,6 @@
 /**
- * Signalements mailbox — not a directory.
- * Habitant = own reports · Admin Kapan = city inbox only.
+ * Signalements — Q&A private forum (no En cours / Résolu / Clôturé).
+ * Read state (Envoyé | Vu) ≠ reply state (En attente | Avec réponse).
  */
 
 import { ADMIN_CITY, SIM_VIEWER_ID } from './demo-data.js'
@@ -13,10 +13,9 @@ export const SIGNAL_CATEGORIES = [
   'Autre',
 ]
 
-export const SIGNAL_STATUSES = ['Envoyé', 'En cours', 'Résolu', 'Clôturé']
-
-/** Mutable demo store */
+/** Mutable demo store — shared object for habitant + admin */
 export const SIGNALEMENTS = {
+  /** 1. Envoyé · En attente · not yet opened by mairie */
   'sig-lampadaire': {
     id: 'sig-lampadaire',
     city: 'kapan',
@@ -25,61 +24,50 @@ export const SIGNALEMENTS = {
     subject: 'Lampadaire en panne',
     category: 'Éclairage',
     place: 'Rue de la Paix, face au n°12',
-    status: 'En cours',
-    unread: true,
+    readByMairie: false,
+    userHasSeenLastMairie: true,
     createdAt: '2026-09-28T10:00:00',
-    updatedAt: '2026-09-30T16:20:00',
+    updatedAt: '2026-09-28T10:00:00',
     messages: [
       {
         id: 'm1',
         kind: 'user',
         authorId: SIM_VIEWER_ID,
-        authorLabel: 'Rica',
+        authorLabel: 'Vous',
         body: 'Le lampadaire devant le 12 ne s’allume plus depuis 3 soirs.',
         photos: true,
         at: '28 sept. · 10:00',
-      },
-      {
-        id: 'm2',
-        kind: 'status',
-        body: 'Statut passé à En cours',
-        at: '29 sept. · 09:15',
-      },
-      {
-        id: 'm3',
-        kind: 'mairie',
-        authorId: 'org-mairie-kapan',
-        authorLabel: 'Mairie de Kapan',
-        body: 'Merci. Une équipe de voirie passera cette semaine.',
-        photos: false,
-        at: '30 sept. · 16:20',
+        readByMairie: false,
       },
     ],
   },
+  /** 2. Vu · En attente (opened by admin, no reply yet) */
   'sig-dechets': {
     id: 'sig-dechets',
     city: 'kapan',
     authorId: SIM_VIEWER_ID,
     authorName: 'Rica (vous)',
-    subject: 'Déchets abandonnés',
+    subject: 'Déchets rue Andranik',
     category: 'Propreté',
-    place: 'Parking place centrale',
-    status: 'Envoyé',
-    unread: false,
-    createdAt: '2026-09-30T08:00:00',
-    updatedAt: '2026-09-30T08:00:00',
+    place: 'Rue Andranik, près des containers',
+    readByMairie: true,
+    userHasSeenLastMairie: true,
+    createdAt: '2026-09-29T08:00:00',
+    updatedAt: '2026-09-29T11:00:00',
     messages: [
       {
         id: 'm1',
         kind: 'user',
         authorId: SIM_VIEWER_ID,
-        authorLabel: 'Rica',
-        body: 'Sacs et cartons abandonnés près des containers depuis dimanche.',
+        authorLabel: 'Vous',
+        body: 'Sacs et cartons abandonnés rue Andranik depuis dimanche.',
         photos: true,
-        at: '30 sept. · 08:00',
+        at: '29 sept. · 08:00',
+        readByMairie: true,
       },
     ],
   },
+  /** 3. Vu · Avec réponse · official reply · user can reply */
   'sig-banc': {
     id: 'sig-banc',
     city: 'kapan',
@@ -88,8 +76,8 @@ export const SIGNALEMENTS = {
     subject: 'Banc endommagé',
     category: 'Équipements publics',
     place: 'Parc municipal, allée sud',
-    status: 'Résolu',
-    unread: false,
+    readByMairie: true,
+    userHasSeenLastMairie: false,
     createdAt: '2026-09-10T14:00:00',
     updatedAt: '2026-09-20T11:00:00',
     messages: [
@@ -97,56 +85,20 @@ export const SIGNALEMENTS = {
         id: 'm1',
         kind: 'user',
         authorId: SIM_VIEWER_ID,
-        authorLabel: 'Rica',
+        authorLabel: 'Vous',
         body: 'Lattes cassées sur le banc près de la fontaine.',
         photos: false,
         at: '10 sept. · 14:00',
+        readByMairie: true,
       },
       {
         id: 'm2',
-        kind: 'status',
-        body: 'Statut passé à En cours',
-        at: '12 sept. · 10:00',
-      },
-      {
-        id: 'm3',
         kind: 'mairie',
         authorId: 'org-mairie-kapan',
         authorLabel: 'Mairie de Kapan',
-        body: 'Réparation planifiée.',
+        body: 'Merci pour le signalement. Le banc a été remplacé ce matin.',
         photos: false,
-        at: '15 sept. · 09:30',
-      },
-      {
-        id: 'm4',
-        kind: 'status',
-        body: 'Statut passé à Résolu — Banc remplacé.',
         at: '20 sept. · 11:00',
-      },
-    ],
-  },
-  /** Other citizen — only visible to admin city inbox */
-  'sig-autre-citoyen': {
-    id: 'sig-autre-citoyen',
-    city: 'kapan',
-    authorId: 'user-other',
-    authorName: 'Aram K.',
-    subject: 'Nid-de-poule',
-    category: 'Voirie',
-    place: 'Avenue principale',
-    status: 'Envoyé',
-    unread: true,
-    createdAt: '2026-09-29T12:00:00',
-    updatedAt: '2026-09-29T12:00:00',
-    messages: [
-      {
-        id: 'm1',
-        kind: 'user',
-        authorId: 'user-other',
-        authorLabel: 'Aram K.',
-        body: 'Gros trou dangereux devant le lycée.',
-        photos: false,
-        at: '29 sept. · 12:00',
       },
     ],
   },
@@ -177,23 +129,63 @@ export function getSignalement(id) {
   return SIGNALEMENTS[id] || null
 }
 
+export function lastMessage(s) {
+  if (!s?.messages?.length) return null
+  return s.messages[s.messages.length - 1]
+}
+
+/** Envoyé | Vu par la mairie */
+export function readLabel(s) {
+  return s.readByMairie ? 'Vu par la mairie' : 'Envoyé'
+}
+
+/**
+ * En attente de réponse = no mairie reply, OR user wrote after last mairie reply
+ * Avec réponse = last message is mairie
+ */
+export function replyLabel(s) {
+  const last = lastMessage(s)
+  if (!last) return 'En attente de réponse'
+  if (last.kind === 'mairie') return 'Avec réponse'
+  return 'En attente de réponse'
+}
+
+export function hasMairieReply(s) {
+  return (s.messages || []).some((m) => m.kind === 'mairie')
+}
+
+/** Habitant: Nouvelle réponse if last mairie msg not seen */
+export function isNewMairieReply(s) {
+  const last = lastMessage(s)
+  return last?.kind === 'mairie' && !s.userHasSeenLastMairie
+}
+
+/** Admin: unread if last user message not read by team */
+export function isUnreadForMairie(s) {
+  const last = lastMessage(s)
+  if (!last || last.kind !== 'user') return false
+  return last.readByMairie === false
+}
+
 export function listSignalementsForViewer({ admin, viewerId = SIM_VIEWER_ID, city = ADMIN_CITY }) {
-  const all = Object.values(SIGNALEMENTS)
-  let list
-  if (admin) {
-    list = all.filter((s) => s.city === city)
-  } else {
-    list = all.filter((s) => s.authorId === viewerId)
-  }
+  let list = Object.values(SIGNALEMENTS).filter((s) =>
+    admin ? s.city === city : s.authorId === viewerId
+  )
   list.sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1))
   const filter = getSignalFilter(admin)
-  if (filter === 'En cours') list = list.filter((s) => s.status === 'En cours')
-  else if (filter === 'Résolus') list = list.filter((s) => s.status === 'Résolu' || s.status === 'Clôturé')
-  else if (filter === 'À traiter') list = list.filter((s) => s.status === 'Envoyé')
+
+  if (admin) {
+    if (filter === 'Non lus') list = list.filter(isUnreadForMairie)
+    else if (filter === 'À répondre') list = list.filter((s) => lastMessage(s)?.kind === 'user')
+    else if (filter === 'Répondus') list = list.filter((s) => lastMessage(s)?.kind === 'mairie')
+  } else {
+    if (filter === 'En attente de réponse') list = list.filter((s) => replyLabel(s) === 'En attente de réponse')
+    else if (filter === 'Avec réponse') list = list.filter((s) => replyLabel(s) === 'Avec réponse')
+  }
   return list
 }
 
-export function createSignalement({ subject, category, place, body }) {
+export function createSignalement({ subject, place, body, category = '' }) {
   const id = `sig-${Date.now()}`
   const now = new Date().toISOString()
   SIGNALEMENTS[id] = {
@@ -201,11 +193,11 @@ export function createSignalement({ subject, category, place, body }) {
     city: ADMIN_CITY,
     authorId: SIM_VIEWER_ID,
     authorName: 'Rica (vous)',
-    subject,
-    category,
-    place,
-    status: 'Envoyé',
-    unread: false,
+    subject: subject || 'Nouveau signalement',
+    category: category || '',
+    place: place || 'Lieu…',
+    readByMairie: false,
+    userHasSeenLastMairie: true,
     createdAt: now,
     updatedAt: now,
     messages: [
@@ -213,10 +205,11 @@ export function createSignalement({ subject, category, place, body }) {
         id: 'm1',
         kind: 'user',
         authorId: SIM_VIEWER_ID,
-        authorLabel: 'Rica',
-        body,
+        authorLabel: 'Vous',
+        body: body || 'Description…',
         photos: false,
         at: 'À l’instant',
+        readByMairie: false,
       },
     ],
   }
@@ -224,52 +217,78 @@ export function createSignalement({ subject, category, place, body }) {
   return SIGNALEMENTS[id]
 }
 
-export function appendSignalMessage(id, { kind, body, authorLabel }) {
+/** Admin opens thread → mark user messages read + readByMairie */
+export function openAsMairie(id) {
   const s = SIGNALEMENTS[id]
   if (!s) return null
+  s.readByMairie = true
+  s.messages.forEach((m) => {
+    if (m.kind === 'user') m.readByMairie = true
+  })
+  return s
+}
+
+/** Habitant opens thread → clear Nouvelle réponse */
+export function openAsHabitant(id) {
+  const s = SIGNALEMENTS[id]
+  if (!s) return null
+  s.userHasSeenLastMairie = true
+  return s
+}
+
+export function appendUserReply(id, body) {
+  const s = SIGNALEMENTS[id]
+  if (!s || !hasMairieReply(s)) return null
   s.messages.push({
     id: `m${s.messages.length + 1}`,
-    kind,
-    authorId: kind === 'mairie' ? 'org-mairie-kapan' : SIM_VIEWER_ID,
-    authorLabel,
+    kind: 'user',
+    authorId: SIM_VIEWER_ID,
+    authorLabel: 'Vous',
+    body,
+    photos: false,
+    at: 'À l’instant',
+    readByMairie: false,
+  })
+  s.updatedAt = new Date().toISOString()
+  s.userHasSeenLastMairie = true
+  return s
+}
+
+export function appendMairieReply(id, body) {
+  const s = SIGNALEMENTS[id]
+  if (!s) return null
+  s.readByMairie = true
+  s.messages.forEach((m) => {
+    if (m.kind === 'user') m.readByMairie = true
+  })
+  s.messages.push({
+    id: `m${s.messages.length + 1}`,
+    kind: 'mairie',
+    authorId: 'org-mairie-kapan',
+    authorLabel: 'Mairie de Kapan',
     body,
     photos: false,
     at: 'À l’instant',
   })
   s.updatedAt = new Date().toISOString()
-  if (kind === 'mairie') s.unread = true
+  s.userHasSeenLastMairie = false
   return s
 }
 
-export function setSignalStatus(id, status, explanation = '') {
-  const s = SIGNALEMENTS[id]
-  if (!s) return null
-  if (s.status === status) return s
-  s.status = status
-  s.updatedAt = new Date().toISOString()
-  const note =
-    status === 'Résolu' || status === 'Clôturé'
-      ? `Statut passé à ${status} — ${explanation || '…'}`
-      : `Statut passé à ${status}`
-  s.messages.push({
-    id: `m${s.messages.length + 1}`,
-    kind: 'status',
-    body: note,
-    at: 'À l’instant',
-  })
-  return s
+/** @deprecated status circuit removed — kept as no-ops for old imports */
+export function setSignalStatus() {
+  return null
 }
-
+export function statusTransitions() {
+  return []
+}
+export function canReplyToSignal() {
+  return false
+}
 export function markSignalRead(id) {
-  const s = SIGNALEMENTS[id]
-  if (s) s.unread = false
+  return openAsHabitant(id)
 }
-
-export function statusTransitions(current) {
-  const all = ['Envoyé', 'En cours', 'Résolu', 'Clôturé']
-  return all.filter((s) => s !== current)
-}
-
-export function canReplyToSignal(status) {
-  return status === 'Envoyé' || status === 'En cours'
+export function appendSignalMessage(id, { kind, body }) {
+  if (kind === 'mairie') return appendMairieReply(id, body)
+  return appendUserReply(id, body)
 }

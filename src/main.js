@@ -28,8 +28,8 @@ import {
   setSignalFilter,
   setOpenSignalId,
   createSignalement,
-  appendSignalMessage,
-  setSignalStatus,
+  appendUserReply,
+  appendMairieReply,
 } from './signalements-data.js'
 
 const historyStack = []
@@ -194,43 +194,28 @@ function handleSim(kind) {
   if (action === 'signal-create') {
     createSignalement({
       subject: 'Nouveau signalement',
-      category: 'Voirie',
-      place: 'Lieu saisi…',
-      body: 'Message…',
+      place: 'Adresse ou lieu précis',
+      body: 'Décrivez le problème…',
+      category: '',
     })
-    toast('Signalement envoyé (simulé)')
+    toast('Votre signalement a été envoyé à la mairie.')
     go('signalement-conversation', { push: false })
     return
   }
-  if (action === 'signal-reply' && arg) {
-    const admin = isAdminRole()
-    appendSignalMessage(arg, {
-      kind: admin ? 'mairie' : 'user',
-      body: admin ? 'Réponse de la mairie (simulée).' : 'Réponse habitant (simulée).',
-      authorLabel: admin ? 'Mairie de Kapan' : 'Rica',
-    })
-    toast('Réponse envoyée (simulé)')
+  if (action === 'signal-reply-user' && arg) {
+    appendUserReply(arg, 'Réponse habitant (simulée).')
+    toast('Votre réponse a été envoyée.')
     render()
     return
   }
-  if (action === 'signal-status' && arg) {
-    // kind = signal-status:id:Status — Status may contain spaces (En cours)
-    const parts = String(kind).split(':')
-    const sid = parts[1]
-    const status = parts.slice(2).join(':')
+  if (action === 'signal-reply-mairie' && arg) {
     if (!isAdminRole()) {
       toast('Accès refusé pour ce rôle (simulé)')
       return
     }
-    const explanation =
-      status === 'Résolu'
-        ? 'Problème traité.'
-        : status === 'Clôturé'
-          ? 'Clôturé sans résolution.'
-          : ''
-    setSignalStatus(sid, status, explanation)
-    toast(`Statut · ${status} (simulé)`)
-    go('signalement-conversation', { push: false })
+    appendMairieReply(arg, 'Réponse de la mairie (simulée).')
+    toast('Réponse envoyée à l’habitant.')
+    render()
     return
   }
   if (action === 'supprimer' || action === 'delete-confirm') {
@@ -404,7 +389,7 @@ function render({ focusActive = false, resetNavScroll = false } = {}) {
       <aside class="proto-nav">
         <header class="proto-brand">
           <strong>Ma Ville</strong>
-          <span class="proto-tag">Wireframe · build 1001-g · signalements</span>
+          <span class="proto-tag">Wireframe · build 1001-h · signalements-qa</span>
         </header>
         <p class="proto-hint">Navigation du prototype (≠ nav dans le téléphone)</p>
         <div class="nav-tabs" role="tablist" aria-label="Côté prototype">
@@ -596,6 +581,7 @@ function resolveScreenId(id) {
   if (id === 'admin-bo-evenements-creer') return 'evenement-gerer'
   if (id === 'admin-bo-annuaire-form') return 'fiche-annuaire-form'
   if (id === 'page-signalement' || (id && id.startsWith('dir-signalement'))) return 'signalements'
+  if (id === 'signalement-statut') return 'signalement-conversation'
   return id
 }
 

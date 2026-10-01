@@ -47,9 +47,14 @@ import {
   getSignalement,
   getOpenSignalId,
   getSignalFilter,
-  markSignalRead,
-  statusTransitions,
-  canReplyToSignal,
+  lastMessage,
+  readLabel,
+  replyLabel,
+  isNewMairieReply,
+  isUnreadForMairie,
+  openAsMairie,
+  openAsHabitant,
+  hasMairieReply,
 } from './signalements-data.js'
 
 /** Screen registry: id → { title, group, render(state) } */
@@ -3194,8 +3199,8 @@ function meteo7Jours() {
 
 function signalFilterChips(admin) {
   const filters = admin
-    ? ['Tous', 'À traiter', 'En cours', 'Résolus']
-    : ['Tous', 'En cours', 'Résolus']
+    ? ['Tous', 'Non lus', 'À répondre', 'Répondus']
+    : ['Tous', 'En attente de réponse', 'Avec réponse']
   const active = getSignalFilter(admin)
   return `<div class="chips">${filters
     .map(
@@ -3205,8 +3210,15 @@ function signalFilterChips(admin) {
     .join('')}</div>`
 }
 
-function signalStatusBadge(status) {
-  return `<span class="badge signal-status-badge">${status}</span>`
+function signalReadBadge(s) {
+  return `<span class="badge signal-read-badge">${readLabel(s)}</span>`
+}
+
+function signalReplyBadge(s) {
+  const label = replyLabel(s)
+  const cls =
+    label === 'Avec réponse' ? 'signal-reply-badge has-reply' : 'signal-reply-badge waiting'
+  return `<span class="badge ${cls}">${label}</span>`
 }
 
 function signalementsInbox() {
@@ -3214,10 +3226,10 @@ function signalementsInbox() {
   const list = listSignalementsForViewer({ admin })
   const title = admin ? 'Signalements reçus' : 'Signalements'
   const intro = admin
-    ? 'Boîte de la mairie de Kapan — signalements du quartier.'
-    : 'Un problème dans votre quartier ? Écrivez à votre mairie et suivez ses réponses ici.'
+    ? 'Boîte de la mairie de Kapan — échangez avec les habitants.'
+    : 'Signalez un problème dans votre ville et échangez avec votre mairie.'
 
-  const rows =
+  const emptyRows =
     list.length === 0
       ? `
       ${emptyState(
@@ -3228,26 +3240,33 @@ function signalementsInbox() {
       ${
         admin
           ? ''
-          : `<button class="hit btn primary block" data-go="signalement-nouveau" type="button">Signaler un problème</button>`
+          : `<button class="hit btn primary block" data-go="signalement-nouveau" type="button">+ Nouveau signalement</button>`
       }`
+      : ''
+
+  const rows =
+    list.length === 0
+      ? emptyRows
       : list
           .map((s) => {
-            const last =
-              [...s.messages].reverse().find((m) => m.kind !== 'status') ||
-              s.messages[s.messages.length - 1]
+            const last = lastMessage(s)
             const preview = last
-              ? `${last.authorLabel || 'Statut'} · ${last.body}`
+              ? `${last.authorLabel || ''} · ${last.body}`
               : ''
             const date = (last?.at || '').split(' · ')[0] || '…'
+            const unreadHabitant = !admin && isNewMairieReply(s)
+            const unreadAdmin = admin && isUnreadForMairie(s)
+            const unread = unreadHabitant || unreadAdmin
             return `
-        <button class="hit signal-row ${s.unread ? 'signal-unread' : ''}" type="button" data-open-signal="${s.id}">
+        <button class="hit signal-row ${unread ? 'signal-unread' : ''}" type="button" data-open-signal="${s.id}">
           <div class="signal-row-top">
-            <span class="badge">${s.category}</span>
-            ${signalStatusBadge(s.status)}
-            ${s.unread ? '<span class="signal-dot" aria-label="Non lu"></span>' : ''}
+            ${signalReadBadge(s)}
+            ${signalReplyBadge(s)}
+            ${unreadHabitant ? '<span class="badge signal-new-reply">Nouvelle réponse</span>' : ''}
+            ${unread ? '<span class="signal-dot" aria-label="Non lu"></span>' : ''}
           </div>
           <strong>${s.subject}</strong>
-          ${admin ? `<p class="meta">${s.authorName}</p>` : ''}
+          ${admin ? `<p class="meta">${s.authorName} · ${s.place}</p>` : ''}
           <p class="meta signal-preview">${preview}</p>
           <span class="meta signal-date">${date}</span>
         </button>`
@@ -3261,7 +3280,8 @@ function signalementsInbox() {
     ${
       admin
         ? ''
-        : `<button class="hit btn primary block" data-go="signalement-nouveau" type="button">Nouveau signalement</button>`
+        : `<button class="hit btn primary block" data-go="signalement-nouveau" type="button">+ Nouveau signalement</button>
+    <h3 class="sec signal-section-label">Mes signalements envoyés</h3>`
     }
     ${signalFilterChips(admin)}
     <div class="signal-list">${rows}</div>
@@ -3285,16 +3305,20 @@ function signalementNouveau() {
   return wrap(
     `
     <h2 class="sec">Nouveau signalement</h2>
-    <label class="field"><span>Objet</span><input type="text" placeholder="Objet du signalement" /></label>
-    <label class="field"><span>Catégorie</span>
+    <label class="field"><span>Objet *</span><input type="text" placeholder="Objet du signalement" /></label>
+    <label class="field"><span>Lieu *</span><input type="text" placeholder="Adresse ou lieu précis" /></label>
+    <label class="field"><span>Description *</span><textarea placeholder="Décrivez le problème…" rows="4"></textarea></label>
+    ${uploadSlot}
+    <label class="field"><span>Catégorie (facultatif)</span>
       <select>
+        <option value="">— Aucune —</option>
         ${SIGNAL_CATEGORIES.map((c) => `<option>${c}</option>`).join('')}
       </select>
     </label>
-    <label class="field"><span>Lieu</span><input type="text" placeholder="Adresse ou lieu précis" /></label>
-    <label class="field"><span>Message</span><textarea placeholder="Décrivez le problème…" rows="4"></textarea></label>
-    ${uploadSlot}
-    <button class="hit btn primary block" type="button" data-sim="signal-create">Envoyer</button>
+    <div class="row-actions">
+      <button class="hit btn block" type="button" data-back>Annuler</button>
+      <button class="hit btn primary block" type="button" data-sim="signal-create">Envoyer le signalement</button>
+    </div>
     `,
     {
       header: phoneHeader({ title: 'Nouveau', backTo: 'signalements' }),
@@ -3306,12 +3330,12 @@ function signalementNouveau() {
 function signalementConversation() {
   const admin = isAdminRole()
   const id = getOpenSignalId()
-  const s = id ? getSignalement(id) : null
+  let s = id ? getSignalement(id) : null
   if (!s) {
     return wrap(
       `
       ${emptyState('Aucun signalement sélectionné.')}
-      <button class="hit btn primary block" data-go="signalements" type="button">Retour à la boîte</button>
+      <button class="hit btn primary block" data-go="signalements" type="button">Retour aux signalements</button>
       `,
       {
         header: phoneHeader({ title: 'Signalement', backTo: 'signalements' }),
@@ -3319,57 +3343,59 @@ function signalementConversation() {
       }
     )
   }
-  markSignalRead(s.id)
+
+  if (admin) openAsMairie(s.id)
+  else openAsHabitant(s.id)
+  s = getSignalement(s.id)
+
   const first = s.messages.find((m) => m.kind === 'user') || s.messages[0]
   const rest = s.messages.filter((m) => m !== first)
-  const canReply = canReplyToSignal(s.status)
-  const extraRight = admin
-    ? `<button class="hit icon-btn" data-go="signalement-statut" title="Options" aria-label="Options">⋯</button>`
-    : ''
 
   const thread = rest
     .map((m) => {
-      if (m.kind === 'status') {
-        return `<p class="signal-status-line meta">${m.body}<br/><span>${m.at || ''}</span></p>`
-      }
       const side = m.kind === 'mairie' ? 'in' : 'out'
+      const label = m.kind === 'mairie' ? 'Mairie de Kapan' : m.authorLabel || 'Vous'
       return `
         <div class="bubble ${side}">
-          <span class="meta">${m.authorLabel || ''}</span><br/>
+          <span class="meta">${label}</span><br/>
           ${m.body}
-          ${m.photos ? `<div class="meta">📷 Photo jointe</div>` : ''}
+          ${m.photos ? `<div class="meta">Photo jointe</div>` : ''}
           <div class="meta">${m.at || ''}</div>
         </div>`
     })
     .join('')
 
-  const composer = canReply
-    ? `
+  let composer = ''
+  if (admin) {
+    composer = `
     <div class="composer-bar">
-      <input type="text" placeholder="Répondre…" />
-      <button class="hit btn primary" type="button" data-sim="signal-reply:${s.id}">Envoyer</button>
+      <input type="text" placeholder="Répondre à l’habitant…" />
+      <button class="hit btn primary" type="button" data-sim="signal-reply-mairie:${s.id}">Envoyer la réponse</button>
     </div>`
-    : `
-    <p class="meta signal-status-line">Ce signalement est ${s.status}. La saisie est désactivée.</p>
+  } else if (!hasMairieReply(s)) {
+    composer = `
+    <p class="meta signal-waiting">Votre signalement est en attente d’une réponse de la mairie.</p>`
+  } else {
+    composer = `
     <div class="composer-bar">
-      <input type="text" placeholder="Conversation clôturée" disabled />
-      <button class="hit btn" type="button" disabled>Envoyer</button>
+      <input type="text" placeholder="Votre réponse…" />
+      <button class="hit btn primary" type="button" data-sim="signal-reply-user:${s.id}">Envoyer ma réponse</button>
     </div>`
+  }
 
   return wrap(
     `
-    <div class="signal-conv-meta">
-      ${signalStatusBadge(s.status)}
-      ${admin ? `<p class="meta">${s.authorName}</p>` : ''}
-    </div>
     <div class="signal-first">
-      <div class="signal-row-top">
-        <span class="badge">${s.category}</span>
-      </div>
+      <strong>${s.subject}</strong>
+      <p class="meta">${s.authorName} · ${first?.at || ''}</p>
       <p class="meta"><strong>Lieu</strong> · ${s.place}</p>
+      ${s.category ? `<span class="badge">${s.category}</span>` : ''}
+      <div class="signal-conv-meta">
+        ${signalReadBadge(s)}
+        ${signalReplyBadge(s)}
+      </div>
       <p>${first?.body || ''}</p>
       ${first?.photos ? `<div class="upload-box"><span class="avatar lg upload-slot"></span><p class="meta">Photo jointe</p></div>` : ''}
-      <p class="meta">${first?.at || ''}</p>
     </div>
     <div class="chat signal-thread">${thread}</div>
     ${composer}
@@ -3378,69 +3404,8 @@ function signalementConversation() {
       header: phoneHeader({
         title: s.subject,
         backTo: 'signalements',
-        extraRight,
       }),
       footer: phoneFooter('menu'),
-    }
-  )
-}
-
-function signalementStatut() {
-  if (!isAdminRole()) {
-    return wrap(
-      `
-      ${emptyState('Accès réservé à la mairie.')}
-      <button class="hit btn block" data-go="signalements" type="button">Retour</button>
-      `,
-      { header: phoneHeader({ title: 'Statut', backTo: 'signalements' }) }
-    )
-  }
-  const id = getOpenSignalId()
-  const s = id ? getSignalement(id) : null
-  if (!s) {
-    return wrap(
-      `${emptyState('Aucun signalement.')}`,
-      {
-        header: phoneHeader({ title: 'Statut', backTo: 'signalements' }),
-        overlay: modalShell(
-          'Changer le statut',
-          `<p class="meta">Ouvrez d’abord une conversation.</p>`,
-          `<button class="hit btn block" data-go="signalements" type="button">Boîte</button>`
-        ),
-      }
-    )
-  }
-  const transitions = statusTransitions(s.status)
-  const quick = transitions.filter((t) => t === 'Envoyé' || t === 'En cours')
-  const needsExplain = transitions.filter((t) => t === 'Résolu' || t === 'Clôturé')
-  const body = `
-    <p class="meta">Statut actuel · <strong>${s.status}</strong></p>
-    ${quick.map((t) => sheetOption(t, { sim: `signal-status:${s.id}:${t}` })).join('')}
-    ${
-      needsExplain.length
-        ? `
-      <div class="sheet-sep" aria-hidden="true"></div>
-      <p class="meta">Résolu / Clôturé — explication obligatoire (simulée)</p>
-      <label class="field"><span>Explication</span><textarea placeholder="Court message ou motif de clôture…" rows="3"></textarea></label>
-      ${needsExplain
-        .map(
-          (t) =>
-            `<button class="hit btn ${t === 'Résolu' ? 'primary' : ''} block" type="button" data-sim="signal-status:${s.id}:${t}">Enregistrer · ${t}</button>`
-        )
-        .join('')}`
-        : ''
-    }
-  `
-  return wrap(
-    `
-    <div class="signal-conv-meta">
-      <strong>${s.subject}</strong>
-      ${signalStatusBadge(s.status)}
-    </div>
-    `,
-    {
-      header: phoneHeader({ title: s.subject, backTo: 'signalement-conversation' }),
-      overlay: modalShell('Changer le statut', body),
     }
   )
 }
@@ -5072,7 +5037,7 @@ export const SCREENS = {
       }),
   },
 
-  /* —— Signalements (mailbox) —— */
+  /* —— Signalements (Q&A privé) —— */
   signalements: {
     title: 'Signalements',
     side: 'user',
@@ -5090,12 +5055,6 @@ export const SCREENS = {
     side: 'user',
     group: 'Vie locale',
     render: signalementConversation,
-  },
-  'signalement-statut': {
-    title: 'Changer statut (admin)',
-    side: 'user',
-    group: 'Vie locale',
-    render: signalementStatut,
   },
 
   /* —— Météo (accueil synthèse + 4 destinations + 3 modèles) —— */
@@ -6956,7 +6915,6 @@ export const NAV_TREE = {
             children: [
               { id: 'signalement-nouveau', label: 'Nouveau' },
               { id: 'signalement-conversation', label: 'Conversation' },
-              { id: 'signalement-statut', label: 'Changer statut (admin)' },
             ],
           },
           { id: 'urgence-numeros', label: 'N° Urgence' },
