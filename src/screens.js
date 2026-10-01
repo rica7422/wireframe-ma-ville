@@ -554,17 +554,47 @@ function mairieTabs(active = 'publications') {
 }
 
 function mairieHeader(title = 'Ma mairie', backTo = 'accueil-kapan') {
-  /* Exactly 3 icons: Retour · Accueil Ma Ville · MIASIN (no ⋯ in header) */
-  return phoneHeader({ title, backTo })
+  /* Retour · Accueil · ⋯ Menu Ma mairie */
+  return phoneHeader({
+    title,
+    backTo,
+    showMiasin: false,
+    extraRight: `<button class="hit icon-btn" data-go="mairie-menu" title="Menu Ma mairie" aria-label="Menu Ma mairie">⋯</button>`,
+  })
+}
+
+function mairieComposer() {
+  return `
+    <div class="compose-card">
+      <div class="compose">
+        <span class="avatar"></span>
+        <button class="hit compose-input" data-go="mairie-nouvelle-publication" type="button">Commencer une publication</button>
+      </div>
+      <div class="row-actions compose-media">
+        <button class="hit btn" data-go="mairie-nouvelle-publication" type="button">▶ Vidéo</button>
+        <button class="hit btn" data-go="mairie-medias-sheet" type="button">🖼 Photo</button>
+      </div>
+    </div>
+  `
+}
+
+function mairieSearchHit() {
+  return `<button class="hit search search-hit" data-go="mairie-recherche" type="button"><span class="search-ico">⌕</span><span class="compose-input">Effectuer une recherche…</span></button>`
+}
+
+function mairieRdvCta() {
+  return `<button class="hit btn primary block rdv-cta" data-go="mairie-rdv">Prendre rendez-vous</button>`
 }
 
 function mairieAccueil() {
   return wrap(
     `
     ${mairieShellTop()}
-    ${search('Effectuer une recherche…')}
+    ${mairieSearchHit()}
     ${mairieAccesGrid()}
+    ${mairieRdvCta()}
     ${mairieTabs('publications')}
+    ${mairieComposer()}
     ${postCard({
       author: 'Mairie de Kapan',
       role: 'Publication',
@@ -578,9 +608,6 @@ function mairieAccueil() {
       multi: true,
       optionsGo: 'mairie-presentation-options',
     })}
-    <button class="hit btn block" data-go="mairie-nouvelle-publication">+ Nouvelle publication</button>
-    <button class="hit row-link" data-go="mairie-menu"><span>Menu Ma mairie</span><span>›</span></button>
-    <button class="hit btn primary block" data-go="mairie-rdv">Prendre rendez-vous</button>
     `,
     {
       header: mairieHeader(),
@@ -593,14 +620,52 @@ function mairieAccueilEvenements() {
   return wrap(
     `
     ${mairieShellTop()}
-    ${search('Effectuer une recherche…')}
+    ${mairieSearchHit()}
     ${mairieAccesGrid()}
+    ${mairieRdvCta()}
     ${mairieTabs('evenements')}
     ${evenementsListeBody({ detailsGo: 'evenement-details' })}
-    <button class="hit btn primary block" data-go="mairie-rdv">Prendre rendez-vous</button>
     `,
     {
       header: mairieHeader(),
+      footer: phoneFooter('mairie'),
+    }
+  )
+}
+
+function mairieRecherche() {
+  return wrap(
+    `
+    ${search('Effectuer une recherche…')}
+    <h2 class="sec">Résultats exemples</h2>
+    <button class="hit row-link" data-go="mairie-presentation" type="button">
+      <span class="ico-box"></span>
+      <span><strong>Publication · Horaires d’accueil</strong><br/><span class="meta">Publications</span></span>
+      <span>›</span>
+    </button>
+    <button class="hit row-link" data-go="evenement-details" type="button">
+      <span class="ico-box"></span>
+      <span><strong>Atelier créatif</strong><br/><span class="meta">Événements · 16 juin</span></span>
+      <span>›</span>
+    </button>
+    <button class="hit row-link" data-go="mairie-plan" type="button">
+      <span class="ico-box"></span>
+      <span><strong>Hôtel de ville</strong><br/><span class="meta">Lieux · Plan de la ville</span></span>
+      <span>›</span>
+    </button>
+    <button class="hit row-link" data-go="mairie-conseil" type="button">
+      <span class="ico-box"></span>
+      <span><strong>Maire & Conseil municipal</strong><br/><span class="meta">Services</span></span>
+      <span>›</span>
+    </button>
+    <button class="hit row-link" data-go="mairie-rdv" type="button">
+      <span class="ico-box"></span>
+      <span><strong>Prendre rendez-vous</strong><br/><span class="meta">Démarches</span></span>
+      <span>›</span>
+    </button>
+    `,
+    {
+      header: phoneHeader({ title: 'Recherche', backTo: 'mairie-accueil' }),
       footer: phoneFooter('mairie'),
     }
   )
@@ -924,46 +989,72 @@ function mairieConseilEdit() {
   )
 }
 
-function mairieInfos() {
-  const items = [
-    { title: 'Construction et réhabilitation de routes', cat: 'Transports', excerpt: 'Extrait de l’info mairie…' },
-    {
-      title: 'L’éducation, une priorité pour la ville de Kapan',
-      cat: 'Éducation',
-      excerpt: 'Extrait de l’info mairie…',
-    },
-    { title: 'Dynamiser l’économie locale de Kapan', cat: 'Économie', excerpt: 'Extrait de l’info mairie…' },
-  ]
-  return wrap(
-    `
-    <div class="chips filter-chips">
-      <button class="hit chip on" type="button">À la une</button>
-      <button class="hit chip" type="button">Administration municipale</button>
-      <button class="hit chip" type="button">Culture</button>
+function mairieInfosInterior() {
+  return `
+    ${mairieShellTop()}
+    <h2 class="sec">Informations</h2>
+    <div class="communaute-links">
+      <button class="hit row-link" type="button"><span>Membres</span><span class="meta">426K ›</span></button>
+      <button class="hit row-link" type="button"><span>Galeries</span><span class="meta">85 ›</span></button>
     </div>
-    ${items.map((it) => infoFeedCard(it)).join('')}
-    `,
-    {
-      header: phoneHeader({ title: 'Infos Mairie', backTo: 'mairie-accueil' }),
-      footer: phoneFooter('mairie'),
-    }
-  )
+    <h2 class="sec">Règles de la Communauté de la ville de Kapan</h2>
+    <article class="card rule-card">
+      <strong>Pas de harcèlement</strong>
+      ${text('Garantir la sécurité de tous — le harcèlement n’est pas toléré.')}
+    </article>
+    <article class="card rule-card">
+      <strong>Soyez aimable</strong>
+      ${text('Le respect mutuel crée un meilleur environnement pour tous.')}
+    </article>
+    <h2 class="sec">Publications</h2>
+    <p class="meta pubs-note">Seuls les administrateurs peuvent publier dans ce club.</p>
+    <h2 class="sec">Historique</h2>
+    <article class="card history-card">
+      <div class="history-row"><span class="meta">Créé le</span><strong>18 avril 2024</strong></div>
+      <div class="history-row"><span class="meta">Dernière modification</span><strong class="accent-text">30 mai 2024</strong></div>
+    </article>
+    <h2 class="sec">Administrateurs & Modérateurs</h2>
+    <div class="admin-list">
+      ${[
+        ['Lilit Ameni', 'Administrateur'],
+        ['Rouben Sirunyan', 'Modérateur'],
+        ['Yester Sullivan', 'Administrateur'],
+      ]
+        .map(
+          ([name, role]) => `
+      <div class="row-link static admin-row">
+        <span class="avatar"></span>
+        <span class="grow"><strong>${name}</strong><br/><span class="meta">${role}</span></span>
+      </div>`
+        )
+        .join('')}
+    </div>
+  `
+}
+
+function mairieInfos() {
+  return wrap(mairieInfosInterior(), {
+    header: mairieHeader('Ma mairie', 'mairie-accueil'),
+    footer: phoneFooter('mairie'),
+  })
 }
 
 function mairieInfosDetail() {
   return wrap(
     `
-    ${photo('Photo info mairie…', 'wide')}
-    <div class="pub-title-row">
-      <strong>Construction et réhabilitation de routes</strong>
-      <button class="hit icon-btn" data-go="mairie-infos-apropos" title="À propos">⋯</button>
-    </div>
-    <p class="meta accent-text">Admin Kapan · <span class="badge">Transports</span></p>
-    ${text('Corps complet de l’information mairie…')}
-    ${socialActions()}
+    <article class="card post-card publication-detail">
+      ${photo('Photo info mairie…', 'wide')}
+      <div class="pub-title-row">
+        <strong class="block-title">Construction et réhabilitation de routes</strong>
+        <button class="hit icon-btn" data-go="mairie-infos-apropos" title="À propos">⋯</button>
+      </div>
+      <p class="meta accent-text">Admin Kapan · <span class="badge">Transports</span></p>
+      ${text('Corps complet de l’information mairie…')}
+      ${socialActions()}
+    </article>
     `,
     {
-      header: phoneHeader({ title: 'Infos Mairie', backTo: 'mairie-infos' }),
+      header: phoneHeader({ title: 'Publication', backTo: 'mairie-accueil' }),
       footer: phoneFooter('mairie'),
     }
   )
@@ -971,7 +1062,7 @@ function mairieInfosDetail() {
 
 function mairieInfosApropos() {
   return wrap(`${photo('Fond info…', 'dim')}`, {
-    header: phoneHeader({ title: 'Infos Mairie', backTo: 'mairie-infos-detail' }),
+    header: phoneHeader({ title: 'Publication', backTo: 'mairie-infos-detail' }),
     footer: phoneFooter('mairie'),
     overlay: modalShell(
       'À propos',
@@ -984,43 +1075,10 @@ function mairieInfosApropos() {
 }
 
 function mairieCommunaute() {
-  return wrap(
-    `
-    ${mairieShellTop()}
-    <button class="hit row-link" type="button"><span>Membres</span><span class="meta">426K ›</span></button>
-    <button class="hit row-link" type="button"><span>Galeries</span><span class="meta">85 ›</span></button>
-    <h2 class="sec">Règles de la Communauté</h2>
-    <article class="card">
-      <strong>Pas de harcèlement</strong>
-      ${text('Règle — texte…')}
-    </article>
-    <article class="card">
-      <strong>Soyez aimable</strong>
-      ${text('Règle — texte…')}
-    </article>
-    <h2 class="sec">Publications</h2>
-    <p class="meta">Seuls les administrateurs peuvent publier dans ce club.</p>
-    <h2 class="sec">Historique</h2>
-    <article class="card">
-      <p><strong>Créé le</strong> · 18 avril 2024</p>
-      <p><strong>Dernière modification</strong> · 30 mai 2024</p>
-    </article>
-    <h2 class="sec">Administrateurs & Modérateurs</h2>
-    ${['Lilit Ameni · Administrateur', 'Rouben Sirunyan · Modérateur', 'Yester Sullivan · Administrateur']
-      .map(
-        (n) => `
-      <div class="row-link static">
-        <span class="avatar"></span>
-        <span>${n}</span>
-      </div>`
-      )
-      .join('')}
-    `,
-    {
-      header: phoneHeader({ title: 'Ma mairie', backTo: 'mairie-accueil' }),
-      footer: phoneFooter('mairie'),
-    }
-  )
+  return wrap(mairieInfosInterior(), {
+    header: mairieHeader('Ma mairie', 'mairie-accueil'),
+    footer: phoneFooter('mairie'),
+  })
 }
 
 function mairiePlan() {
@@ -2576,6 +2634,12 @@ export const SCREENS = {
     render: mairieAccueilEvenements,
   },
   'mairie-menu': { title: 'Menu Ma mairie', side: 'user', group: 'Ma mairie', render: mairieMenu },
+  'mairie-recherche': {
+    title: 'Recherche Ma mairie',
+    side: 'user',
+    group: 'Ma mairie',
+    render: mairieRecherche,
+  },
   'mairie-rdv': { title: 'Prendre rendez-vous', side: 'user', group: 'Ma mairie', render: mairieRdv },
   'mairie-rdv-creneau': {
     title: 'RDV — Date & créneau',
@@ -4901,7 +4965,8 @@ export const NAV_TREE = {
             id: 'mairie-accueil',
             label: 'Ma mairie',
             children: [
-              { id: 'mairie-menu', label: 'Menu Ma mairie' },
+              { id: 'mairie-menu', label: 'Menu ⋯' },
+              { id: 'mairie-recherche', label: 'Recherche' },
               { id: 'mairie-accueil-evenements', label: 'Événements (onglet)' },
               {
                 id: 'mairie-rdv',
@@ -4925,13 +4990,13 @@ export const NAV_TREE = {
               },
               {
                 id: 'mairie-infos',
-                label: 'Infos Mairie',
+                label: 'Infos Mairie (communauté)',
                 children: [
-                  { id: 'mairie-infos-detail', label: 'Détail' },
+                  { id: 'mairie-infos-detail', label: 'Publication détail' },
                   { id: 'mairie-infos-apropos', label: 'À propos (sheet)' },
+                  { id: 'mairie-communaute', label: 'Communauté (alias)' },
                 ],
               },
-              { id: 'mairie-communaute', label: 'Communauté infos' },
               {
                 id: 'mairie-plan',
                 label: 'Plan de la ville',
