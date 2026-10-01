@@ -6235,7 +6235,7 @@ export const NAV_TREE = {
           },
           {
             id: 'infos-feed',
-            label: 'Infos Feed',
+            label: 'Infos citoyen',
             children: [
               { id: 'infos-post-options', label: 'Options (propre)' },
               { id: 'infos-post-options-other', label: 'Options (autre)' },
