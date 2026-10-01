@@ -42,8 +42,15 @@ function refuseManage(id) {
   toast('Accès refusé pour ce rôle (simulé)')
   const publicFallback =
     id?.startsWith('evenement-') ? 'evenement-details' : id?.startsWith('mairie-') ? 'mairie-accueil' : 'mairie-accueil'
-  if (SCREENS[publicFallback] && publicFallback !== currentId) {
-    go(publicFallback, { push: false })
+  if (SCREENS[publicFallback]) {
+    // Always land on public view + sync hash (currentId may already be the fallback
+    // when hash was set before the gate ran).
+    currentId = publicFallback
+    navTab = ADMIN_IDS.has(publicFallback) ? 'admin' : 'user'
+    if (location.hash.slice(1) !== publicFallback) {
+      history.replaceState(null, '', `#${publicFallback}`)
+    }
+    render({ focusActive: true })
   } else {
     render()
   }
