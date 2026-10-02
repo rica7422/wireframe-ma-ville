@@ -14,6 +14,7 @@ import {
   getParticipant,
   EVENT_INSCRIPTIONS,
 } from './demo-data.js'
+import { getOffre } from './emplois-data.js'
 
 /** Personal saved / hidden state (simulated, per viewer) */
 const personal = {
@@ -413,28 +414,53 @@ export function annonceMenuActions({ official = true } = {}, role = getRole()) {
   return actions
 }
 
-export function offreMenuActions(role = getRole()) {
+export function offreMenuActions(contentId, role = getRole()) {
   const admin = isAdminRole(role)
-  const actions = [
-    { id: 'share', label: 'Partager', sim: 'partage' },
-    { id: 'save', label: 'Enregistrer', go: 'enregistrements' },
-    { id: 'modalites', label: 'Voir les modalités', go: 'emploi-details' },
-  ]
-  if (admin) {
-    actions.push({ id: 'edit', label: 'Modifier', go: 'emploi-details', section: 'manage' })
-    actions.push({ id: 'close', label: 'Clôturer', sim: 'cloturer', section: 'manage' })
-    actions.push({
-      id: 'delete',
-      label: 'Supprimer',
-      sim: 'supprimer',
-      danger: true,
-      section: 'danger',
-    })
-  } else {
+  const state = getOffre(contentId)?.state || 'published'
+  const actions = []
+  if (!admin) {
+    actions.push({ id: 'share', label: 'Partager', sim: 'partage' })
+    actions.push({ id: 'copy', label: 'Copier le lien', sim: `offre-copy:${contentId || ''}` })
     actions.push({
       id: 'report',
       label: 'Signaler',
       go: 'evenement-signaler',
+      danger: true,
+      section: 'danger',
+    })
+    return actions
+  }
+  if (state === 'draft') {
+    actions.push({ id: 'edit', label: 'Modifier', sim: `offre-edit:${contentId}`, section: 'manage' })
+    actions.push({ id: 'preview', label: 'Prévisualiser', sim: `offre-preview:${contentId}`, section: 'manage' })
+    actions.push({ id: 'publish', label: 'Publier', sim: `offre-publish:${contentId}`, section: 'manage' })
+    actions.push({
+      id: 'delete',
+      label: 'Supprimer brouillon',
+      sim: `offre-delete-confirm:${contentId}`,
+      danger: true,
+      section: 'danger',
+    })
+  } else if (state === 'published') {
+    actions.push({ id: 'share', label: 'Partager', sim: 'partage' })
+    actions.push({ id: 'copy', label: 'Copier le lien', sim: `offre-copy:${contentId || ''}` })
+    actions.push({ id: 'edit', label: 'Modifier', sim: `offre-edit:${contentId}`, section: 'manage' })
+    actions.push({ id: 'preview', label: 'Prévisualiser', sim: `offre-preview:${contentId}`, section: 'manage' })
+    actions.push({ id: 'close', label: 'Clôturer', sim: `offre-close-confirm:${contentId}`, section: 'manage' })
+    actions.push({
+      id: 'delete',
+      label: 'Supprimer',
+      sim: `offre-delete-confirm:${contentId}`,
+      danger: true,
+      section: 'danger',
+    })
+  } else {
+    actions.push({ id: 'preview', label: 'Aperçu', sim: `offre-preview:${contentId}`, section: 'manage' })
+    actions.push({ id: 'edit', label: 'Modifier', sim: `offre-edit:${contentId}`, section: 'manage' })
+    actions.push({
+      id: 'delete',
+      label: 'Supprimer',
+      sim: `offre-delete-confirm:${contentId}`,
       danger: true,
       section: 'danger',
     })
@@ -472,6 +498,10 @@ export function canAccessManageRoute(screenId, role = getRole()) {
     'admin-annonce-form',
     'admin-offres',
     'admin-offre-form',
+    'emploi-form',
+    'emploi-preview',
+    'emploi-confirm-close',
+    'emploi-confirm-delete',
     'admin-annuaires',
     'admin-annuaire-sante',
     'admin-annuaire-pharmacies',

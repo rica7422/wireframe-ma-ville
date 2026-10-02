@@ -114,6 +114,34 @@ import {
   pubStateLabel,
 } from './annuaire-data.js'
 import {
+  EMPLOI_CATEGORIES,
+  EMPLOI_SECTORS,
+  EMPLOI_CONTRACTS,
+  EMPLOI_TIMES,
+  EMPLOI_MODES,
+  listPublicOffres,
+  listAdminOffres,
+  listSimilarOffres,
+  getOffre,
+  getOpenOffreId,
+  setOpenOffreId,
+  getEditOffreId,
+  getEmploiFormStep,
+  getEmploiCategory,
+  setEmploiCategory,
+  getEmploiSearch,
+  getEmploiQuick,
+  getEmploiFilters,
+  getAdminOffreTab,
+  countActiveFilters,
+  categoryLabel,
+  modeLabel,
+  stateLabel,
+  formatSalary,
+  formatPubDate,
+  mailtoForOffre,
+} from './emplois-data.js'
+import {
   listRencontres,
   listDrafts,
   getRencontre,
@@ -1178,7 +1206,7 @@ function contentMenuActions(ctx) {
     case 'annonce':
       return annonceMenuActions({ official: true })
     case 'offre':
-      return offreMenuActions()
+      return offreMenuActions(ctx.contentId)
     default:
       return []
   }
@@ -2902,25 +2930,61 @@ function annoncesFiltres() {
   )
 }
 
-function emploisListe() {
+function offreCard(o) {
+  const salary = formatSalary(o)
+  const mode = modeLabel(o.mode)
+  return `
+    <article class="card offre-card" data-offre-id="${o.id}">
+      ${o.logo ? photo('Logo…', 'thumb') : photo('Logo…', 'thumb')}
+      <strong>${o.title}</strong>
+      <p class="meta">${o.employer}</p>
+      <p class="meta">${[o.city, o.location].filter(Boolean).join(' · ')}</p>
+      <p class="meta">${[mode, o.contract, o.time].filter(Boolean).join(' · ')}</p>
+      ${salary ? `<p class="meta">${salary}</p>` : ''}
+      <p class="meta">${formatPubDate(o.publishedAt)}${o.deadline ? ` · Limite ${formatPubDate(o.deadline)}` : ''}</p>
+      <button class="hit btn primary" data-open-offre="${o.id}" type="button">Voir l’offre</button>
+    </article>`
+}
+
+function emploisQuickChips(active) {
+  const items = [
+    { id: 'toutes', label: 'Toutes' },
+    { id: 'recentes', label: 'Récentes' },
+    { id: 'proximite', label: 'À proximité' },
+    { id: 'filtres', label: 'Filtres', go: 'emplois-filtres' },
+  ]
+  const n = countActiveFilters()
+  return `<div class="chips">${items
+    .map((it, i) => {
+      const on = active === it.id || (it.id === 'filtres' && n > 0 && active === 'filtres')
+      const label = it.id === 'filtres' && n ? `Filtres (${n})` : it.label
+      if (it.go) {
+        return `<button class="hit chip ${on ? 'on' : ''}" data-go="${it.go}" type="button">${label}</button>`
+      }
+      return `<button class="hit chip ${on || (!active && i === 0) ? 'on' : ''}" data-sim="offre-quick:${it.id}" type="button">${label}</button>`
+    })
+    .join('')}</div>`
+}
+
+function emploisAccueil() {
+  const list = listPublicOffres({ quick: getEmploiQuick(), query: getEmploiSearch() })
+  const admin = isAdminRole()
   return wrap(
     `
-    ${search('Rechercher une offre…')}
-    ${chips(['Toutes', 'CDI', 'CDD', 'Stage', 'À préciser'])}
-    ${[
-      ['Chargé(e) de communication', 'Mairie de Kapan'],
-      ['Infirmier(ère)', 'Hôpital de Kapan'],
-    ]
-      .map(
-        ([title, org]) => `
-      <article class="card">
-        <strong>${title}</strong>
-        <p class="meta">${org} · Kapan · Publié récemment</p>
-        ${tbd('Salaire / type — À préciser si non fourni')}
-        <button class="hit btn primary" data-go="emploi-details">Voir les détails</button>
-      </article>`
-      )
-      .join('')}
+    <div class="banner-box">
+      ${photo('Bannière emplois…')}
+      <strong>Trouvez un emploi près de chez vous</strong>
+      <p class="meta">Les opportunités professionnelles de votre ville</p>
+    </div>
+    ${sousCatGrid(EMPLOI_CATEGORIES.map((c) => ({ label: c.label, go: c.go })))}
+    <label class="search"><span class="search-ico">⌕</span><input type="search" placeholder="Rechercher un poste ou un employeur" data-field="offre-search" data-sim-change="offre-search" value="${escapeAttr(
+      getEmploiSearch()
+    )}" /></label>
+    ${getEmploiSearch() ? `<button class="hit linkish" data-sim="offre-search-clear" type="button">Effacer la recherche</button>` : ''}
+    ${emploisQuickChips(getEmploiQuick())}
+    ${admin ? `<button class="hit btn block outline admin-shortcut" data-sim="offre-create" type="button">Créer une offre</button>` : ''}
+    <h2 class="sec">Offres publiées · ${list.length}</h2>
+    ${list.length ? list.map(offreCard).join('') : emptyState('Aucune offre pour ces critères')}
     `,
     {
       header: phoneHeader({ title: 'Offres d’emploi', backTo: 'accueil-kapan' }),
@@ -2929,28 +2993,445 @@ function emploisListe() {
   )
 }
 
-function emploiDetails() {
+function emploisCategorie(catId) {
+  setEmploiCategory(catId)
+  const label = categoryLabel(catId)
+  const list = listPublicOffres({
+    category: catId,
+    quick: getEmploiQuick(),
+    query: getEmploiSearch(),
+  })
   return wrap(
     `
-    <div class="event-title-row">
-      <strong class="block-title">Chargé(e) de communication</strong>
-      <button class="hit icon-btn" data-open-menu="offre" data-content-id="offre-1" data-menu-parent="emploi-details" title="Plus d’options" aria-label="Plus d’options">⋯</button>
-    </div>
-    <p class="meta">Mairie de Kapan · Kapan</p>
-    <span class="badge">CDI</span>
-    <h2 class="sec">Description</h2>
-    ${text('Texte de l’offre…')}
-    <h2 class="sec">Profil recherché</h2>
-    ${text('Critères…')}
-    ${tbd('Candidature en ligne — À préciser')}
-    <button class="hit btn primary block" data-sim="message">Envoyer un message (simulé)</button>
-    <button class="hit btn block" data-sim="appeler">Appeler (simulé)</button>
+    <label class="search"><span class="search-ico">⌕</span><input type="search" placeholder="Rechercher un poste ou un employeur" data-field="offre-search" data-sim-change="offre-search" value="${escapeAttr(
+      getEmploiSearch()
+    )}" /></label>
+    ${emploisQuickChips(getEmploiQuick())}
+    <h2 class="sec">${label} · ${list.length}</h2>
+    ${list.length ? list.map(offreCard).join('') : emptyState('Aucune offre dans cette catégorie')}
     `,
     {
-      header: phoneHeader({ title: 'Détail offre', backTo: 'emplois-liste' }),
+      header: phoneHeader({ title: label, backTo: 'emplois-liste' }),
       footer: phoneFooter('menu'),
     }
   )
+}
+
+function emploisListe() {
+  return emploisAccueil()
+}
+
+function emploisFiltres() {
+  const f = getEmploiFilters()
+  return wrap(`${photo('Liste atténuée…', 'dim')}`, {
+    header: phoneHeader({ title: 'Filtres', chrome: 'panel', closeIcon: true }),
+    footer: '',
+    overlay: modalShell(
+      'Filtres des offres',
+      `
+      <label class="field"><span>Secteur</span>
+        <select data-field="filtre-secteur">
+          <option value="">Tous</option>
+          ${EMPLOI_SECTORS.map((s) => `<option ${f.sector === s ? 'selected' : ''}>${s}</option>`).join('')}
+        </select>
+      </label>
+      <label class="field"><span>Contrat</span>
+        <select data-field="filtre-contrat">
+          <option value="">Tous</option>
+          ${EMPLOI_CONTRACTS.map((s) => `<option ${f.contract === s ? 'selected' : ''}>${s}</option>`).join('')}
+        </select>
+      </label>
+      <label class="field"><span>Temps</span>
+        <select data-field="filtre-temps">
+          <option value="">Tous</option>
+          ${EMPLOI_TIMES.map((s) => `<option ${f.time === s ? 'selected' : ''}>${s}</option>`).join('')}
+        </select>
+      </label>
+      <label class="field"><span>Mode</span>
+        <select data-field="filtre-mode">
+          <option value="">Tous</option>
+          ${EMPLOI_MODES.map((m) => `<option value="${m.id}" ${f.mode === m.id ? 'selected' : ''}>${m.label}</option>`).join('')}
+        </select>
+      </label>
+      <label class="field"><span>Expérience</span>
+        <input type="text" placeholder="ex. 2 ans" data-field="filtre-experience" value="${escapeAttr(f.experience || '')}" />
+      </label>
+      <label class="field"><span>Publiée depuis</span>
+        <input type="date" data-field="filtre-date" value="${escapeAttr(f.datePub || '')}" />
+      </label>
+      <label class="field"><span>Localisation</span>
+        <input type="text" placeholder="Quartier, lieu…" data-field="filtre-loc" value="${escapeAttr(f.location || '')}" />
+      </label>
+      `,
+      `
+      <button class="hit linkish" data-sim="offre-filters-reset" type="button">Réinitialiser</button>
+      <button class="hit btn primary block" data-sim="offre-filters-apply" type="button">Afficher les offres</button>
+      `
+    ),
+  })
+}
+
+function emploiApplyBlock(o) {
+  if (o.state === 'closed') {
+    return `<div class="notice"><strong>Cette offre n’accepte plus de candidatures.</strong><p class="meta">L’offre est clôturée. La fiche reste consultable.</p></div>`
+  }
+  if (o.applyMethod === 'email') {
+    return `
+      <button class="hit btn primary block" data-sim="offre-apply-email:${o.id}" type="button">Candidater par courriel</button>
+      <p class="meta">${o.applyEmail} · <button class="hit linkish" data-sim="offre-copy-email:${o.id}" type="button">Copier</button></p>`
+  }
+  if (o.applyMethod === 'url') {
+    return `<button class="hit btn primary block" data-sim="offre-apply-url:${o.id}" type="button">Candidater sur le site</button>
+      <p class="meta">Ouverture d’un lien externe (retour possible).</p>`
+  }
+  return `<button class="hit btn primary block" data-sim="offre-apply-modalites:${o.id}" type="button">Voir les modalités</button>`
+}
+
+function emploiDetails() {
+  const id = getOpenOffreId() || 'offre-1'
+  const o = getOffre(id)
+  if (!o) {
+    return wrap(
+      `
+      <div class="menu-unavailable">
+        <strong>Cette offre n’est plus disponible</strong>
+        <p class="meta">L’offre a été retirée. Les anciens liens restent sur cet écran.</p>
+        <button class="hit btn primary" data-go="emplois-liste" type="button">Retour aux offres</button>
+      </div>`,
+      {
+        header: phoneHeader({ title: 'Détails de l’offre', backTo: 'emplois-liste' }),
+        footer: phoneFooter('menu'),
+      }
+    )
+  }
+  if (o.state === 'draft' && !isAdminRole()) {
+    return wrap(
+      `
+      <div class="menu-unavailable">
+        <strong>Cette offre n’est plus disponible</strong>
+        <p class="meta">Brouillon — réservé à l’équipe municipale.</p>
+        <button class="hit btn primary" data-go="emplois-liste" type="button">Retour aux offres</button>
+      </div>`,
+      {
+        header: phoneHeader({ title: 'Détails de l’offre', backTo: 'emplois-liste' }),
+        footer: phoneFooter('menu'),
+      }
+    )
+  }
+  const salary = formatSalary(o)
+  const similar = listSimilarOffres(o.id)
+  const admin = isAdminRole()
+  return wrap(
+    `
+    ${o.logo ? photo('Logo employeur…', 'hero') : photo('Illustration poste…', 'hero')}
+    <div class="event-title-row">
+      <strong class="block-title">${o.title}</strong>
+      <button class="hit icon-btn" data-open-menu="offre" data-content-id="${o.id}" data-menu-parent="emploi-details" title="Plus d’options" aria-label="Plus d’options">⋯</button>
+    </div>
+    <p class="meta">${o.employer}${o.city ? ` · ${o.city}` : ''}${o.location ? ` · ${o.location}` : ''}</p>
+    <div class="chips">
+      <span class="badge">${categoryLabel(o.category)}</span>
+      <span class="badge">${o.contract}</span>
+      <span class="badge">${o.time}</span>
+      <span class="badge">${modeLabel(o.mode)}</span>
+      <span class="badge">${stateLabel(o.state)}</span>
+    </div>
+    ${salary ? `<p><strong>${salary}</strong></p>` : ''}
+    ${o.startDate ? `<p class="meta">Prise de poste · ${o.startDate}</p>` : ''}
+    ${o.deadline ? `<p class="meta">Date limite · ${formatPubDate(o.deadline)}</p>` : ''}
+    ${admin && o.state === 'draft' ? `<p class="meta">Brouillon · visible équipe seulement</p>` : ''}
+    ${admin ? `<button class="hit btn block outline admin-shortcut" data-sim="offre-edit:${o.id}" type="button">Modifier cette offre</button>` : ''}
+    ${o.presentation ? `<h2 class="sec">Présentation</h2><p>${o.presentation}</p>` : ''}
+    ${o.missions ? `<h2 class="sec">Missions</h2><p>${o.missions}</p>` : ''}
+    ${o.profile ? `<h2 class="sec">Profil</h2><p>${o.profile}</p>` : ''}
+    ${
+      o.skills || o.experience || o.education || o.languages
+        ? `<h2 class="sec">Compléments</h2>
+      <p class="meta">${[o.skills && `Compétences · ${o.skills}`, o.experience && `Expérience · ${o.experience}`, o.education && `Formation · ${o.education}`, o.languages && `Langues · ${o.languages}`]
+        .filter(Boolean)
+        .join(' · ')}</p>`
+        : ''
+    }
+    ${o.conditions ? `<h2 class="sec">Conditions</h2><p>${o.conditions}</p>` : ''}
+    <h2 class="sec" id="offre-modalites">Comment candidater</h2>
+    ${
+      o.applyMethod === 'modalites' && o.applyInstructions
+        ? `<div class="card" id="offre-modalites-body"><p>${o.applyInstructions}</p>${
+            o.applyDocs ? `<p class="meta">Documents · ${o.applyDocs}</p>` : ''
+          }</div>`
+        : o.applyDocs
+          ? `<p class="meta">Documents · ${o.applyDocs}</p>`
+          : `<p class="meta">${
+              o.applyMethod === 'email'
+                ? 'Candidature par courriel (ouvre votre messagerie — rien n’est envoyé automatiquement).'
+                : o.applyMethod === 'url'
+                  ? 'Candidature sur le site externe de l’employeur.'
+                  : 'Modalités décrites ci-dessous.'
+            }</p>`
+    }
+    ${emploiApplyBlock(o)}
+    ${
+      o.phone
+        ? `<button class="hit btn block" data-sim="appeler:${escapeAttr(o.phone)}" type="button">Appeler ${o.phone}</button>
+      <p class="meta">Appeler ≠ candidature.</p>`
+        : ''
+    }
+    ${
+      o.employerAbout
+        ? `<h2 class="sec">À propos de l’employeur</h2><p>${o.employerAbout}</p>`
+        : ''
+    }
+    ${
+      o.economyFicheId
+        ? `<button class="hit btn outline block" data-open-fiche="${o.economyFicheId}" data-go="dir-economie-entreprises-fiche-infos" type="button">Voir la fiche de l’employeur</button>`
+        : ''
+    }
+    ${
+      similar.length
+        ? `<div class="sec-row"><h2 class="sec">Offres similaires</h2><button class="hit linkish" data-go="emplois-liste" type="button">Tout voir</button></div>
+    <div class="h-scroll similaires-rail">${similar
+      .map(
+        (s) => `
+      <article class="card similaire-card">
+        ${photo('Photo…', 'wide')}
+        <strong>${s.title}</strong>
+        <p class="meta">${s.employer} · ${s.contract}</p>
+        <button class="hit btn primary" data-open-offre="${s.id}" type="button">Voir</button>
+      </article>`
+      )
+      .join('')}</div>`
+        : ''
+    }
+    `,
+    {
+      header: phoneHeader({ title: 'Détails de l’offre', backTo: 'emplois-liste' }),
+      footer: phoneFooter('menu'),
+    }
+  )
+}
+
+function emploiForm() {
+  const id = getEditOffreId()
+  const o = id ? getOffre(id) : null
+  if (!o) {
+    return wrap(emptyState('Aucune offre en cours d’édition'), {
+      header: phoneHeader({ title: 'Offre', chrome: 'form', backTo: 'admin-offres' }),
+      footer: '',
+    })
+  }
+  const step = getEmploiFormStep() || 1
+  const backAdmin = `<button class="hit linkish" data-go="admin-offres" type="button">Retour liste BO</button>`
+  let body = ''
+  if (step === 1) {
+    body = `
+      <h2 class="sec">1 · Employeur et poste</h2>
+      <label class="field"><span>Employeur</span><input type="text" data-field="offre-employer" value="${escapeAttr(o.employer)}" /></label>
+      <label class="field"><span>Intitulé</span><input type="text" data-field="offre-title" value="${escapeAttr(o.title)}" /></label>
+      <label class="field"><span>Catégorie</span>
+        <select data-field="offre-category">${EMPLOI_CATEGORIES.map(
+          (c) => `<option value="${c.id}" ${o.category === c.id ? 'selected' : ''}>${c.label}</option>`
+        ).join('')}</select>
+      </label>
+      <label class="field"><span>Secteur</span>
+        <select data-field="offre-sector">${EMPLOI_SECTORS.map(
+          (s) => `<option ${o.sector === s ? 'selected' : ''}>${s}</option>`
+        ).join('')}</select>
+      </label>
+      <label class="field"><span>Ville</span><input type="text" data-field="offre-city" value="${escapeAttr(o.city)}" /></label>
+      <label class="field"><span>Lieu du poste</span><input type="text" data-field="offre-location" value="${escapeAttr(o.location || '')}" placeholder="Adresse ou zone" /></label>
+      <p class="meta">Logo facultatif · fiche Économie si liée (non forcée)</p>
+    `
+  } else if (step === 2) {
+    body = `
+      <h2 class="sec">2 · Description</h2>
+      <label class="field"><span>Présentation</span><textarea rows="3" data-field="offre-presentation">${escapeAttr(o.presentation || '')}</textarea></label>
+      <label class="field"><span>Missions</span><textarea rows="3" data-field="offre-missions">${escapeAttr(o.missions || '')}</textarea></label>
+      <label class="field"><span>Profil</span><textarea rows="2" data-field="offre-profile">${escapeAttr(o.profile || '')}</textarea></label>
+      <label class="field"><span>Compétences</span><input type="text" data-field="offre-skills" value="${escapeAttr(o.skills || '')}" /></label>
+      <label class="field"><span>Expérience</span><input type="text" data-field="offre-experience" value="${escapeAttr(o.experience || '')}" /></label>
+      <label class="field"><span>Formation / langues</span><input type="text" data-field="offre-education" value="${escapeAttr(
+        [o.education, o.languages].filter(Boolean).join(' · ')
+      )}" /></label>
+    `
+  } else if (step === 3) {
+    body = `
+      <h2 class="sec">3 · Conditions</h2>
+      <label class="field"><span>Contrat</span>
+        <select data-field="offre-contract">${EMPLOI_CONTRACTS.map(
+          (c) => `<option ${o.contract === c ? 'selected' : ''}>${c}</option>`
+        ).join('')}</select>
+      </label>
+      <label class="field"><span>Temps</span>
+        <select data-field="offre-time">${EMPLOI_TIMES.map(
+          (c) => `<option ${o.time === c ? 'selected' : ''}>${c}</option>`
+        ).join('')}</select>
+      </label>
+      <label class="field"><span>Mode</span>
+        <select data-field="offre-mode">${EMPLOI_MODES.map(
+          (m) => `<option value="${m.id}" ${o.mode === m.id ? 'selected' : ''}>${m.label}</option>`
+        ).join('')}</select>
+      </label>
+      <label class="field"><span>Rémunération (facultatif)</span><input type="text" data-field="offre-salary" value="${escapeAttr(
+        o.salary?.amount || ''
+      )}" placeholder="Montant ou fourchette" /></label>
+      <label class="field"><span>Prise de poste</span><input type="text" data-field="offre-start" value="${escapeAttr(o.startDate || '')}" /></label>
+      <label class="field"><span>Date limite</span><input type="date" data-field="offre-deadline" value="${escapeAttr(o.deadline || '')}" /></label>
+    `
+  } else {
+    body = `
+      <h2 class="sec">4 · Candidature</h2>
+      <label class="field"><span>Méthode</span>
+        <select data-field="offre-apply-method">
+          <option value="email" ${o.applyMethod === 'email' ? 'selected' : ''}>Courriel</option>
+          <option value="url" ${o.applyMethod === 'url' ? 'selected' : ''}>Site externe</option>
+          <option value="modalites" ${o.applyMethod === 'modalites' ? 'selected' : ''}>Modalités</option>
+        </select>
+      </label>
+      <label class="field"><span>Courriel</span><input type="email" data-field="offre-apply-email" value="${escapeAttr(o.applyEmail || '')}" /></label>
+      <label class="field"><span>Lien</span><input type="url" data-field="offre-apply-url" value="${escapeAttr(o.applyUrl || '')}" placeholder="https://…" /></label>
+      <label class="field"><span>Instructions</span><textarea rows="3" data-field="offre-apply-instructions">${escapeAttr(
+        o.applyInstructions || ''
+      )}</textarea></label>
+      <label class="field"><span>Documents</span><input type="text" data-field="offre-docs" value="${escapeAttr(o.applyDocs || '')}" /></label>
+      <label class="field"><span>Téléphone public</span><input type="text" data-field="offre-phone" value="${escapeAttr(o.phone || '')}" /></label>
+      <label class="field"><span>Présentation employeur</span><textarea rows="2" data-field="offre-employer-about">${escapeAttr(
+        o.employerAbout || ''
+      )}</textarea></label>
+      <div class="notice"><strong>Récap</strong><p class="meta">${o.title || 'Sans titre'} · ${o.employer || '—'} · ${categoryLabel(
+        o.category
+      )} · ${stateLabel(o.state)}</p></div>
+    `
+  }
+  return wrap(
+    `
+    <div class="form-card" data-offre-id="${o.id}">
+      ${backAdmin}
+      <p class="meta">Étape ${step} / 4 · même formulaire public / BO</p>
+      ${body}
+      <div class="row-actions">
+        ${step > 1 ? `<button class="hit btn" data-sim="offre-step:${step - 1}" type="button">Retour</button>` : ''}
+        ${step < 4 ? `<button class="hit btn primary" data-sim="offre-step:${step + 1}" type="button">Continuer</button>` : ''}
+      </div>
+      <div class="row-actions">
+        <button class="hit btn" data-sim="offre-save-draft" type="button">Brouillon</button>
+        <button class="hit btn" data-sim="offre-preview:${o.id}" type="button">Prévisualiser</button>
+        <button class="hit btn primary" data-sim="offre-publish:${o.id}" type="button">${
+          o.state === 'published' ? 'Enregistrer' : 'Publier'
+        }</button>
+      </div>
+    </div>
+    `,
+    {
+      header: phoneHeader({
+        title: o.state === 'draft' && !o.title ? 'Nouvelle offre' : 'Modifier l’offre',
+        chrome: 'form',
+        backTo: 'admin-offres',
+      }),
+      footer: '',
+    }
+  )
+}
+
+function emploiPreview() {
+  const id = getEditOffreId() || getOpenOffreId()
+  const o = getOffre(id)
+  if (!o) {
+    return wrap(emptyState('Offre introuvable'), {
+      header: phoneHeader({ title: 'Prévisualisation', chrome: 'form', backTo: 'emploi-form' }),
+      footer: '',
+    })
+  }
+  setOpenOffreId(id)
+  const salary = formatSalary(o)
+  return wrap(
+    `
+    <div class="notice"><strong>Prévisualisation</strong><p class="meta">Aperçu · ${stateLabel(o.state)} · brouillon non public</p></div>
+    ${o.logo ? photo('Logo…', 'hero') : photo('Illustration…', 'hero')}
+    <strong class="block-title">${o.title || 'Sans titre'}</strong>
+    <p class="meta">${o.employer || '—'} · ${o.city || ''}</p>
+    <p class="meta">${[categoryLabel(o.category), o.contract, modeLabel(o.mode)].filter(Boolean).join(' · ')}</p>
+    ${salary ? `<p><strong>${salary}</strong></p>` : ''}
+    ${o.presentation ? `<h2 class="sec">Présentation</h2><p>${o.presentation}</p>` : ''}
+    ${o.missions ? `<h2 class="sec">Missions</h2><p>${o.missions}</p>` : ''}
+    <button class="hit btn primary block" data-sim="offre-edit:${o.id}" type="button">Retour au formulaire</button>
+    `,
+    {
+      header: phoneHeader({ title: 'Prévisualisation', chrome: 'form', backTo: 'emploi-form' }),
+      footer: '',
+    }
+  )
+}
+
+function emploiConfirmClose() {
+  const id = getOpenOffreId() || getEditOffreId()
+  const o = getOffre(id)
+  return menuConfirmShell({
+    title: 'Clôturer l’offre',
+    body: `Clôturer « ${o?.title || 'cette offre'} » ? Elle n’acceptera plus de candidatures et sortira des listes ordinaires. La fiche restera accessible par lien.`,
+    confirmSim: `offre-close:${id}`,
+    confirmLabel: 'Clôturer',
+  })
+}
+
+function emploiConfirmDelete() {
+  const id = getOpenOffreId() || getEditOffreId()
+  const o = getOffre(id)
+  return menuConfirmShell({
+    title: 'Supprimer l’offre',
+    body: `Supprimer « ${o?.title || 'cette offre'} » ? Les anciens liens afficheront « Cette offre n’est plus disponible ».`,
+    confirmSim: `offre-delete:${id}`,
+    confirmLabel: 'Supprimer',
+  })
+}
+
+function adminOffres() {
+  const tab = getAdminOffreTab()
+  const list = listAdminOffres({ tab })
+  return wrap(
+    `
+    <h2 class="sec">Offres d’emploi</h2>
+    <button class="hit btn primary block" data-sim="offre-create" type="button">+ Créer une offre</button>
+    <div class="tabs">
+      ${['toutes', 'brouillons', 'publiees', 'cloturees']
+        .map((t) => {
+          const labels = { toutes: 'Toutes', brouillons: 'Brouillons', publiees: 'Publiées', cloturees: 'Clôturées' }
+          return `<button class="hit tab ${tab === t ? 'on' : ''}" data-sim="offre-admin-tab:${t}" type="button">${labels[t]}</button>`
+        })
+        .join('')}
+    </div>
+    ${list
+      .map(
+        (o) => `
+      <button class="hit row-link" data-open-offre="${o.id}" type="button">
+        <span>
+          <strong>${o.title || 'Sans titre'}</strong><br/>
+          <span class="meta">${o.employer || '—'} · ${o.city || ''} · ${categoryLabel(o.category)} · ${stateLabel(
+            o.state
+          )}${o.publishedAt ? ` · ${formatPubDate(o.publishedAt)}` : ''}</span>
+        </span>
+        <span>›</span>
+      </button>
+      <div class="row-actions">
+        <button class="hit btn outline" data-sim="offre-edit:${o.id}" type="button">Modifier</button>
+        ${
+          o.state === 'draft'
+            ? `<button class="hit btn primary" data-sim="offre-publish:${o.id}" type="button">Publier</button>`
+            : o.state === 'published'
+              ? `<button class="hit btn" data-sim="offre-close-confirm:${o.id}" type="button">Clôturer</button>`
+              : ''
+        }
+      </div>`
+      )
+      .join('') || emptyState('Aucune offre')}
+    `,
+    {
+      header: phoneHeader({ title: 'Offres', backTo: 'admin-home' }),
+    }
+  )
+}
+
+function adminOffreForm() {
+  return emploiForm()
 }
 
 function urgenceNumeros() {
@@ -5927,47 +6408,6 @@ function adminAnnonceForm() {
   )
 }
 
-function adminOffres() {
-  return wrap(
-    `
-    <h2 class="sec">Offres d’emploi</h2>
-    <button class="hit btn primary block" data-go="admin-offre-form" type="button">+ Nouvelle offre</button>
-    ${['Agent d’accueil — publié', 'Chargé de mission — brouillon']
-      .map(
-        (t) => `
-      <button class="hit row-link" data-go="emploi-details" type="button">
-        <span><strong>${t}</strong></span><span>›</span>
-      </button>`
-      )
-      .join('')}
-    `,
-    {
-      header: phoneHeader({ title: 'Offres', backTo: 'admin-home' }),
-    }
-  )
-}
-
-function adminOffreForm() {
-  return wrap(
-    `
-    <div class="form-card">
-      <h2 class="sec">Nouvelle offre</h2>
-      <label class="field"><span>Titre du poste</span><input type="text" placeholder="Intitulé" /></label>
-      <label class="field"><span>Rémunération</span><input type="text" placeholder="ex. Selon grille" /></label>
-      <label class="field"><span>Description</span><textarea rows="3" placeholder="Missions…"></textarea></label>
-      <div class="row-actions">
-        <button class="hit btn" data-sim="brouillon" type="button">Brouillon</button>
-        <button class="hit btn primary" data-sim="publier-admin" type="button">Publier</button>
-      </div>
-    </div>
-    `,
-    {
-      header: phoneHeader({ title: 'Offre', backTo: 'admin-offres', chrome: 'form' }),
-      footer: '',
-    }
-  )
-}
-
 function adminAnnuaires() {
   const custom = ANN_RUBRIQUES.filter((r) => r.custom)
   return wrap(
@@ -6774,11 +7214,65 @@ export const SCREENS = {
     render: annoncesFiltres,
   },
   'emplois-liste': { title: 'Offres d’emploi', side: 'user', group: 'Social / contenus', render: emploisListe },
+  'emplois-cat-emplois': {
+    title: 'Emplois',
+    side: 'user',
+    group: 'Social / contenus',
+    render: () => emploisCategorie('emplois'),
+  },
+  'emplois-cat-temporaires': {
+    title: 'Emplois temporaires',
+    side: 'user',
+    group: 'Social / contenus',
+    render: () => emploisCategorie('temporaires'),
+  },
+  'emplois-cat-stages': {
+    title: 'Stages',
+    side: 'user',
+    group: 'Social / contenus',
+    render: () => emploisCategorie('stages'),
+  },
+  'emplois-cat-alternance': {
+    title: 'Alternance',
+    side: 'user',
+    group: 'Social / contenus',
+    render: () => emploisCategorie('alternance'),
+  },
+  'emplois-filtres': {
+    title: 'Offres — Filtres',
+    side: 'user',
+    group: 'Social / contenus',
+    render: emploisFiltres,
+  },
   'emploi-details': {
     title: 'Offre — Détail',
     side: 'user',
     group: 'Social / contenus',
     render: emploiDetails,
+  },
+  'emploi-form': {
+    title: 'Offre — Formulaire',
+    side: 'user',
+    group: 'Social / contenus',
+    render: emploiForm,
+  },
+  'emploi-preview': {
+    title: 'Offre — Prévisualisation',
+    side: 'user',
+    group: 'Social / contenus',
+    render: emploiPreview,
+  },
+  'emploi-confirm-close': {
+    title: 'Offre — Clôturer',
+    side: 'user',
+    group: 'Social / contenus',
+    render: emploiConfirmClose,
+  },
+  'emploi-confirm-delete': {
+    title: 'Offre — Supprimer',
+    side: 'user',
+    group: 'Social / contenus',
+    render: emploiConfirmDelete,
   },
   'urgence-numeros': { title: 'N° Urgence', side: 'user', group: 'Social / contenus', render: urgenceNumeros },
   messages: {
@@ -9034,7 +9528,7 @@ export const SCREENS = {
     title: 'Admin — Formulaire offre',
     side: 'admin',
     group: 'Admin',
-    render: adminOffreForm,
+    render: emploiForm,
   },
   'admin-annuaires': {
     title: 'Admin — Annuaires',
@@ -9260,7 +9754,14 @@ export const NAV_TREE = {
             id: 'emplois-liste',
             label: 'Offres d’emploi',
             children: [
+              { id: 'emplois-cat-emplois', label: 'Emplois' },
+              { id: 'emplois-cat-temporaires', label: 'Emplois temporaires' },
+              { id: 'emplois-cat-stages', label: 'Stages' },
+              { id: 'emplois-cat-alternance', label: 'Alternance' },
+              { id: 'emplois-filtres', label: 'Filtres' },
               { id: 'emploi-details', label: 'Détail offre' },
+              { id: 'emploi-form', label: 'Formulaire' },
+              { id: 'emploi-preview', label: 'Prévisualisation' },
             ],
           },
           { id: 'communautes-groupes', label: 'Groupes', children: [
@@ -9844,7 +10345,10 @@ export const NAV_TREE = {
           {
             id: 'admin-offres',
             label: 'Offres',
-            children: [{ id: 'admin-offre-form', label: 'Formulaire' }],
+            children: [
+              { id: 'admin-offre-form', label: 'Formulaire' },
+              { id: 'emploi-preview', label: 'Prévisualisation' },
+            ],
           },
           {
             id: 'admin-annuaires',

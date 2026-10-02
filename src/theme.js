@@ -72,7 +72,7 @@ export function sectionFor(id) {
   if (id.startsWith('evenement') || id === 'evenements-liste' || id === 'evenements-a-valider')
     return 'evenements'
   if (id.startsWith('annonce') || id === 'admin-annonce-form') return 'annonces'
-  if (id.startsWith('emploi') || id === 'admin-offre-form') return 'emplois'
+  if (id.startsWith('emploi') || id === 'admin-offre-form' || id === 'admin-offres') return 'emplois'
   if (id.startsWith('sante-')) return 'sante'
   if (id === 'urgence-numeros') return 'urgence'
   if (id.startsWith('communautes-groupes') || id === 'communautes-groupes') return 'groupes'

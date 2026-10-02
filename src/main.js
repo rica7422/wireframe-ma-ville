@@ -169,6 +169,26 @@ import {
   updateRencontre,
   isOrganizer,
 } from './rencontres-data.js'
+import {
+  setOpenOffreId,
+  getOpenOffreId,
+  setEditOffreId,
+  getEditOffreId,
+  setEmploiFormStep,
+  getEmploiFormStep,
+  setEmploiSearch,
+  setEmploiQuick,
+  setEmploiFilters,
+  clearEmploiSecondaryFilters,
+  setAdminOffreTab,
+  getOffre,
+  createEmptyOffre,
+  updateOffre,
+  publishOffre,
+  closeOffre,
+  deleteOffre,
+  mailtoForOffre,
+} from './emplois-data.js'
 
 const historyStack = []
 let currentId = 'ville-bienvenue'
@@ -403,6 +423,58 @@ function tryQuitRencCreate() {
   setDraft(null)
   toast('Brouillon enregistré')
   return true
+}
+
+function readOffreFormFields() {
+  const root = document.querySelector('.form-card')
+  if (!root) return {}
+  const val = (name) => {
+    const el = root.querySelector(`[data-field="${name}"]`)
+    return el ? el.value : undefined
+  }
+  const patch = {}
+  const map = {
+    'offre-employer': 'employer',
+    'offre-title': 'title',
+    'offre-category': 'category',
+    'offre-sector': 'sector',
+    'offre-city': 'city',
+    'offre-location': 'location',
+    'offre-presentation': 'presentation',
+    'offre-missions': 'missions',
+    'offre-profile': 'profile',
+    'offre-skills': 'skills',
+    'offre-experience': 'experience',
+    'offre-contract': 'contract',
+    'offre-time': 'time',
+    'offre-mode': 'mode',
+    'offre-start': 'startDate',
+    'offre-deadline': 'deadline',
+    'offre-apply-method': 'applyMethod',
+    'offre-apply-email': 'applyEmail',
+    'offre-apply-url': 'applyUrl',
+    'offre-apply-instructions': 'applyInstructions',
+    'offre-docs': 'applyDocs',
+    'offre-phone': 'phone',
+    'offre-employer-about': 'employerAbout',
+  }
+  for (const [field, key] of Object.entries(map)) {
+    const v = val(field)
+    if (v !== undefined) patch[key] = v
+  }
+  const edu = val('offre-education')
+  if (edu !== undefined) {
+    const parts = String(edu).split('·').map((s) => s.trim())
+    patch.education = parts[0] || ''
+    if (parts[1]) patch.languages = parts[1]
+  }
+  const salary = val('offre-salary')
+  if (salary !== undefined) {
+    patch.salary = salary.trim()
+      ? { amount: salary.trim(), currency: 'AMD', period: 'mois', netBrut: 'brut' }
+      : null
+  }
+  return patch
 }
 
 function handleSim(kind) {
@@ -1959,6 +2031,214 @@ function handleSim(kind) {
     return
   }
 
+  // ——— Offres d’emploi ———
+  if (action === 'offre-quick' && arg) {
+    if (arg === 'toutes') clearEmploiSecondaryFilters()
+    else if (arg === 'recentes') {
+      setEmploiQuick('recentes')
+    } else if (arg === 'proximite') {
+      setEmploiQuick('proximite')
+    } else {
+      setEmploiQuick(arg)
+    }
+    render()
+    return
+  }
+  if (action === 'offre-search') {
+    setEmploiSearch(readField('offre-search') || '')
+    render()
+    return
+  }
+  if (action === 'offre-search-clear') {
+    setEmploiSearch('')
+    render()
+    return
+  }
+  if (action === 'offre-filters-reset') {
+    setEmploiFilters({})
+    toast('Filtres réinitialisés')
+    render()
+    return
+  }
+  if (action === 'offre-filters-apply') {
+    const patch = {
+      sector: readField('filtre-secteur') || '',
+      contract: readField('filtre-contrat') || '',
+      time: readField('filtre-temps') || '',
+      mode: readField('filtre-mode') || '',
+      experience: readField('filtre-experience') || '',
+      datePub: readField('filtre-date') || '',
+      location: readField('filtre-loc') || '',
+    }
+    Object.keys(patch).forEach((k) => {
+      if (!patch[k]) delete patch[k]
+    })
+    setEmploiFilters(patch)
+    setEmploiQuick(Object.keys(patch).length ? 'filtres' : 'toutes')
+    go('emplois-liste', { push: false })
+    return
+  }
+  if (action === 'offre-admin-tab' && arg) {
+    setAdminOffreTab(arg)
+    render()
+    return
+  }
+  if (action === 'offre-create') {
+    if (!isAdminRole()) {
+      toast('Accès refusé pour ce rôle (simulé)')
+      return
+    }
+    createEmptyOffre()
+    go('emploi-form')
+    return
+  }
+  if (action === 'offre-edit' && arg) {
+    if (!isAdminRole()) {
+      toast('Accès refusé pour ce rôle (simulé)')
+      return
+    }
+    setEditOffreId(arg)
+    setOpenOffreId(arg)
+    setEmploiFormStep(1)
+    go('emploi-form')
+    return
+  }
+  if (action === 'offre-step' && arg) {
+    const id = getEditOffreId()
+    if (id) updateOffre(id, readOffreFormFields())
+    setEmploiFormStep(Number(arg) || 1)
+    render()
+    return
+  }
+  if (action === 'offre-save-draft') {
+    if (!isAdminRole()) {
+      toast('Accès refusé pour ce rôle (simulé)')
+      return
+    }
+    const id = getEditOffreId()
+    if (!id) {
+      toast('Aucune offre en cours')
+      return
+    }
+    updateOffre(id, { ...readOffreFormFields(), state: 'draft' })
+    toast('Brouillon enregistré')
+    render()
+    return
+  }
+  if (action === 'offre-preview' && arg) {
+    const id = arg || getEditOffreId() || getOpenOffreId()
+    if (getEditOffreId()) updateOffre(getEditOffreId(), readOffreFormFields())
+    setEditOffreId(id)
+    setOpenOffreId(id)
+    go('emploi-preview')
+    return
+  }
+  if (action === 'offre-publish' && arg) {
+    if (!isAdminRole()) {
+      toast('Accès refusé pour ce rôle (simulé)')
+      return
+    }
+    if (getEditOffreId() === arg) updateOffre(arg, readOffreFormFields())
+    const res = publishOffre(arg)
+    if (res?.error) {
+      toast(res.error)
+      return
+    }
+    setOpenOffreId(arg)
+    toast('Offre publiée')
+    go('emploi-details', { push: false })
+    return
+  }
+  if (action === 'offre-close-confirm' && arg) {
+    setOpenOffreId(arg)
+    go('emploi-confirm-close')
+    return
+  }
+  if (action === 'offre-close' && arg) {
+    if (!isAdminRole()) {
+      toast('Accès refusé pour ce rôle (simulé)')
+      return
+    }
+    closeOffre(arg)
+    toast('Offre clôturée')
+    go('emploi-details', { push: false })
+    return
+  }
+  if (action === 'offre-delete-confirm' && arg) {
+    setOpenOffreId(arg)
+    go('emploi-confirm-delete')
+    return
+  }
+  if (action === 'offre-delete' && arg) {
+    if (!isAdminRole()) {
+      toast('Accès refusé pour ce rôle (simulé)')
+      return
+    }
+    deleteOffre(arg)
+    toast('Offre supprimée')
+    go(isAdminRole() ? 'admin-offres' : 'emplois-liste', { push: false })
+    return
+  }
+  if (action === 'offre-copy' && arg) {
+    const link = `${location.origin}${location.pathname}#emploi-details`
+    setOpenOffreId(arg)
+    if (navigator.clipboard?.writeText) navigator.clipboard.writeText(link).catch(() => {})
+    toast('Lien copié (simulé)')
+    return
+  }
+  if (action === 'offre-copy-email' && arg) {
+    const o = getOffre(arg)
+    if (o?.applyEmail && navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(o.applyEmail).catch(() => {})
+    }
+    toast(o?.applyEmail ? 'Courriel copié' : 'Aucun courriel')
+    return
+  }
+  if (action === 'offre-apply-email' && arg) {
+    const o = getOffre(arg)
+    if (!o || o.state === 'closed') {
+      toast('Candidatures clôturées')
+      return
+    }
+    const href = mailtoForOffre(o)
+    if (href) {
+      try {
+        window.open(href, '_self')
+      } catch {
+        /* ignore */
+      }
+    }
+    toast('Ouverture de votre messagerie — rien n’est envoyé automatiquement')
+    return
+  }
+  if (action === 'offre-apply-url' && arg) {
+    const o = getOffre(arg)
+    if (!o || o.state === 'closed') {
+      toast('Candidatures clôturées')
+      return
+    }
+    if (o.applyUrl) {
+      try {
+        window.open(o.applyUrl, '_blank', 'noopener,noreferrer')
+      } catch {
+        /* ignore */
+      }
+    }
+    toast('Lien externe ouvert — retour possible')
+    return
+  }
+  if (action === 'offre-apply-modalites' && arg) {
+    const o = getOffre(arg)
+    if (!o || o.state === 'closed') {
+      toast('Candidatures clôturées')
+      return
+    }
+    const el = document.getElementById('offre-modalites') || document.getElementById('offre-modalites-body')
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    toast('Modalités de candidature — aucune candidature envoyée')
+    return
+  }
+
   const map = {
     miasin: 'Retour MIASIN (simulé) — MIASIN hors scope',
     appeler: arg ? `Appel simulé → ${arg}` : 'Appel simulé',
@@ -2112,7 +2392,7 @@ function render({ focusActive = false, resetNavScroll = false } = {}) {
       <aside class="proto-nav">
         <header class="proto-brand">
           <strong>Ma Ville</strong>
-          <span class="proto-tag">Wireframe · build 1001-r · layout-global</span>
+          <span class="proto-tag">Wireframe · build 1001-s · offres-emploi</span>
         </header>
         <p class="proto-hint">Navigation du prototype (≠ nav dans le téléphone)</p>
         <div class="nav-tabs" role="tablist" aria-label="Côté prototype">
@@ -2168,6 +2448,13 @@ function render({ focusActive = false, resetNavScroll = false } = {}) {
       e.preventDefault()
       setOpenEventId(openEvent.dataset.openEvent)
       go('evenement-details')
+      return
+    }
+    const openOffre = e.target.closest('[data-open-offre]')
+    if (openOffre) {
+      e.preventDefault()
+      setOpenOffreId(openOffre.dataset.openOffre)
+      go('emploi-details')
       return
     }
     const openFiche = e.target.closest('[data-open-fiche]')
@@ -2383,6 +2670,7 @@ function resolveScreenId(id) {
   if (id === 'admin-bo-annuaire-form') return 'fiche-annuaire-form'
   if (id === 'page-signalement' || (id && id.startsWith('dir-signalement'))) return 'signalements'
   if (id === 'signalement-statut') return 'signalement-conversation'
+  if (id === 'admin-offre-form') return 'emploi-form'
   if (id === 'mes-rencontres') return 'communautes-rencontres'
   return id
 }
