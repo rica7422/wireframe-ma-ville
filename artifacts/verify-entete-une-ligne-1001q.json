@@ -1,0 +1,126 @@
+{
+  "stamp": "1001-q",
+  "base": "http://127.0.0.1:4317",
+  "passed": 23,
+  "failed": 0,
+  "ok": true,
+  "results": [
+    {
+      "name": "App opens",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Stamp contains 1001-q",
+      "ok": true,
+      "detail": "Wireframe · build 1001-q · entete-une-ligne"
+    },
+    {
+      "name": "On #mairie-accueil",
+      "ok": true,
+      "detail": "#mairie-accueil"
+    },
+    {
+      "name": "NO .app-chrome visible (mairie)",
+      "ok": true,
+      "detail": "absent"
+    },
+    {
+      "name": "Header has Accueil Ma Ville + Accueil MIASIN (mairie)",
+      "ok": true,
+      "detail": "maVille=1 miasin=1"
+    },
+    {
+      "name": "NO ⋯ in .phone-header-full (mairie)",
+      "ok": true,
+      "detail": "ellipsisBtns=0 maybeMenu=0"
+    },
+    {
+      "name": "⋯ in .identity-row near Kapan — Arménie (mairie)",
+      "ok": true,
+      "detail": "ellipsis=1 text=\n        \n          Kapan — Arménie\n        \n        ⋯\n      "
+    },
+    {
+      "name": "Screenshot mairie written",
+      "ok": true,
+      "detail": "/opt/cursor/artifacts/screenshots/1001-q-mairie-entete.png | /cursor/stores/bc-62a66aae-7ddf-4f7d-bfef-8741542e3a40/media/1001-q-mairie-entete.png | /workspace/artifacts/1001-q-mairie-entete.png"
+    },
+    {
+      "name": "On #accueil-kapan",
+      "ok": true,
+      "detail": "#accueil-kapan"
+    },
+    {
+      "name": "NO .app-chrome visible (accueil)",
+      "ok": true,
+      "detail": "absent"
+    },
+    {
+      "name": "One-line homes in header (accueil)",
+      "ok": true,
+      "detail": "maVille=1 miasin=1"
+    },
+    {
+      "name": "NO ⋯ in full header (accueil)",
+      "ok": true,
+      "detail": "ellipsisBtns=0 maybeMenu=0"
+    },
+    {
+      "name": "⋯ in hero identity (accueil)",
+      "ok": true,
+      "detail": "count=1"
+    },
+    {
+      "name": "Screenshot accueil written",
+      "ok": true,
+      "detail": "/opt/cursor/artifacts/screenshots/1001-q-accueil-entete.png | /cursor/stores/bc-62a66aae-7ddf-4f7d-bfef-8741542e3a40/media/1001-q-accueil-entete.png | /workspace/artifacts/1001-q-accueil-entete.png"
+    },
+    {
+      "name": "On vie locale list",
+      "ok": true,
+      "detail": "#sante-pharmacies"
+    },
+    {
+      "name": "Header homes on vie locale list",
+      "ok": true,
+      "detail": "maVille=1 miasin=1"
+    },
+    {
+      "name": "NO ⋯ in full header (vie locale)",
+      "ok": true,
+      "detail": "ellipsisBtns=0 maybeMenu=0"
+    },
+    {
+      "name": "Screenshot vie locale written",
+      "ok": true,
+      "detail": "/opt/cursor/artifacts/screenshots/1001-q-vie-locale-entete.png | /cursor/stores/bc-62a66aae-7ddf-4f7d-bfef-8741542e3a40/media/1001-q-vie-locale-entete.png | /workspace/artifacts/1001-q-vie-locale-entete.png"
+    },
+    {
+      "name": "On #evenement-details",
+      "ok": true,
+      "detail": "#evenement-details"
+    },
+    {
+      "name": "Header has homes (evenement-details)",
+      "ok": true,
+      "detail": "maVille=1 miasin=1"
+    },
+    {
+      "name": "NO ⋯ in full header (evenement-details)",
+      "ok": true,
+      "detail": "ellipsisBtns=0 maybeMenu=0"
+    },
+    {
+      "name": "⋯ exists in event content (not header)",
+      "ok": true,
+      "detail": "count=1"
+    },
+    {
+      "name": "No page errors",
+      "ok": true,
+      "detail": ""
+    }
+  ],
+  "pageErrors": [],
+  "at": "2026-10-02T10:11:19.566Z"
+}
