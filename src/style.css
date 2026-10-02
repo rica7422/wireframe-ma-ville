@@ -3124,3 +3124,165 @@ button.hit.toggle {
   min-height: 80px;
   margin-bottom: 8px;
 }
+
+/* ——— Mes rencontres ——— */
+.renc-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+}
+.renc-card {
+  border: 1px solid color-mix(in srgb, var(--c-rencontres) 22%, #e2e8f0);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--c-rencontres) 4%, #fff);
+  overflow: hidden;
+}
+.renc-card-main {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  padding: 12px;
+  background: transparent;
+  border: 0;
+  color: inherit;
+}
+.renc-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: color-mix(in srgb, var(--c-rencontres) 28%, #fff);
+  border: 1px solid color-mix(in srgb, var(--c-rencontres) 40%, #cbd5e1);
+}
+.renc-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+.renc-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+.renc-card-top strong {
+  font-size: 0.95rem;
+}
+.renc-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.72rem;
+  line-height: 1.2;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--c-rencontres) 14%, #fff);
+  color: color-mix(in srgb, var(--c-rencontres) 70%, #1e293b);
+  white-space: normal;
+  max-width: 11rem;
+  flex-shrink: 0;
+}
+.renc-chip.accepted {
+  background: color-mix(in srgb, #16a34a 14%, #fff);
+  color: #166534;
+}
+.renc-chip.refused,
+.renc-chip.withdrawn,
+.renc-chip.cancelled {
+  background: color-mix(in srgb, #dc2626 12%, #fff);
+  color: #991b1b;
+}
+.renc-chip.pending,
+.renc-chip.reconfirm,
+.renc-chip.proposed {
+  background: color-mix(in srgb, var(--c-rencontres) 18%, #fff);
+  color: #92400e;
+}
+.renc-chip.draft,
+.renc-chip.past {
+  background: #f1f5f9;
+  color: #475569;
+}
+.renc-chip.collective {
+  max-width: 14rem;
+}
+.renc-card-actions {
+  padding: 0 12px 12px;
+}
+.renc-temp-chips {
+  margin-top: 4px;
+}
+.renc-filter-hint {
+  margin: 4px 0 0;
+}
+.renc-detail .renc-org-row,
+.renc-guest-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+.renc-status-line {
+  margin: 8px 0 12px;
+}
+.renc-status-ico {
+  display: inline-block;
+  min-width: 1rem;
+}
+.renc-counter {
+  margin: 8px 0 12px;
+  padding: 10px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--c-rencontres) 10%, #fff);
+  border: 1px solid color-mix(in srgb, var(--c-rencontres) 25%, #e2e8f0);
+}
+.renc-steps {
+  margin-bottom: 8px;
+}
+.renc-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0;
+}
+.renc-friend-list .row-link.selected {
+  background: color-mix(in srgb, var(--c-rencontres) 10%, #fff);
+}
+.renc-recap {
+  padding: 12px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--c-rencontres) 6%, #fff);
+  border: 1px solid color-mix(in srgb, var(--c-rencontres) 18%, #e2e8f0);
+  margin-bottom: 12px;
+}
+.renc-history {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+.renc-photo-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.search-clear {
+  margin-left: auto;
+}
+.row-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.radio-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0;
+}
+.danger-text {
+  color: #b91c1c;
+}

@@ -146,6 +146,28 @@ import {
   getCommunaute,
   isCommunauteAdmin,
 } from './communautes-data.js'
+import {
+  setRencTab,
+  setRencFilter,
+  setRencTemp,
+  setRencSearch,
+  setOpenRencontreId,
+  getRencontre,
+  getDraft,
+  setDraft,
+  startCreateDraft as startRencDraft,
+  createRencontreFromDraft,
+  setGuestResponse,
+  submitCounterProposal,
+  resolveCounterProposal,
+  addGuests,
+  removeGuest,
+  cancelRencontre,
+  deleteDraft,
+  removeFromMyList,
+  updateRencontre,
+  isOrganizer,
+} from './rencontres-data.js'
 
 const historyStack = []
 let currentId = 'ville-bienvenue'
@@ -315,6 +337,7 @@ function go(id, { push = true, resetStack = false } = {}) {
 }
 
 function back() {
+  if (currentId === 'rencontre-create' && !tryQuitRencCreate()) return
   const prev = historyStack.pop()
   if (prev) {
     if (!canAccessManageRoute(prev)) {
@@ -331,6 +354,54 @@ function back() {
   } else {
     go('accueil-kapan', { push: false })
   }
+}
+
+function readRencCreateFields(draft) {
+  const d = { ...(draft || getDraft() || {}) }
+  const title = document.querySelector('[data-field="renc-title"]')
+  if (title) d.title = title.value
+  ;['date', 'time', 'placeName', 'address', 'link', 'description'].forEach((k) => {
+    const el = document.querySelector(`[data-field="renc-${k}"]`)
+    if (el) d[k] = el.value
+  })
+  const modeEl = document.querySelector('[data-field="renc-mode"]:checked')
+  if (modeEl) d.mode = modeEl.value
+  return d
+}
+
+function isRencCreateDirty(draft) {
+  if (!draft) return false
+  if ((draft.guestIds || []).length) return true
+  if ((draft.title || '').trim()) return true
+  if (draft.date || draft.time || draft.address || draft.description || draft.link || draft.placeName)
+    return true
+  if (draft.photo) return true
+  return false
+}
+
+/** Dirty quit: Continuer (false) / Enregistrer brouillon / Abandonner */
+function tryQuitRencCreate() {
+  const draft = readRencCreateFields(getDraft())
+  if (!isRencCreateDirty(draft)) {
+    setDraft(null)
+    return true
+  }
+  if (!confirm('Quitter la création ?\nOK = Enregistrer le brouillon\nAnnuler = autres options')) {
+    if (confirm('Abandonner sans enregistrer ?')) {
+      setDraft(null)
+      return true
+    }
+    return false
+  }
+  setDraft(draft)
+  const res = createRencontreFromDraft(draft, { asDraft: true })
+  if (res?.error) {
+    toast('Impossible d’enregistrer le brouillon')
+    return false
+  }
+  setDraft(null)
+  toast('Brouillon enregistré')
+  return true
 }
 
 function handleSim(kind) {
@@ -1492,6 +1563,401 @@ function handleSim(kind) {
     return
   }
 
+  // ——— Mes rencontres ———
+  if (action === 'renc-tab' && arg) {
+    setRencTab(arg)
+    render()
+    return
+  }
+  if (action === 'renc-filter' && arg) {
+    setRencFilter(arg)
+    render()
+    return
+  }
+  if (action === 'renc-temp' && arg) {
+    setRencTemp(arg)
+    render()
+    return
+  }
+  if (action === 'renc-search') {
+    if (arg === 'clear') setRencSearch('')
+    else setRencSearch(readField('renc-search') || '')
+    render()
+    return
+  }
+  if (action === 'renc-open' && arg) {
+    setOpenRencontreId(arg)
+    go('rencontre-details')
+    return
+  }
+  if (action === 'renc-create') {
+    startRencDraft({ context: 'maville' })
+    go('rencontre-create')
+    return
+  }
+  if (action === 'renc-create-quit') {
+    if (!tryQuitRencCreate()) return
+    go('communautes-rencontres', { push: false })
+    return
+  }
+  if (action === 'renc-create-mode') {
+    const draft = readRencCreateFields(getDraft())
+    setDraft(draft)
+    render()
+    return
+  }
+  if (action === 'renc-create-step' && arg) {
+    const draft = readRencCreateFields(getDraft())
+    const step = Number(arg) || 1
+    if (step === 2 && !(draft.guestIds || []).length) {
+      toast('Choisissez au moins une personne')
+      return
+    }
+    if (step === 3) {
+      if (!(draft.title || '').trim()) {
+        toast('Titre obligatoire')
+        return
+      }
+      if (!draft.date || !draft.time) {
+        toast('Date et heure obligatoires')
+        return
+      }
+      if (draft.mode === 'physical' && !(draft.address || '').trim()) {
+        toast('Adresse obligatoire pour une rencontre sur place')
+        return
+      }
+    }
+    draft.step = step
+    setDraft(draft)
+    render()
+    return
+  }
+  if (action === 'renc-toggle-guest' && arg) {
+    const draft = getDraft() || startRencDraft()
+    const ids = new Set(draft.guestIds || [])
+    if (ids.has(arg)) ids.delete(arg)
+    else ids.add(arg)
+    draft.guestIds = [...ids]
+    setDraft(draft)
+    render()
+    return
+  }
+  if (action === 'renc-photo') {
+    const draft = readRencCreateFields(getDraft())
+    if (arg === 'clear') draft.photo = null
+    else draft.photo = 'local-preview'
+    setDraft(draft)
+    toast(arg === 'clear' ? 'Photo retirée' : 'Photo ajoutée (aperçu local · non envoyée)')
+    render()
+    return
+  }
+  if (action === 'renc-send') {
+    const draft = readRencCreateFields(getDraft())
+    const res = createRencontreFromDraft(draft, { asDraft: false })
+    if (res?.error === 'guests') {
+      toast('Choisissez au moins une personne')
+      return
+    }
+    if (res?.error === 'title') {
+      toast('Titre obligatoire')
+      return
+    }
+    if (res?.error === 'datetime') {
+      toast('Date et heure obligatoires')
+      return
+    }
+    if (res?.error === 'past') {
+      toast('La date/heure ne peut pas être dans le passé')
+      return
+    }
+    if (res?.error === 'address') {
+      toast('Adresse obligatoire')
+      return
+    }
+    if (res?.error) {
+      toast('Envoi impossible')
+      return
+    }
+    toast('Invitations envoyées')
+    setRencTab('envoyees')
+    go('rencontre-details', { push: false })
+    return
+  }
+  if (action === 'renc-save-draft') {
+    const draft = readRencCreateFields(getDraft())
+    const res = createRencontreFromDraft(draft, { asDraft: true })
+    if (res?.error === 'guests') {
+      toast('Choisissez au moins une personne pour un brouillon')
+      return
+    }
+    if (res?.error) {
+      toast('Brouillon impossible')
+      return
+    }
+    setDraft(null)
+    toast('Brouillon enregistré')
+    setRencTemp('brouillons')
+    setRencTab('envoyees')
+    go('communautes-rencontres', { push: false })
+    return
+  }
+  if (action === 'renc-accept' && arg) {
+    const res = setGuestResponse(arg, 'accepted')
+    if (res?.error) toast('Action impossible')
+    else toast('Vous avez accepté')
+    render()
+    return
+  }
+  if (action === 'renc-refuse' && arg) {
+    if (!confirm('Refuser cette invitation ?')) return
+    const res = setGuestResponse(arg, 'refused')
+    if (res?.error) toast('Action impossible')
+    else toast('Vous avez refusé')
+    render()
+    return
+  }
+  if (action === 'renc-withdraw' && arg) {
+    if (!confirm('Ne plus y aller ? Cela retire uniquement votre participation.')) return
+    const res = setGuestResponse(arg, 'withdrawn')
+    if (res?.error) toast('Action impossible')
+    else toast('Participation retirée')
+    render()
+    return
+  }
+  if (action === 'renc-cancel-refuse' && arg) {
+    if (!confirm('Annuler le refus ? L’invitation revient en attente (sans accepter automatiquement).'))
+      return
+    const res = setGuestResponse(arg, 'pending')
+    if (res?.error) toast('Action impossible')
+    else toast('Refus annulé — en attente de votre réponse')
+    render()
+    return
+  }
+  if (action === 'renc-propose' && arg) {
+    setOpenRencontreId(arg)
+    go('rencontre-propose')
+    return
+  }
+  if (action === 'renc-propose-submit' && arg) {
+    const res = submitCounterProposal(arg, {
+      date: readField('renc-prop-date'),
+      time: readField('renc-prop-time'),
+      placeName: readField('renc-prop-placeName'),
+      address: readField('renc-prop-address'),
+      message: readField('renc-prop-message'),
+    })
+    if (res?.error === 'empty') {
+      toast('Modifiez au moins un champ')
+      return
+    }
+    if (res?.error) {
+      toast('Proposition impossible')
+      return
+    }
+    toast('Proposition envoyée — en attente de réponse')
+    go('rencontre-details', { push: false })
+    return
+  }
+  if (action === 'renc-propose-accept' && arg) {
+    const res = resolveCounterProposal(arg, true)
+    if (res?.error) toast('Action impossible')
+    else toast('Contre-proposition acceptée')
+    render()
+    return
+  }
+  if (action === 'renc-propose-refuse' && arg) {
+    if (!confirm('Refuser cette contre-proposition ? L’invitation reviendra en attente.')) return
+    const res = resolveCounterProposal(arg, false)
+    if (res?.error) toast('Action impossible')
+    else toast('Contre-proposition refusée')
+    render()
+    return
+  }
+  if (action === 'renc-edit' && arg) {
+    setOpenRencontreId(arg)
+    const r = getRencontre(arg)
+    if (r?.status === 'draft') {
+      // Reprendre brouillon → formulaire création prérempli
+      setDraft({
+        step: 2,
+        context: r.context,
+        city: r.city,
+        guestIds: (r.guests || []).map((g) => g.userId),
+        title: r.title,
+        mode: r.mode,
+        date: r.date,
+        time: r.time,
+        placeName: r.placeName,
+        address: r.address,
+        link: r.link,
+        description: r.description,
+        photo: r.photo,
+        resumeDraftId: r.id,
+      })
+      go('rencontre-create')
+      return
+    }
+    go('rencontre-edit')
+    return
+  }
+  if (action === 'renc-edit-save' && arg) {
+    const r = getRencontre(arg)
+    if (!r || !isOrganizer(r)) {
+      toast('Modification réservée à l’organisateur')
+      return
+    }
+    const patch = {
+      title: readField('renc-edit-title') || r.title,
+      mode: document.querySelector('[data-field="renc-edit-mode"]:checked')?.value || r.mode,
+      date: readField('renc-edit-date') || r.date,
+      time: readField('renc-edit-time') || r.time,
+      placeName: readField('renc-edit-placeName'),
+      address: readField('renc-edit-address'),
+      link: readField('renc-edit-link'),
+      description: readField('renc-edit-description'),
+    }
+    const important =
+      patch.date !== r.date ||
+      patch.time !== r.time ||
+      patch.address !== r.address ||
+      patch.mode !== r.mode
+    if (important) {
+      if (
+        !confirm(
+          'Cette modification demandera aux personnes ayant accepté de confirmer à nouveau. Continuer ?'
+        )
+      ) {
+        return
+      }
+    }
+    const res = updateRencontre(arg, patch, { important })
+    if (res?.error) {
+      toast('Enregistrement impossible')
+      return
+    }
+    toast(important ? 'Modification enregistrée — confirmations demandées' : 'Présentation mise à jour')
+    go('rencontre-details', { push: false })
+    return
+  }
+  if (action === 'renc-cancel' && arg) {
+    const motif = prompt('Motif d’annulation (facultatif) :', '') 
+    if (motif === null) return
+    if (!confirm('Annuler la rencontre pour tout le monde ?')) return
+    const res = cancelRencontre(arg, motif)
+    if (res?.error) toast('Annulation impossible')
+    else toast('Rencontre annulée')
+    go('rencontre-details', { push: false })
+    return
+  }
+  if (action === 'renc-delete-draft' && arg) {
+    if (!confirm('Supprimer ce brouillon ? Personne d’autre n’est affecté.')) return
+    const res = deleteDraft(arg)
+    if (res?.error) toast('Suppression impossible')
+    else toast('Brouillon supprimé')
+    go('communautes-rencontres', { push: false })
+    return
+  }
+  if (action === 'renc-remove-list' && arg) {
+    if (
+      !confirm(
+        'Retirer de votre liste uniquement ? L’historique reste dans la conversation.'
+      )
+    )
+      return
+    const res = removeFromMyList(arg)
+    if (res?.error) toast('Retrait impossible pour le moment')
+    else toast('Retirée de votre liste')
+    go('communautes-rencontres', { push: false })
+    return
+  }
+  if (action === 'renc-add-guest' && arg) {
+    const [rid, uid] = String(arg).split(':')
+    const res = addGuests(rid, [uid])
+    if (res?.error) toast('Ajout impossible')
+    else toast('Invitation ajoutée (en attente)')
+    render()
+    return
+  }
+  if (action === 'renc-remove-guest' && arg) {
+    const [rid, uid] = String(arg).split(':')
+    if (
+      !confirm(
+        'Retirer cet invité ? Il sera informé et perdra l’accès au salon (simulé).'
+      )
+    )
+      return
+    const res = removeGuest(rid, uid)
+    if (res?.error) toast('Retrait impossible')
+    else toast('Invité retiré')
+    render()
+    return
+  }
+  if (action === 'renc-message' && arg) {
+    const r = getRencontre(arg)
+    if (!r) {
+      toast('Rencontre introuvable')
+      return
+    }
+    const ctx = r.context === 'miasin' ? 'miasin' : 'maville'
+    setMsgTab(ctx === 'miasin' ? 'miasin' : 'maville')
+    if (r.conversationId) {
+      setOpenConversationId(r.conversationId)
+      go('messages-thread')
+      return
+    }
+    if (r.kind === 'tat') {
+      const peer = isOrganizer(r)
+        ? (r.guests || [])[0]?.userId
+        : r.organizerId
+      if (!peer) {
+        toast('Pas d’interlocuteur')
+        return
+      }
+      openOrCreateDm(peer, ctx)
+      go('messages-thread')
+      return
+    }
+    // collectif — salon lié (simulé via conversation id salon)
+    if (r.salonId) {
+      setOpenConversationId(r.salonId)
+      // may not exist in MSG_STORE — open DM to first guest as fallback
+      const existing = getConversation(r.salonId)
+      if (!existing) {
+        const peer = (r.guests || []).find((g) => g.userId !== 'user-rica')?.userId || (r.guests || [])[0]?.userId
+        if (peer) openOrCreateDm(peer, ctx)
+        else {
+          toast('Salon collectif (simulé) — messagerie réutilisée')
+          go('messages')
+          return
+        }
+      }
+      go('messages-thread')
+      return
+    }
+    toast('Conversation indisponible')
+    return
+  }
+  if (action === 'renc-report' && arg) {
+    const r = getRencontre(arg)
+    const motif = prompt('Motif du signalement :', 'Contenu inapproprié')
+    if (motif === null) return
+    createModerationCase({
+      type: 'rencontre',
+      title: `Rencontre signalée · ${r?.title || arg}`,
+      author: r?.organizerName || 'Inconnu',
+      motif: motif || 'Signalement rencontre',
+      contentLabel: `${r?.title || ''} · ${r?.date || ''}`.slice(0, 120),
+      contentGo: 'rencontre-details',
+    })
+    toast('Signalement transmis à la modération (dossier créé)')
+    if (currentId === 'rencontre-menu') back()
+    return
+  }
+  if (action === 'renc-stub') {
+    toast(arg === 'profil' ? 'Profil organisateur (simulé)' : `Simulé · ${arg || 'rencontre'}`)
+    return
+  }
+
   const map = {
     miasin: 'Retour MIASIN (simulé) — MIASIN hors scope',
     appeler: arg ? `Appel simulé → ${arg}` : 'Appel simulé',
@@ -1645,7 +2111,7 @@ function render({ focusActive = false, resetNavScroll = false } = {}) {
       <aside class="proto-nav">
         <header class="proto-brand">
           <strong>Ma Ville</strong>
-          <span class="proto-tag">Wireframe · build 1001-n · groupes-clubs-maquette</span>
+          <span class="proto-tag">Wireframe · build 1001-o · mes-rencontres</span>
         </header>
         <p class="proto-hint">Navigation du prototype (≠ nav dans le téléphone)</p>
         <div class="nav-tabs" role="tablist" aria-label="Côté prototype">
@@ -1908,6 +2374,7 @@ function resolveScreenId(id) {
   if (id === 'admin-bo-annuaire-form') return 'fiche-annuaire-form'
   if (id === 'page-signalement' || (id && id.startsWith('dir-signalement'))) return 'signalements'
   if (id === 'signalement-statut') return 'signalement-conversation'
+  if (id === 'mes-rencontres') return 'communautes-rencontres'
   return id
 }
 

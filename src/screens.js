@@ -111,6 +111,27 @@ import {
   pubStateLabel,
 } from './annuaire-data.js'
 import {
+  listRencontres,
+  listDrafts,
+  getRencontre,
+  getOpenRencontreId,
+  getRencTab,
+  getRencFilter,
+  getRencTemp,
+  getRencSearch,
+  getDraft,
+  RENC_CONTACTS,
+  formatWhen,
+  placeLabel,
+  connectionHint,
+  responseLabel,
+  collectiveSummary,
+  isOrganizer,
+  myGuest,
+  temporalBucket,
+  getRencViewer,
+} from './rencontres-data.js'
+import {
   listConversations,
   getConversation,
   getOpenConversationId,
@@ -3932,13 +3953,189 @@ function communauteCreate() {
   })
 }
 
-function communautesRencontres() {
+function rencResponseIcon(resp) {
+  const map = {
+    pending: '○',
+    accepted: '✓',
+    refused: '✕',
+    withdrawn: '⊖',
+    proposed: '⇄',
+    reconfirm: '⟳',
+  }
+  return map[resp] || '·'
+}
+
+function rencGuestStatusLabel(resp) {
+  const map = {
+    pending: 'En attente',
+    accepted: 'Acceptée',
+    refused: 'Refusée',
+    withdrawn: 'Participation retirée',
+    proposed: 'Autre date proposée',
+    reconfirm: 'En attente de confirmation',
+  }
+  return map[resp] || resp
+}
+
+function rencCardStatus(r, tab) {
+  if (r.status === 'cancelled') return { cls: 'cancelled', label: 'Annulée' }
+  if (r.status === 'draft') return { cls: 'draft', label: 'Brouillon' }
+  if (temporalBucket(r) === 'passees') return { cls: 'past', label: 'Passée' }
+  if (tab === 'recues') {
+    const g = myGuest(r)
+    if (!g) return { cls: 'pending', label: '—' }
+    return {
+      cls: g.response,
+      label: responseLabel(g.response),
+      icon: rencResponseIcon(g.response),
+    }
+  }
+  if (r.kind === 'collectif') {
+    return { cls: 'collective', label: collectiveSummary(r) }
+  }
+  const one = (r.guests || [])[0]
+  if (!one) return { cls: 'pending', label: 'En attente' }
+  if (one.response === 'proposed') {
+    return { cls: 'proposed', label: 'Nouvelle proposition reçue', icon: '⇄' }
+  }
+  return {
+    cls: one.response,
+    label: responseLabel(one.response, { asOrganizer: true, guestName: one.name }),
+    icon: rencResponseIcon(one.response),
+  }
+}
+
+function rencCardHtml(r, tab) {
+  const org = isOrganizer(r)
+  const status = rencCardStatus(r, tab)
+  const other =
+    r.kind === 'tat'
+      ? org
+        ? (r.guests || [])[0]
+        : { name: r.organizerName }
+      : null
+  const lineWho =
+    tab === 'recues'
+      ? `Organisée par ${escapeHtml(r.organizerName)}`
+      : r.kind === 'tat'
+        ? `Invitation envoyée à ${escapeHtml(other?.name || '…')}`
+        : `Organisateur · ${escapeHtml(r.organizerName)}${org ? ' (Vous)' : ''}`
+  const pendingReceived =
+    tab === 'recues' && r.status === 'active' && myGuest(r)?.response === 'pending'
+  const guestCount = (r.guests || []).length
+  return `
+    <article class="renc-card" data-renc-id="${r.id}">
+      <button class="hit renc-card-main" data-sim="renc-open:${r.id}" type="button">
+        <span class="renc-avatar" aria-hidden="true"></span>
+        <span class="renc-card-body">
+          <span class="renc-card-top">
+            <strong>${escapeHtml(r.title)}</strong>
+            <span class="renc-chip ${status.cls}">${status.icon ? `${status.icon} ` : ''}${escapeHtml(
+              status.label
+            )}</span>
+          </span>
+          <span class="meta">${escapeHtml(formatWhen(r))}</span>
+          <span class="meta">${escapeHtml(placeLabel(r))}</span>
+          <span class="meta">${lineWho}</span>
+          ${
+            r.kind === 'collectif'
+              ? `<span class="meta">${guestCount} invité${guestCount > 1 ? 's' : ''}${
+                  org ? '' : ` · ${escapeHtml(responseLabel(myGuest(r)?.response || 'pending'))}`
+                }</span>`
+              : other
+                ? `<span class="meta">${escapeHtml(other.name || '')}</span>`
+                : ''
+          }
+        </span>
+      </button>
+      ${
+        pendingReceived
+          ? `<div class="row-actions renc-card-actions">
+        <button class="hit btn outline" data-sim="renc-refuse:${r.id}" type="button">Refuser</button>
+        <button class="hit btn primary" data-sim="renc-accept:${r.id}" type="button">Accepter</button>
+      </div>`
+          : ''
+      }
+    </article>`
+}
+
+/** Liste Mes rencontres */
+function mesRencontres() {
+  const tab = getRencTab()
+  const filter = getRencFilter()
+  const temp = getRencTemp()
+  const q = getRencSearch()
+  const list = listRencontres({ tab, filter, temp, query: q })
+  const drafts = listDrafts()
+  const filters = [
+    { id: 'toutes', label: 'Toutes' },
+    { id: 'attente', label: 'En attente' },
+    { id: 'acceptees', label: 'Acceptées' },
+    { id: 'refusees', label: 'Refusées' },
+  ]
+  const temps = [
+    { id: 'avenir', label: 'À venir' },
+    { id: 'passees', label: 'Passées' },
+    { id: 'annulees', label: 'Annulées' },
+  ]
+  const emptyMsg = q
+    ? 'Aucun résultat'
+    : temp === 'annulees'
+      ? 'Aucune rencontre annulée'
+      : temp === 'passees'
+        ? 'Aucune rencontre passée'
+        : tab === 'recues'
+          ? 'Aucune invitation reçue'
+          : 'Aucune invitation envoyée'
   return wrap(
     `
-    <h2 class="sec">Mes rencontres</h2>
-    <p class="meta">Rubrique conservée · pas de moteur de rencontre dans ce prototype.</p>
-    ${emptyState('Aucune rencontre à afficher pour le moment')}
-    <p class="meta">Correctifs de navigation uniquement — ébauche signalée.</p>
+    <button class="hit btn primary block" data-sim="renc-create" type="button">Créer une rencontre</button>
+    <label class="search">
+      <span class="search-ico">⌕</span>
+      <input type="search" data-field="renc-search" data-sim-change="renc-search" placeholder="Rechercher une rencontre…" value="${escapeHtml(
+        q
+      )}" />
+      ${
+        q
+          ? `<button class="hit icon-btn search-clear" data-sim="renc-search:clear" type="button" title="Effacer">✕</button>`
+          : ''
+      }
+    </label>
+    <div class="tabs">
+      <button class="hit tab ${tab === 'recues' ? 'on' : ''}" data-sim="renc-tab:recues" type="button">Reçues</button>
+      <button class="hit tab ${tab === 'envoyees' ? 'on' : ''}" data-sim="renc-tab:envoyees" type="button">Envoyées</button>
+    </div>
+    <div class="chips filter-chips">
+      ${filters
+        .map(
+          (f) =>
+            `<button class="hit chip ${filter === f.id ? 'on' : ''}" data-sim="renc-filter:${f.id}" type="button">${
+              f.label
+            }</button>`
+        )
+        .join('')}
+    </div>
+    <div class="chips filter-chips renc-temp-chips">
+      ${temps
+        .map(
+          (t) =>
+            `<button class="hit chip ${temp === t.id ? 'on' : ''}" data-sim="renc-temp:${t.id}" type="button">${
+              t.label
+            }</button>`
+        )
+        .join('')}
+      <button class="hit chip ${temp === 'brouillons' ? 'on' : ''}" data-sim="renc-temp:brouillons" type="button">Brouillons${
+        drafts.length ? ` (${drafts.length})` : ''
+      }</button>
+    </div>
+    ${
+      tab === 'envoyees' && filter !== 'toutes' && list.length
+        ? `<p class="meta renc-filter-hint">Rencontres avec au moins une réponse de ce type</p>`
+        : ''
+    }
+    <div class="renc-list">
+      ${list.length ? list.map((r) => rencCardHtml(r, tab)).join('') : emptyState(emptyMsg)}
+    </div>
     `,
     {
       header: phoneHeader({ title: 'Mes rencontres', backTo: 'accueil-kapan' }),
@@ -3947,11 +4144,534 @@ function communautesRencontres() {
   )
 }
 
+/** Alias route communautés-rencontres → mesRencontres */
+function communautesRencontres() {
+  return mesRencontres()
+}
+
+function rencGuestListHtml(r, { manage = false } = {}) {
+  const guests = r.guests || []
+  if (!guests.length) return emptyState('Aucun invité')
+  return guests
+    .map((g) => {
+      const icon = rencResponseIcon(g.response)
+      const label = rencGuestStatusLabel(g.response)
+      return `
+      <div class="renc-guest-row">
+        <span class="avatar"></span>
+        <div class="grow">
+          <strong>${escapeHtml(g.name)}</strong>
+          <p class="meta"><span class="renc-status-ico" aria-hidden="true">${icon}</span> ${escapeHtml(label)}</p>
+        </div>
+        ${
+          manage
+            ? `<button class="hit btn outline danger-text" data-sim="renc-remove-guest:${r.id}:${g.userId}" type="button">Retirer</button>`
+            : ''
+        }
+      </div>`
+    })
+    .join('')
+}
+
+function rencOrgActions(r) {
+  if (r.status === 'draft') {
+    return `
+      <button class="hit btn primary block" data-sim="renc-edit:${r.id}" type="button">Reprendre</button>
+      <button class="hit btn outline block" data-sim="renc-delete-draft:${r.id}" type="button">Supprimer le brouillon</button>`
+  }
+  if (r.status === 'cancelled' || temporalBucket(r) === 'passees') {
+    return `
+      <button class="hit btn block" data-sim="renc-message:${r.id}" type="button">Conversation</button>
+      <button class="hit btn outline block" data-sim="renc-remove-list:${r.id}" type="button">Retirer de ma liste</button>`
+  }
+  const counter =
+    r.counterProposal?.status === 'pending'
+      ? `
+      <section class="renc-counter">
+        <h2 class="sec">Contre-proposition</h2>
+        <p class="meta">${escapeHtml(r.counterProposal.fromName)} propose :</p>
+        <p><strong>${escapeHtml(r.counterProposal.date)} · ${escapeHtml(r.counterProposal.time)}</strong></p>
+        <p class="meta">${escapeHtml(
+          [r.counterProposal.placeName, r.counterProposal.address].filter(Boolean).join(' · ')
+        )}</p>
+        ${r.counterProposal.message ? `<p>${escapeHtml(r.counterProposal.message)}</p>` : ''}
+        <div class="row-actions">
+          <button class="hit btn outline" data-sim="renc-propose-refuse:${r.id}" type="button">Refuser</button>
+          <button class="hit btn primary" data-sim="renc-propose-accept:${r.id}" type="button">Accepter</button>
+        </div>
+      </section>`
+      : ''
+  return `
+    ${counter}
+    <button class="hit btn primary block" data-sim="renc-edit:${r.id}" type="button">Modifier la rencontre</button>
+    <button class="hit btn block" data-sim="renc-message:${r.id}" type="button">${
+      r.kind === 'collectif' ? 'Ouvrir le salon' : 'Conversation'
+    }</button>
+    ${
+      r.kind === 'collectif'
+        ? `<button class="hit btn outline block" data-go="rencontre-guests" type="button">Gérer les invités</button>`
+        : ''
+    }`
+}
+
+function rencGuestActions(r) {
+  const g = myGuest(r)
+  if (!g || r.status !== 'active') {
+    if (r.status === 'cancelled' || temporalBucket(r) === 'passees') {
+      return `<button class="hit btn outline block" data-sim="renc-remove-list:${r.id}" type="button">Retirer de ma liste</button>`
+    }
+    return ''
+  }
+  if (g.response === 'pending' || g.response === 'reconfirm') {
+    return `
+      <div class="row-actions renc-detail-actions">
+        <button class="hit btn outline" data-sim="renc-refuse:${r.id}" type="button">Refuser</button>
+        <button class="hit btn primary" data-sim="renc-accept:${r.id}" type="button">Accepter</button>
+      </div>
+      ${
+        r.kind === 'tat'
+          ? `<button class="hit btn outline block" data-sim="renc-propose:${r.id}" type="button">Proposer autre date/lieu</button>`
+          : ''
+      }
+      <button class="hit btn block" data-sim="renc-message:${r.id}" type="button">Conversation</button>`
+  }
+  if (g.response === 'proposed') {
+    return `
+      <p class="meta renc-chip proposed">⇄ Votre proposition attend une réponse</p>
+      <button class="hit btn block" data-sim="renc-message:${r.id}" type="button">Conversation</button>`
+  }
+  if (g.response === 'accepted') {
+    return `
+      <p class="meta"><span class="renc-chip accepted">✓ Vous avez accepté</span></p>
+      <button class="hit btn outline block" data-sim="renc-withdraw:${r.id}" type="button">Ne plus y aller</button>
+      <button class="hit btn block" data-sim="renc-message:${r.id}" type="button">Conversation</button>`
+  }
+  if (g.response === 'refused' || g.response === 'withdrawn') {
+    return `
+      <p class="meta"><span class="renc-chip refused">${
+        g.response === 'withdrawn' ? '⊖ Vous avez retiré votre participation' : '✕ Vous avez refusé'
+      }</span></p>
+      ${
+        g.response === 'refused'
+          ? `<button class="hit btn outline block" data-sim="renc-cancel-refuse:${r.id}" type="button">Annuler le refus</button>`
+          : ''
+      }
+      <button class="hit btn block" data-sim="renc-message:${r.id}" type="button">Conversation</button>`
+  }
+  return `<button class="hit btn block" data-sim="renc-message:${r.id}" type="button">Conversation</button>`
+}
+
+function rencontreDetails() {
+  const id = getOpenRencontreId()
+  const r = getRencontre(id)
+  if (!r) {
+    return wrap(emptyState('Rencontre introuvable ou accès refusé'), {
+      header: phoneHeader({ title: 'Détails', backTo: 'communautes-rencontres' }),
+      footer: phoneFooter('menu'),
+    })
+  }
+  const org = isOrganizer(r)
+  const kindLabel = r.kind === 'tat' ? 'Tête-à-tête' : 'Collective'
+  const modeLabel = r.mode === 'online' ? 'En ligne' : 'Sur place'
+  const statusLine = org
+    ? r.kind === 'collectif'
+      ? collectiveSummary(r)
+      : responseLabel((r.guests || [])[0]?.response || 'pending', {
+          asOrganizer: true,
+          guestName: (r.guests || [])[0]?.name,
+        })
+    : responseLabel(myGuest(r)?.response || 'pending')
+  return wrap(
+    `
+    <div class="renc-detail" data-renc-id="${r.id}">
+      ${r.photo ? photo('Photo rencontre…', 'hero') : photo('Pas de photo', 'hero dim')}
+      <div class="detail-head">
+        <strong class="block-title">${escapeHtml(r.title)}</strong>
+        <p class="meta">${kindLabel} · ${modeLabel}${
+          r.status === 'cancelled' ? ' · Annulée' : r.status === 'draft' ? ' · Brouillon' : ''
+        }</p>
+        <p class="meta">${escapeHtml(formatWhen(r))}</p>
+        <p class="meta">${escapeHtml(placeLabel(r))}</p>
+        ${
+          r.mode === 'online'
+            ? `<p class="meta">${escapeHtml(connectionHint(r))}</p>`
+            : r.address
+              ? `<p class="meta">${escapeHtml(r.address)}</p>`
+              : ''
+        }
+        ${r.description ? `<p>${escapeHtml(r.description)}</p>` : ''}
+      </div>
+      <div class="renc-org-row">
+        <span class="avatar"></span>
+        <div class="grow">
+          <strong>${escapeHtml(r.organizerName)}${org ? ' · Vous' : ''}</strong>
+          <p class="meta">Organisateur</p>
+        </div>
+        ${
+          !org
+            ? `<button class="hit btn outline" data-sim="renc-message:${r.id}" type="button">Écrire</button>`
+            : ''
+        }
+      </div>
+      <p class="meta renc-status-line"><span class="renc-chip">${escapeHtml(statusLine)}</span></p>
+      ${r.cancelMotif ? `<p class="meta">Motif d’annulation · ${escapeHtml(r.cancelMotif)}</p>` : ''}
+      ${org ? rencOrgActions(r) : rencGuestActions(r)}
+      <h2 class="sec">Invités · ${(r.guests || []).length}</h2>
+      ${rencGuestListHtml(r)}
+      ${
+        (r.history || []).length
+          ? `<h2 class="sec">Historique</h2>
+        <ul class="renc-history">${(r.history || [])
+          .slice()
+          .reverse()
+          .slice(0, 6)
+          .map((h) => `<li class="meta">${escapeHtml(h.text)}</li>`)
+          .join('')}</ul>`
+          : ''
+      }
+      <p class="meta">Simulé · pas de visio réelle · messagerie réutilisée</p>
+    </div>
+    `,
+    {
+      header: phoneHeader({
+        title: 'Détails',
+        backTo: 'communautes-rencontres',
+        extraRight: `<button class="hit icon-btn" data-go="rencontre-menu" type="button" title="Menu">⋯</button>`,
+      }),
+      footer: phoneFooter('menu'),
+    }
+  )
+}
+
+function rencontreCreate() {
+  const draft = getDraft() || {
+    step: 1,
+    context: 'maville',
+    city: 'Kapan',
+    guestIds: [],
+    title: '',
+    mode: 'physical',
+    date: '',
+    time: '',
+    placeName: '',
+    address: '',
+    link: '',
+    description: '',
+    photo: null,
+  }
+  const step = Number(draft.step) || 1
+  const selected = new Set(draft.guestIds || [])
+  let body = ''
+  if (step === 1) {
+    body = `
+      <h2 class="sec">Amis</h2>
+      <p class="meta">Choisissez au moins une personne. 1 = tête-à-tête · plusieurs = collective.</p>
+      <label class="search">
+        <span class="search-ico">⌕</span>
+        <input type="search" data-field="renc-friend-search" placeholder="Rechercher un ami…" />
+      </label>
+      <div class="renc-chips">
+        ${[...selected]
+          .map((id) => {
+            const c = RENC_CONTACTS.find((x) => x.id === id)
+            return `<button class="hit chip on" data-sim="renc-toggle-guest:${id}" type="button">${escapeHtml(
+              c?.name || id
+            )} ✕</button>`
+          })
+          .join('')}
+      </div>
+      <div class="renc-friend-list">
+        ${RENC_CONTACTS.map((c) => {
+          const on = selected.has(c.id)
+          return `
+          <button class="hit row-link ${on ? 'selected' : ''}" data-sim="renc-toggle-guest:${c.id}" type="button">
+            <span class="avatar"></span>
+            <span class="grow"><strong>${escapeHtml(c.name)}</strong></span>
+            <span class="meta">${on ? '✓' : '+'}</span>
+          </button>`
+        }).join('')}
+      </div>
+      <button class="hit btn primary block" data-sim="renc-create-step:2" type="button" ${
+        selected.size ? '' : 'disabled'
+      }>Continuer</button>`
+  } else if (step === 2) {
+    const online = draft.mode === 'online'
+    body = `
+      <h2 class="sec">Informations</h2>
+      <label class="field"><span>Titre *</span>
+        <input data-field="renc-title" type="text" value="${escapeHtml(draft.title || '')}" placeholder="Titre de la rencontre" />
+      </label>
+      <fieldset class="field">
+        <legend>Mode *</legend>
+        <label class="radio-row"><input data-field="renc-mode" type="radio" name="renc-mode" value="physical" data-sim-change="renc-create-mode" ${
+          !online ? 'checked' : ''
+        } /> Sur place</label>
+        <label class="radio-row"><input data-field="renc-mode" type="radio" name="renc-mode" value="online" data-sim-change="renc-create-mode" ${
+          online ? 'checked' : ''
+        } /> En ligne</label>
+      </fieldset>
+      <div class="row-2">
+        <label class="field"><span>Date *</span>
+          <input data-field="renc-date" type="date" value="${escapeHtml(draft.date || '')}" />
+        </label>
+        <label class="field"><span>Heure *</span>
+          <input data-field="renc-time" type="time" value="${escapeHtml(draft.time || '')}" />
+        </label>
+      </div>
+      ${
+        online
+          ? `<p class="meta">La rencontre se déroulera en ligne.</p>
+        <label class="field"><span>Lien de connexion (facultatif)</span>
+          <input data-field="renc-link" type="url" value="${escapeHtml(draft.link || '')}" placeholder="https://…" />
+        </label>
+        <p class="meta">Si vide : les informations de connexion seront partagées dans la discussion.</p>`
+          : `<label class="field"><span>Nom du lieu (facultatif)</span>
+          <input data-field="renc-placeName" type="text" value="${escapeHtml(draft.placeName || '')}" />
+        </label>
+        <label class="field"><span>Adresse *</span>
+          <input data-field="renc-address" type="text" value="${escapeHtml(draft.address || '')}" placeholder="Adresse" />
+        </label>
+        <p class="meta">Ville · ${escapeHtml(draft.city || 'Kapan')}</p>`
+      }
+      <label class="field"><span>Description (facultatif)</span>
+        <textarea data-field="renc-description" rows="3">${escapeHtml(draft.description || '')}</textarea>
+      </label>
+      <div class="field">
+        <span>Photo (facultatif · JPG/PNG · 5 Mo · simulé)</span>
+        ${
+          draft.photo
+            ? `<div class="renc-photo-preview">${photo('Aperçu…', 'thumb')}
+            <div class="row-actions">
+              <button class="hit btn outline" data-sim="renc-photo:replace" type="button">Remplacer</button>
+              <button class="hit btn outline" data-sim="renc-photo:clear" type="button">Retirer</button>
+            </div></div>`
+            : `<button class="hit btn outline block" data-sim="renc-photo:add" type="button">Ajouter une photo</button>`
+        }
+      </div>
+      <div class="row-actions">
+        <button class="hit btn outline" data-sim="renc-create-step:1" type="button">Retour</button>
+        <button class="hit btn primary" data-sim="renc-create-step:3" type="button">Continuer</button>
+      </div>`
+  } else {
+    const guests = (draft.guestIds || [])
+      .map((id) => RENC_CONTACTS.find((c) => c.id === id)?.name || id)
+      .join(', ')
+    const kind = (draft.guestIds || []).length > 1 ? 'Collective' : 'Tête-à-tête'
+    body = `
+      <h2 class="sec">Vérification</h2>
+      <article class="renc-recap">
+        <p><strong>${escapeHtml(draft.title || 'Sans titre')}</strong></p>
+        <p class="meta">${kind} · ${draft.mode === 'online' ? 'En ligne' : 'Sur place'}</p>
+        <p class="meta">${escapeHtml(draft.date || '—')} · ${escapeHtml(draft.time || '—')}</p>
+        <p class="meta">${
+          draft.mode === 'online'
+            ? escapeHtml(draft.link || 'Connexion via la discussion')
+            : escapeHtml([draft.placeName, draft.address, draft.city].filter(Boolean).join(' · ') || 'Lieu à préciser')
+        }</p>
+        <p class="meta">Invités · ${escapeHtml(guests)}</p>
+        ${draft.description ? `<p>${escapeHtml(draft.description)}</p>` : ''}
+      </article>
+      <div class="row-actions">
+        <button class="hit btn outline" data-sim="renc-create-step:2" type="button">Retour</button>
+        <button class="hit btn primary" data-sim="renc-send" type="button">Envoyer les invitations</button>
+      </div>
+      <button class="hit btn outline block" data-sim="renc-save-draft" type="button">Enregistrer le brouillon</button>`
+  }
+  return wrap(
+    `
+    <div class="renc-steps meta">Étape ${step} / 3</div>
+    ${body}
+    `,
+    {
+      header: phoneHeader({
+        title: 'Créer une rencontre',
+        chrome: 'form',
+        closeIcon: true,
+        backTo: 'communautes-rencontres',
+      }),
+      footer: '',
+    }
+  )
+}
+
+function rencontreEdit() {
+  const r = getRencontre(getOpenRencontreId())
+  if (!r || !isOrganizer(r)) {
+    return wrap(emptyState('Modification réservée à l’organisateur'), {
+      header: phoneHeader({ title: 'Modifier', chrome: 'form', backTo: 'rencontre-details' }),
+      footer: '',
+    })
+  }
+  const online = r.mode === 'online'
+  return wrap(
+    `
+    <h2 class="sec">Modifier la rencontre</h2>
+    <p class="meta">Présentation (titre, description, photo) : conserve les réponses. Date, heure, adresse ou mode : les personnes ayant accepté devront confirmer à nouveau.</p>
+    <label class="field"><span>Titre</span>
+      <input data-field="renc-edit-title" type="text" value="${escapeHtml(r.title)}" />
+    </label>
+    <fieldset class="field">
+      <legend>Mode</legend>
+      <label class="radio-row"><input data-field="renc-edit-mode" type="radio" name="renc-edit-mode" value="physical" ${
+        !online ? 'checked' : ''
+      } /> Sur place</label>
+      <label class="radio-row"><input data-field="renc-edit-mode" type="radio" name="renc-edit-mode" value="online" ${
+        online ? 'checked' : ''
+      } /> En ligne</label>
+    </fieldset>
+    <div class="row-2">
+      <label class="field"><span>Date</span>
+        <input data-field="renc-edit-date" type="date" value="${escapeHtml(r.date || '')}" />
+      </label>
+      <label class="field"><span>Heure</span>
+        <input data-field="renc-edit-time" type="time" value="${escapeHtml(r.time || '')}" />
+      </label>
+    </div>
+    <label class="field"><span>Nom du lieu</span>
+      <input data-field="renc-edit-placeName" type="text" value="${escapeHtml(r.placeName || '')}" />
+    </label>
+    <label class="field"><span>Adresse</span>
+      <input data-field="renc-edit-address" type="text" value="${escapeHtml(r.address || '')}" />
+    </label>
+    <label class="field"><span>Lien (en ligne)</span>
+      <input data-field="renc-edit-link" type="url" value="${escapeHtml(r.link || '')}" />
+    </label>
+    <label class="field"><span>Description</span>
+      <textarea data-field="renc-edit-description" rows="3">${escapeHtml(r.description || '')}</textarea>
+    </label>
+    <button class="hit btn primary block" data-sim="renc-edit-save:${r.id}" type="button">Enregistrer</button>
+    `,
+    {
+      header: phoneHeader({ title: 'Modifier', chrome: 'form', backTo: 'rencontre-details' }),
+      footer: '',
+    }
+  )
+}
+
+function rencontreGuests() {
+  const r = getRencontre(getOpenRencontreId())
+  if (!r || !isOrganizer(r) || r.kind !== 'collectif') {
+    return wrap(emptyState('Gestion des invités réservée aux rencontres collectives de l’organisateur'), {
+      header: phoneHeader({ title: 'Invités', chrome: 'form', backTo: 'rencontre-details' }),
+      footer: '',
+    })
+  }
+  const existing = new Set((r.guests || []).map((g) => g.userId))
+  const addable = RENC_CONTACTS.filter((c) => !existing.has(c.id) && c.id !== getRencViewer())
+  return wrap(
+    `
+    <h2 class="sec">Gérer les invités</h2>
+    <p class="meta">${collectiveSummary(r)}</p>
+    ${rencGuestListHtml(r, { manage: true })}
+    <h2 class="sec">Ajouter</h2>
+    ${
+      addable.length
+        ? addable
+            .map(
+              (c) => `
+      <button class="hit row-link" data-sim="renc-add-guest:${r.id}:${c.id}" type="button">
+        <span class="avatar"></span>
+        <span class="grow"><strong>${escapeHtml(c.name)}</strong></span>
+        <span class="meta">+</span>
+      </button>`
+            )
+            .join('')
+        : emptyState('Tous vos contacts sont déjà invités')
+    }
+    <p class="meta">Un tête-à-tête ne devient pas collectif ici — créez une nouvelle rencontre collective.</p>
+    `,
+    {
+      header: phoneHeader({ title: 'Invités', chrome: 'form', backTo: 'rencontre-details' }),
+      footer: '',
+    }
+  )
+}
+
+function rencontrePropose() {
+  const r = getRencontre(getOpenRencontreId())
+  const g = myGuest(r)
+  if (!r || r.kind !== 'tat' || !g || g.response !== 'pending') {
+    return wrap(emptyState('Contre-proposition disponible uniquement pour un TÀT en attente'), {
+      header: phoneHeader({ title: 'Proposer', chrome: 'form', backTo: 'rencontre-details' }),
+      footer: '',
+    })
+  }
+  return wrap(
+    `
+    <h2 class="sec">Proposer une autre date / un autre lieu</h2>
+    <p class="meta">Modifiez au moins un champ. Les infos actuelles restent jusqu’à réponse de l’organisateur.</p>
+    <div class="row-2">
+      <label class="field"><span>Date</span>
+        <input data-field="renc-prop-date" type="date" value="${escapeHtml(r.date || '')}" />
+      </label>
+      <label class="field"><span>Heure</span>
+        <input data-field="renc-prop-time" type="time" value="${escapeHtml(r.time || '')}" />
+      </label>
+    </div>
+    <label class="field"><span>Nom du lieu</span>
+      <input data-field="renc-prop-placeName" type="text" value="${escapeHtml(r.placeName || '')}" />
+    </label>
+    <label class="field"><span>Adresse</span>
+      <input data-field="renc-prop-address" type="text" value="${escapeHtml(r.address || '')}" />
+    </label>
+    <label class="field"><span>Message</span>
+      <textarea data-field="renc-prop-message" rows="3" placeholder="Message facultatif"></textarea>
+    </label>
+    <button class="hit btn primary block" data-sim="renc-propose-submit:${r.id}" type="button">Envoyer la proposition</button>
+    `,
+    {
+      header: phoneHeader({ title: 'Contre-proposition', chrome: 'form', backTo: 'rencontre-details' }),
+      footer: '',
+    }
+  )
+}
+
+function rencontreMenu() {
+  const r = getRencontre(getOpenRencontreId())
+  if (!r) {
+    return wrap(emptyState('Rencontre indisponible'), {
+      header: phoneHeader({ title: 'Menu', chrome: 'panel', closeIcon: true }),
+      footer: '',
+    })
+  }
+  const org = isOrganizer(r)
+  const pastOrCancelled = r.status === 'cancelled' || temporalBucket(r) === 'passees'
+  let options = ''
+  if (org) {
+    if (r.status === 'draft') {
+      options = `
+        ${sheetOption('Reprendre', { sim: `renc-edit:${r.id}` })}
+        ${sheetOption('Supprimer le brouillon', { sim: `renc-delete-draft:${r.id}`, danger: true })}`
+    } else if (pastOrCancelled) {
+      options = `
+        ${sheetOption('Conversation', { sim: `renc-message:${r.id}` })}
+        ${sheetOption('Retirer de ma liste', { sim: `renc-remove-list:${r.id}` })}`
+    } else {
+      options = `
+        ${sheetOption('Modifier', { sim: `renc-edit:${r.id}` })}
+        ${r.kind === 'collectif' ? sheetOption('Gérer les invités', { go: 'rencontre-guests' }) : ''}
+        ${sheetOption('Conversation', { sim: `renc-message:${r.id}` })}
+        ${sheetOption('Annuler la rencontre', { sim: `renc-cancel:${r.id}`, danger: true })}`
+    }
+  } else {
+    options = `
+      ${sheetOption('Conversation', { sim: `renc-message:${r.id}` })}
+      ${sheetOption('Profil organisateur', { sim: 'renc-stub:profil' })}
+      ${sheetOption('Signaler', { sim: `renc-report:${r.id}`, danger: true })}
+      ${pastOrCancelled ? sheetOption('Retirer de ma liste', { sim: `renc-remove-list:${r.id}` }) : ''}`
+  }
+  return wrap(`${photo(`Fond ${r.title}…`, 'dim')}`, {
+    header: phoneHeader({ title: 'Options', chrome: 'panel', closeIcon: true }),
+    footer: '',
+    overlay: modalShell('Options de la rencontre', options),
+  })
+}
+
 function communautesStub(title) {
   // legacy alias — Groupes/Clubs use communautesList
   if (title === 'Groupes') return communautesList('groupes')
   if (title === 'Clubs') return communautesList('clubs')
-  return communautesRencontres()
+  return mesRencontres()
 }
 
 function enregistrements() {
@@ -7943,7 +8663,49 @@ export const SCREENS = {
     title: 'Mes rencontres',
     side: 'user',
     group: 'Vie locale',
-    render: communautesRencontres,
+    render: mesRencontres,
+  },
+  'mes-rencontres': {
+    title: 'Mes rencontres',
+    side: 'user',
+    group: 'Vie locale',
+    render: mesRencontres,
+  },
+  'rencontre-details': {
+    title: 'Rencontre — Détails',
+    side: 'user',
+    group: 'Vie locale',
+    render: rencontreDetails,
+  },
+  'rencontre-create': {
+    title: 'Créer une rencontre',
+    side: 'user',
+    group: 'Vie locale',
+    render: rencontreCreate,
+  },
+  'rencontre-edit': {
+    title: 'Modifier une rencontre',
+    side: 'user',
+    group: 'Vie locale',
+    render: rencontreEdit,
+  },
+  'rencontre-guests': {
+    title: 'Gérer les invités',
+    side: 'user',
+    group: 'Vie locale',
+    render: rencontreGuests,
+  },
+  'rencontre-propose': {
+    title: 'Contre-proposition',
+    side: 'user',
+    group: 'Vie locale',
+    render: rencontrePropose,
+  },
+  'rencontre-menu': {
+    title: 'Menu rencontre',
+    side: 'user',
+    group: 'Vie locale',
+    render: rencontreMenu,
   },
   'communaute-page': {
     title: 'Communauté',
@@ -8312,7 +9074,18 @@ export const NAV_TREE = {
             { id: 'communaute-create', label: 'Créer' },
           ] },
           { id: 'communautes-clubs', label: 'Clubs' },
-          { id: 'communautes-rencontres', label: 'Mes rencontres (ébauche)' },
+          {
+            id: 'communautes-rencontres',
+            label: 'Mes rencontres',
+            children: [
+              { id: 'rencontre-details', label: 'Détails' },
+              { id: 'rencontre-create', label: 'Créer' },
+              { id: 'rencontre-edit', label: 'Modifier' },
+              { id: 'rencontre-guests', label: 'Invités' },
+              { id: 'rencontre-propose', label: 'Contre-proposition' },
+              { id: 'rencontre-menu', label: 'Menu ⋯' },
+            ],
+          },
           {
             id: 'dir-education',
             label: 'Éducation',
