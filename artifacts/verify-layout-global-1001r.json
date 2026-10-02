@@ -1,0 +1,175 @@
+{
+  "stamp": "1001-r",
+  "base": "http://127.0.0.1:4317",
+  "passed": 29,
+  "failed": 0,
+  "ok": true,
+  "spacingSpot": {
+    "mairie-accueil": {
+      "paddingLeft": 20,
+      "header": "headerH=49"
+    },
+    "sante-pharmacies": {
+      "paddingLeft": 20,
+      "header": "headerH=49"
+    },
+    "evenements-liste": {
+      "paddingLeft": 20,
+      "header": "headerH=49"
+    }
+  },
+  "results": [
+    {
+      "name": "App opens",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Stamp contains 1001-r",
+      "ok": true,
+      "detail": "Wireframe · build 1001-r · layout-global"
+    },
+    {
+      "name": "On #annonce-details",
+      "ok": true,
+      "detail": "#annonce-details"
+    },
+    {
+      "name": "« Annonces similaires » present",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "« Annonces similaires » visible after scroll",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": ".similaires-rail or .h-scroll near similaires clientHeight >= 80",
+      "ok": true,
+      "detail": "{\"found\":true,\"className\":\"h-scroll similaires-rail\",\"clientHeight\":169,\"scrollHeight\":169,\"offsetHeight\":169,\"width\":346,\"top\":785,\"bottom\":954,\"childCount\":3}"
+    },
+    {
+      "name": ".h-scroll under similares not collapsed",
+      "ok": true,
+      "detail": "clientH=169 scrollH=169"
+    },
+    {
+      "name": "Tout voir present",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "NO ⋯ in .phone-header-full (annonce-details)",
+      "ok": true,
+      "detail": "ellipsisBtns=0"
+    },
+    {
+      "name": "Homes present in header (annonce-details)",
+      "ok": true,
+      "detail": "maVille=1 miasin=1"
+    },
+    {
+      "name": "Screenshot similares written",
+      "ok": true,
+      "detail": "/opt/cursor/artifacts/screenshots/1001-r-annonce-details-similaires.png | /cursor/stores/bc-62a66aae-7ddf-4f7d-bfef-8741542e3a40/media/1001-r-annonce-details-similaires.png | /workspace/artifacts/1001-r-annonce-details-similaires.png"
+    },
+    {
+      "name": "Screenshot annonce top written",
+      "ok": true,
+      "detail": "/opt/cursor/artifacts/screenshots/1001-r-annonce-details-top.png | /cursor/stores/bc-62a66aae-7ddf-4f7d-bfef-8741542e3a40/media/1001-r-annonce-details-top.png | /workspace/artifacts/1001-r-annonce-details-top.png"
+    },
+    {
+      "name": "On #mairie-accueil",
+      "ok": true,
+      "detail": "#mairie-accueil"
+    },
+    {
+      "name": ".phone-scroll padding-left ~20 (#mairie-accueil)",
+      "ok": true,
+      "detail": "paddingLeft=20"
+    },
+    {
+      "name": "Header one-line still OK (#mairie-accueil)",
+      "ok": true,
+      "detail": "headerH=49"
+    },
+    {
+      "name": "Homes present (#mairie-accueil)",
+      "ok": true,
+      "detail": "maVille=1 miasin=1"
+    },
+    {
+      "name": "NO ⋯ in full header (#mairie-accueil)",
+      "ok": true,
+      "detail": "ellipsisBtns=0"
+    },
+    {
+      "name": "On #sante-pharmacies",
+      "ok": true,
+      "detail": "#sante-pharmacies"
+    },
+    {
+      "name": ".phone-scroll padding-left ~20 (#sante-pharmacies)",
+      "ok": true,
+      "detail": "paddingLeft=20"
+    },
+    {
+      "name": "Header one-line still OK (#sante-pharmacies)",
+      "ok": true,
+      "detail": "headerH=49"
+    },
+    {
+      "name": "Homes present (#sante-pharmacies)",
+      "ok": true,
+      "detail": "maVille=1 miasin=1"
+    },
+    {
+      "name": "NO ⋯ in full header (#sante-pharmacies)",
+      "ok": true,
+      "detail": "ellipsisBtns=0"
+    },
+    {
+      "name": "On #evenements-liste",
+      "ok": true,
+      "detail": "#evenements-liste"
+    },
+    {
+      "name": ".phone-scroll padding-left ~20 (#evenements-liste)",
+      "ok": true,
+      "detail": "paddingLeft=20"
+    },
+    {
+      "name": "Header one-line still OK (#evenements-liste)",
+      "ok": true,
+      "detail": "headerH=49"
+    },
+    {
+      "name": "Homes present (#evenements-liste)",
+      "ok": true,
+      "detail": "maVille=1 miasin=1"
+    },
+    {
+      "name": "NO ⋯ in full header (#evenements-liste)",
+      "ok": true,
+      "detail": "ellipsisBtns=0"
+    },
+    {
+      "name": "Screenshot mairie spacing written",
+      "ok": true,
+      "detail": "/opt/cursor/artifacts/screenshots/1001-r-mairie-spacing.png | /cursor/stores/bc-62a66aae-7ddf-4f7d-bfef-8741542e3a40/media/1001-r-mairie-spacing.png | /workspace/artifacts/1001-r-mairie-spacing.png"
+    },
+    {
+      "name": "No page errors",
+      "ok": true,
+      "detail": ""
+    }
+  ],
+  "pageErrors": [],
+  "screenshots": [
+    "1001-r-annonce-details-similaires.png",
+    "1001-r-annonce-details-top.png",
+    "1001-r-mairie-spacing.png"
+  ],
+  "at": "2026-10-02T10:36:00.810Z"
+}
