@@ -73,6 +73,40 @@ import {
   getFormStep,
   publicationLabel,
 } from './events-data.js'
+import {
+  listModCases,
+  getModCase,
+  getOpenModCaseId,
+  getModFilter,
+  typeLabel as modTypeLabel,
+  decisionLabel as modDecisionLabel,
+} from './moderation-data.js'
+import {
+  listMotifs,
+  getMotif,
+  listBookings,
+  listUserBookings,
+  listIndispos,
+  getDispoSlots,
+  getRdvPick,
+  getEditMotifId,
+  getAdminRdvTab,
+  statusLabel as rdvStatusLabel,
+  slotsForMayDay,
+  weekdayForMay2026,
+} from './rdv-data.js'
+import {
+  ANN_RUBRIQUES,
+  getRubrique,
+  getFiche,
+  getFicheContext,
+  getAnnuaireRubriqueId,
+  listPharmacieFiches,
+  listAdminPubs,
+  getAdminPub,
+  getPubEditId,
+  pubStateLabel,
+} from './annuaire-data.js'
 
 /** Screen registry: id → { title, group, render(state) } */
 
@@ -420,9 +454,12 @@ function dirUnavailable(title = 'Cette fiche n’est plus disponible') {
 
 function pharmacieDetails(tab = 'infos', contentId = 'dir-pharmacie-centrale') {
   const dir = getDirectory(contentId)
+  const fiche = getFiche(contentId) || getFiche('dir-pharmacie-centrale')
   if (dir && dir.state !== 'published' && !isAdminRole()) {
     return dirUnavailable()
   }
+  const hasPhone = fiche?.hasPhone ?? dir?.phone
+  const hasPlace = fiche?.hasPlace ?? dir?.place
   const tabs = `
     <div class="tabs">
       <button class="hit tab ${tab === 'infos' ? 'on' : ''}" data-go="sante-pharmacie-infos">Informations</button>
@@ -430,16 +467,16 @@ function pharmacieDetails(tab = 'infos', contentId = 'dir-pharmacie-centrale') {
     </div>`
   const infos = `
     <h2 class="sec">Contact</h2>
-    <p class="meta">Tél. · Adresse · Site web</p>
-    ${text('Coordonnées…')}
+    <p class="meta">${fiche?.phone ? `Tél. ${fiche.phone}` : 'Pas de téléphone'}${fiche?.address ? ` · ${fiche.address}` : ''}</p>
     <h2 class="sec">Adresse</h2>
-    ${text('Adresse complète…')}
+    ${text(fiche?.address || 'Adresse non renseignée')}
     ${photo('Carte (emplacement)…', 'map')}
     <h2 class="sec">À propos</h2>
-    ${text('Description…')}
+    ${text(fiche?.description || 'Description…')}
   `
   const horaires = `
     <h2 class="sec">Horaires</h2>
+    <p class="meta">${fiche?.hours || 'Horaires à préciser'}</p>
     ${['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche']
       .map(
         (d) => `
@@ -449,30 +486,31 @@ function pharmacieDetails(tab = 'infos', contentId = 'dir-pharmacie-centrale') {
       </div>`
       )
       .join('')}
-    ${tbd('Horaires manquants éventuels — À préciser')}
   `
   const adminEdit = isAdminRole()
-    ? `<button class="hit btn block outline admin-shortcut" data-go="fiche-annuaire-form" type="button">Modifier cette fiche</button>`
+    ? `<button class="hit btn block outline admin-shortcut" data-sim="fiche-edit:${contentId}" type="button">Modifier cette fiche</button>`
     : ''
   const stateBadge =
     dir && dir.state !== 'published'
       ? `<span class="badge">${dir.state === 'draft' ? 'Brouillon' : 'Non publiée'}</span>`
       : `<span class="badge">Ouvert 24h/24</span>`
+  const actions = `
+    <div class="row-actions">
+      ${hasPlace ? `<button class="hit btn" data-sim="itineraire">Itinéraire</button>` : ''}
+      ${hasPhone ? `<button class="hit btn primary" data-sim="appeler:${escapeAttr(fiche?.phone || '')}">Appeler</button>` : ''}
+    </div>`
   return wrap(
     `
     ${photo('Photo façade…', 'hero')}
     <div class="detail-head">
       <div class="event-title-row">
-        <strong>${dir?.title || 'Pharmacie centrale'}</strong>
+        <strong>${fiche?.title || dir?.title || 'Pharmacie centrale'}</strong>
         <button class="hit icon-btn" data-open-menu="directory" data-content-id="${contentId}" data-menu-parent="sante-pharmacie-infos" title="Plus d’options" aria-label="Plus d’options">⋯</button>
       </div>
       ${stateBadge}
       <p class="meta">Pharmacie · 1,2 km</p>
     </div>
-    <div class="row-actions">
-      <button class="hit btn" data-sim="itineraire">Itinéraire</button>
-      <button class="hit btn primary" data-sim="appeler">Appeler</button>
-    </div>
+    ${actions}
     ${adminEdit}
     ${tabs}
     ${tab === 'infos' ? infos : horaires}
@@ -800,72 +838,94 @@ function mairieMenu() {
   })
 }
 
-const MAIRIE_MOTIFS = [
-  'État civil',
-  'Carte d’identité / Passeport',
-  'Mariage',
-  'Urbanisme / permis',
-  'Logement',
-  'Scolarité',
-  'Audience avec le maire',
-  'Cérémonie / salle',
-  'Démarches sociales',
-  'Autre',
-]
+const MAIRIE_MOTIFS = [] // replaced by rdv-data listMotifs
 
-/** Wireframe: always show one fictional RDV en cours (Annuler hides the block) */
-const MAIRIE_RDV_EN_COURS = {
-  motif: 'Carte d’identité / Passeport',
-  when: '12 juin 2026 · 10:00',
-}
-
-function mairieRdvEnCoursBlock(rdv) {
-  if (!rdv) return ''
+function mairieRdvEnCoursBlock(bookings) {
+  if (!bookings?.length) return ''
   return `
     <section class="rdv-section">
       <h2 class="sec">Rendez-vous en cours</h2>
-      <article class="card rdv-en-cours">
-        <p class="meta">${rdv.when}</p>
-        <p><strong>Motif</strong> · ${rdv.motif}</p>
-        <button class="hit btn block" data-sim="rdv-annuler">Annuler le rendez-vous</button>
-      </article>
+      ${bookings
+        .map((rdv) => {
+          const motif = getMotif(rdv.motifId)
+          return `
+      <article class="card rdv-en-cours" data-rdv-id="${rdv.id}">
+        <p class="meta">${rdv.slotLabel}</p>
+        <p><strong>Motif</strong> · ${motif?.label || rdv.motifId}</p>
+        <div class="row-actions">
+          <button class="hit btn" data-sim="rdv-move:${rdv.id}" type="button">Déplacer</button>
+          <button class="hit btn" data-sim="rdv-annuler:${rdv.id}" type="button">Annuler</button>
+        </div>
+      </article>`
+        })
+        .join('')}
     </section>
   `
 }
 
-function mairieRdvDateSlots() {
+function mairieRdvDateSlots(pick = {}) {
+  const day = pick.day || 27
+  const slots = slotsForMayDay(day)
+  const morning = slots.filter((t) => Number(t.split(':')[0]) < 12)
+  const afternoon = slots.filter((t) => Number(t.split(':')[0]) >= 12)
+  const selectedSlot = pick.slot || morning[0] || afternoon[0] || ''
   return `
     <h2 class="sec">Choisir une date</h2>
     <p class="meta">Mai 2026</p>
     <div class="calendar">
       ${Array.from({ length: 31 }, (_, i) => {
         const d = i + 1
-        const cls = d === 27 ? 'on' : d % 7 === 0 ? 'closed' : ''
-        return `<button class="hit cal-day ${cls}" type="button">${d}</button>`
+        const wd = weekdayForMay2026(d)
+        const closed = wd > 5 || slotsForMayDay(d).length === 0
+        const cls = d === day ? 'on' : closed ? 'closed' : ''
+        return `<button class="hit cal-day ${cls}" type="button" data-sim="rdv-pick-day:${d}">${d}</button>`
       }).join('')}
     </div>
-    <h2 class="sec">Créneaux disponibles — 27 mai</h2>
+    <h2 class="sec">Créneaux disponibles — ${day} mai</h2>
+    ${
+      slots.length
+        ? `
     <p class="meta">MATINÉE</p>
     <div class="chips">
-      ${['09:00', '09:30', '10:00', '11:00']
-        .map((t, i) => `<button class="hit chip ${i === 1 ? 'on' : ''}" type="button">${t}</button>`)
-        .join('')}
+      ${
+        morning.length
+          ? morning
+              .map(
+                (t) =>
+                  `<button class="hit chip ${t === selectedSlot ? 'on' : ''}" type="button" data-sim="rdv-pick-slot:${t}">${t}</button>`
+              )
+              .join('')
+          : '<span class="meta">Aucun</span>'
+      }
     </div>
     <p class="meta">APRÈS-MIDI</p>
     <div class="chips">
-      ${['14:00', '14:30', '15:00', '16:00']
-        .map((t) => `<button class="hit chip" type="button">${t}</button>`)
-        .join('')}
+      ${
+        afternoon.length
+          ? afternoon
+              .map(
+                (t) =>
+                  `<button class="hit chip ${t === selectedSlot ? 'on' : ''}" type="button" data-sim="rdv-pick-slot:${t}">${t}</button>`
+              )
+              .join('')
+          : '<span class="meta">Aucun</span>'
+      }
     </div>
-    <button class="hit btn primary block" data-go="mairie-rdv-suite">Continuer</button>
+    <button class="hit btn primary block" data-go="mairie-rdv-suite">Continuer</button>`
+        : `<p class="meta">Aucun créneau ce jour (week-end ou indisponibilité).</p>`
+    }
   `
 }
 
 function mairieRdv() {
-  const selected = 'Carte d’identité / Passeport'
+  const motifs = listMotifs({ activeOnly: true })
+  const pick = getRdvPick()
+  const selectedId = pick.motifId || motifs[0]?.id
+  const selected = getMotif(selectedId)
+  const mine = listUserBookings('user-rica')
   return wrap(
     `
-    ${mairieRdvEnCoursBlock(MAIRIE_RDV_EN_COURS)}
+    ${mairieRdvEnCoursBlock(mine)}
     <hr class="section-sep" aria-hidden="true" />
     <section class="rdv-section">
       <h2 class="sec">Nouveau rendez-vous</h2>
@@ -873,21 +933,23 @@ function mairieRdv() {
         <span>Motif de rendez-vous</span>
         <div class="motif-select" data-motif-select>
           <button class="hit motif-trigger" type="button" data-motif-toggle aria-expanded="false">
-            <span class="motif-value">${selected}</span>
+            <span class="motif-value" data-motif-id="${selectedId || ''}">${selected?.label || 'Choisir…'}</span>
             <span class="motif-chev" aria-hidden="true">▼</span>
           </button>
           <div class="motif-dropdown" hidden>
-            ${MAIRIE_MOTIFS.map(
-              (m) => `
-            <button class="hit motif-option ${m === selected ? 'on' : ''}" type="button" data-motif-pick="${m}">
-              ${m}
+            ${motifs
+              .map(
+                (m) => `
+            <button class="hit motif-option ${m.id === selectedId ? 'on' : ''}" type="button" data-motif-pick="${m.id}" data-motif-label="${m.label}">
+              ${m.label} · ${m.duration} min
             </button>`
-            ).join('')}
+              )
+              .join('')}
           </div>
         </div>
       </label>
-      <p class="meta">Un seul motif par rendez-vous</p>
-      ${mairieRdvDateSlots()}
+      <p class="meta">Un seul motif par rendez-vous · durée ${selected?.duration || '—'} min</p>
+      ${mairieRdvDateSlots(pick)}
     </section>
     `,
     {
@@ -898,24 +960,28 @@ function mairieRdv() {
 }
 
 function mairieRdvCreneau() {
-  // Date & créneaux live on the RDV screen (below motif dropdown)
   return mairieRdv()
 }
 
 function mairieRdvSuite() {
+  const pick = getRdvPick()
+  const motifs = listMotifs({ activeOnly: true })
+  const motif = getMotif(pick.motifId) || motifs[0]
+  const day = pick.day || 27
+  const slot = pick.slot || '09:30'
   return wrap(
     `
     <h2 class="sec">Confirmation RDV</h2>
     <article class="card">
       <strong>Récapitulatif</strong>
-      <p><strong>Motif</strong> · Carte d’identité / Passeport</p>
-      <p><strong>Date</strong> · 27 mai 2026</p>
-      <p><strong>Créneau</strong> · 09:30</p>
-      <p class="meta">Un motif par rendez-vous · valeurs illustratives</p>
+      <p><strong>Motif</strong> · ${motif?.label || '—'}</p>
+      <p><strong>Date</strong> · ${day} mai 2026</p>
+      <p><strong>Créneau</strong> · ${slot}</p>
+      <p class="meta">Durée ${motif?.duration || '—'} min · Mairie de Kapan</p>
     </article>
     <div class="row-actions">
       <button class="hit btn" data-go="mairie-rdv">Retour</button>
-      <button class="hit btn primary" data-sim="rdv">Confirmer (simulé)</button>
+      <button class="hit btn primary" data-sim="rdv-confirm" type="button">Confirmer</button>
     </div>
     `,
     {
@@ -1167,15 +1233,19 @@ function mairieGererPage() {
 }
 
 function mairiePublicationForm({ mode = 'create' } = {}) {
-  const isEdit = mode === 'edit'
-  const title = isEdit ? 'Modifier la publication' : 'Nouvelle publication'
-  const backTo = isEdit ? 'mairie-accueil' : 'mairie-accueil'
+  const editId = getPubEditId()
+  const pub = editId ? getAdminPub(editId) : null
+  const isEdit = mode === 'edit' || !!pub?.title
+  const titleVal = pub?.title || ''
+  const bodyVal = pub?.body || ''
+  const backTo = 'admin-mairie'
+  const formTitle = isEdit && titleVal ? 'Modifier la publication' : 'Nouvelle publication'
   return wrap(
     `
-    <div class="form-card">
-      <p class="meta">Mairie de Kapan · ${isEdit ? 'édition' : 'création'}</p>
-      <label class="field"><span>Titre</span><input type="text" placeholder="Titre de la publication…" value="${isEdit ? 'Horaires d’accueil' : ''}" /></label>
-      <label class="field"><span>Corps</span><textarea rows="5" placeholder="Corps de la publication…">${isEdit ? 'Rappel — démarches en mairie et horaires d’accueil.' : ''}</textarea></label>
+    <div class="form-card" data-pub-id="${pub?.id || ''}">
+      <p class="meta">Mairie de Kapan · ${isEdit && titleVal ? 'édition' : 'création'}${pub?.id ? ` · ${pub.id}` : ''}</p>
+      <label class="field"><span>Titre</span><input type="text" placeholder="Titre de la publication…" value="${escapeAttr(titleVal)}" data-field="pub-title" /></label>
+      <label class="field"><span>Corps</span><textarea rows="5" placeholder="Corps de la publication…" data-field="pub-body">${escapeHtml(bodyVal)}</textarea></label>
       <h2 class="sec">Médias</h2>
       <div class="photo-grid media-added">
         ${photo('Photo…')}${photo('Photo…')}
@@ -1188,16 +1258,16 @@ function mairiePublicationForm({ mode = 'create' } = {}) {
         <span>Activer les commentaires</span>
         <span class="toggle on" aria-hidden="true"></span>
       </div>
-      ${lifecycleBar('brouillon')}
+      ${lifecycleBar(pub?.state === 'published' ? 'publie' : 'brouillon')}
       <div class="row-actions">
-        <button class="hit btn" data-sim="brouillon" type="button">Brouillon</button>
-        <button class="hit btn" data-go="mairie-pub-preview" type="button">Prévisualiser</button>
-        <button class="hit btn primary" data-sim="publier" type="button">Publier</button>
+        <button class="hit btn" data-sim="pub-save-draft" type="button">Brouillon</button>
+        <button class="hit btn" data-sim="pub-preview" type="button">Prévisualiser</button>
+        <button class="hit btn primary" data-sim="pub-publish" type="button">Publier</button>
       </div>
     </div>
     `,
     {
-      header: phoneHeader({ title, backTo, chrome: 'form' }),
+      header: phoneHeader({ title: formTitle, backTo, chrome: 'form' }),
       footer: '',
     }
   )
@@ -1212,21 +1282,22 @@ function mairiePubEdit() {
 }
 
 function mairiePubPreview() {
+  const pub = getAdminPub(getPubEditId())
   return wrap(
     `
     <article class="card post-card">
       <div class="pub-title-row">
-        <strong class="block-title">Horaires d’accueil</strong>
+        <strong class="block-title">${pub?.title || 'Sans titre'}</strong>
         <span class="badge">Aperçu</span>
       </div>
       <p class="meta">Mairie de Kapan</p>
-      ${text('Rappel — démarches en mairie et horaires d’accueil.')}
+      ${text(pub?.body || 'Corps…')}
       ${photo('Média publication…', 'wide')}
     </article>
     ${lifecycleBar('preview')}
     <div class="row-actions">
       <button class="hit btn" data-go="mairie-pub-edit" type="button">Retour brouillon</button>
-      <button class="hit btn primary" data-sim="publier" type="button">Publier</button>
+      <button class="hit btn primary" data-sim="pub-publish" type="button">Publier</button>
     </div>
     `,
     {
@@ -2151,6 +2222,10 @@ function evenementForm() {
   const pending = e?.publication === 'pending'
   const title = e?.title || ''
   const backTo = admin && !e?.origin?.includes?.('citizen') ? 'admin-evenements' : 'evenements-liste'
+  const orgaLabel =
+    e?.orgLabel || (municipal || (admin && e?.origin !== 'citizen') ? 'Mairie de Kapan' : 'Rica')
+  const isFree = e?.isFree !== false && (!e?.price || e.price === 'Gratuit')
+  const capacityUnlimited = e?.capacity == null
 
   const stepChip = (n, label) =>
     `<button class="hit chip ${step === n ? 'on' : ''}" data-sim="event-form-step:${n}" type="button">${n} · ${label}</button>`
@@ -2159,7 +2234,8 @@ function evenementForm() {
   if (step === 1) {
     fields = `
       <label class="field"><span>Titre</span><input type="text" value="${escapeAttr(title)}" placeholder="Titre de l’événement" data-field="title" /></label>
-      <label class="field"><span>Description</span><textarea rows="4" placeholder="Décrivez l’événement…" data-field="description">${escapeHtml(e?.description || '')}</textarea></label>
+      <label class="field"><span>Organisation</span><input type="text" value="${escapeAttr(orgaLabel)}" readonly data-field="orgLabel" /></label>
+      <label class="field"><span>Ville</span><input type="text" value="${escapeAttr(e?.ville || 'Kapan')}" readonly data-field="ville" /></label>
       <label class="field"><span>Catégorie</span>
         <select data-field="category">
           ${['Culture', 'Artistique / Créatif', 'Social / Lifestyle', 'Institutionnel', 'Sport']
@@ -2170,32 +2246,66 @@ function evenementForm() {
             .join('')}
         </select>
       </label>
+      <label class="field"><span>Description</span><textarea rows="4" placeholder="Décrivez l’événement…" data-field="description">${escapeHtml(e?.description || '')}</textarea></label>
       <label class="field"><span>Photo</span>
         <button class="hit btn block outline" data-sim="upload" type="button">Ajouter une photo (simulé)</button>
       </label>
     `
   } else if (step === 2) {
     fields = `
-      <label class="field"><span>Date</span><input type="text" value="${escapeAttr(e?.dateLabel || '')}" placeholder="ex. Vendredi 16 juin 2026" data-field="dateLabel" /></label>
-      <label class="field"><span>Heure</span><input type="text" value="${escapeAttr(e?.time || '')}" placeholder="15:30" data-field="time" /></label>
+      <label class="field"><span>Date début</span><input type="text" value="${escapeAttr(e?.dateLabel || '')}" placeholder="ex. Vendredi 16 juin 2026" data-field="dateLabel" /></label>
+      <label class="field"><span>Date fin (optionnel)</span><input type="text" value="${escapeAttr(e?.dateEndLabel || '')}" placeholder="ex. Dimanche 17 juin 2026" data-field="dateEndLabel" /></label>
+      <label class="field"><span>Heure début</span><input type="text" value="${escapeAttr(e?.time || '')}" placeholder="15:30" data-field="time" /></label>
+      <label class="field"><span>Heure fin</span><input type="text" value="${escapeAttr(e?.timeEnd || '')}" placeholder="17:30" data-field="timeEnd" /></label>
       <label class="field"><span>Lieu</span><input type="text" value="${escapeAttr(e?.lieu || '')}" placeholder="Lieu" data-field="lieu" /></label>
-      <label class="field"><span>Prix</span><input type="text" value="${escapeAttr(e?.price || 'Gratuit')}" placeholder="Gratuit / 20 €" data-field="price" /></label>
+      <label class="field"><span>Prix</span>
+        <select data-field="priceMode">
+          <option value="free" ${isFree ? 'selected' : ''}>Gratuit</option>
+          <option value="paid" ${!isFree ? 'selected' : ''}>Montant</option>
+        </select>
+      </label>
+      <label class="field"><span>Montant (si payant)</span><input type="text" value="${escapeAttr(!isFree ? e?.price || '' : '')}" placeholder="ex. 20 €" data-field="priceAmount" ${isFree ? 'disabled' : ''} /></label>
     `
   } else {
     fields = `
       <label class="field"><span>Mode d’inscription</span>
         <select data-field="inscriptionMode">
           <option value="free" ${e?.inscriptionMode === 'free' ? 'selected' : ''}>Libre (sans inscription)</option>
-          <option value="immediate" ${e?.inscriptionMode === 'immediate' ? 'selected' : ''}>Inscription immédiate</option>
+          <option value="immediate" ${!e?.inscriptionMode || e?.inscriptionMode === 'immediate' ? 'selected' : ''}>Inscription immédiate</option>
           <option value="validation" ${e?.inscriptionMode === 'validation' ? 'selected' : ''}>À valider par l’orga</option>
         </select>
       </label>
-      <label class="field"><span>Capacité (vide = illimité)</span><input type="text" value="${e?.capacity != null ? e.capacity : ''}" placeholder="ex. 20" data-field="capacity" /></label>
-      <p class="meta">Note : une date limite d’inscription pourra être ajoutée plus tard.</p>
+      <label class="field"><span>Capacité</span>
+        <select data-field="capacityMode">
+          <option value="limited" ${!capacityUnlimited ? 'selected' : ''}>Nombre limité</option>
+          <option value="unlimited" ${capacityUnlimited ? 'selected' : ''}>Illimité</option>
+        </select>
+      </label>
+      <label class="field"><span>Nombre de places</span><input type="number" min="1" value="${e?.capacity != null ? e.capacity : ''}" placeholder="ex. 20" data-field="capacity" ${capacityUnlimited ? 'disabled' : ''} /></label>
+      <label class="field"><span>Date limite d’inscription</span><input type="text" value="${escapeAttr(e?.inscriptionDeadline || '')}" placeholder="ex. Vendredi 10 juin 2026" data-field="inscriptionDeadline" /></label>
+      <label class="field"><span>Conditions</span><textarea rows="3" placeholder="Conditions de participation…" data-field="conditions">${escapeHtml(e?.conditions || '')}</textarea></label>
     `
   }
 
-  const habitantCtas = `
+  const navSteps =
+    step < 3
+      ? `
+    <div class="row-actions form-step-nav">
+      ${
+        step > 1
+          ? `<button class="hit btn" data-sim="event-form-prev" type="button">Précédent</button>`
+          : `<span></span>`
+      }
+      <button class="hit btn primary" data-sim="event-form-next" type="button">Suivant</button>
+    </div>`
+      : `
+    <div class="row-actions form-step-nav">
+      <button class="hit btn" data-sim="event-form-prev" type="button">Précédent</button>
+    </div>`
+
+  const habitantCtas =
+    step === 3
+      ? `
     <p class="meta">Il sera visible après validation par la mairie.</p>
     <div class="row-actions">
       <button class="hit btn" data-sim="event-save-draft" type="button">Enregistrer brouillon</button>
@@ -2208,13 +2318,17 @@ function evenementForm() {
         : ''
     }
   `
-  const adminCtas = `
+      : ''
+  const adminCtas =
+    step === 3
+      ? `
     <div class="row-actions">
       <button class="hit btn" data-sim="event-save-draft" type="button">Brouillon</button>
       <button class="hit btn" data-sim="event-preview" type="button">Prévisualiser</button>
       <button class="hit btn primary" data-sim="event-publish" type="button">Publier</button>
     </div>
   `
+      : ''
 
   return wrap(
     `
@@ -2227,6 +2341,7 @@ function evenementForm() {
         ${stepChip(3, 'Participation')}
       </div>
       ${fields}
+      ${navSteps}
       ${admin && e?.origin !== 'citizen' ? adminCtas : habitantCtas}
     </div>
     `,
@@ -3070,42 +3185,55 @@ function vieLocaleHub() {
  * Fiche détail — Infos / Horaires
  * noHours: Nature / Activités → « Pas d’horaire d’ouverture » (ne pas inventer)
  */
-function dirFiche(tab = 'infos', { title = 'Fiche détail…', category = 'Catégorie', noHours = false, backTo = 'vie-locale-hub', idInfos = 'dir-fiche', idHoraires = 'dir-fiche-horaires' } = {}) {
+function dirFiche(tab = 'infos', { title = 'Fiche détail…', category = 'Catégorie', noHours = false, backTo = 'vie-locale-hub', idInfos = 'dir-fiche', idHoraires = 'dir-fiche-horaires', ficheId = null } = {}) {
+  const fiche = ficheId ? getFiche(ficheId) : null
+  const displayTitle = fiche?.title || title
+  const address = fiche?.address || '12 rue exemple, Kapan'
+  const phone = fiche?.phone || ''
+  const hours = fiche?.hours || (noHours ? '' : '08:00 – 18:00')
+  const desc = fiche?.description || `Présentation de ${displayTitle}.`
+  const hasPhone = fiche ? fiche.hasPhone && !!phone : !!phone
+  const hasPlace = fiche ? fiche.hasPlace : true
+
   const statusBox = noHours
     ? `<div class="notice"><strong>Pas d’horaire d’ouverture</strong>${text('À vérifier sur place')}</div>`
-    : `<div class="notice"><strong>Ouvert</strong>${text('Aujourd’hui : horaires…')}</div>`
+    : `<div class="notice"><strong>Ouvert</strong>${text(hours ? `Aujourd’hui : ${hours}` : 'Horaires…')}</div>`
 
   const horairesBody = noHours
     ? `<h2 class="sec">Horaires d’ouverture</h2>
        <div class="notice"><strong>Pas d’horaire d’ouverture exact</strong>${text('À vérifier sur place')}</div>`
     : `<h2 class="sec">Horaires d’ouverture</h2>
+       <p class="meta">${hours || 'Horaires à préciser'}</p>
        ${['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche']
          .map(
            (d) => `
          <div class="row-link static">
            <span>${d}</span>
-           <span class="meta">${d === 'Dimanche' ? 'Fermé' : '08:00 – …'}</span>
+           <span class="meta">${d === 'Dimanche' ? 'Fermé' : hours || '08:00 – …'}</span>
          </div>`
          )
          .join('')}`
 
   const adminEdit = isAdminRole()
-    ? `<button class="hit btn block outline admin-shortcut" data-go="fiche-annuaire-form" type="button">Modifier cette fiche</button>`
+    ? `<button class="hit btn block outline admin-shortcut" data-sim="fiche-edit:${ficheId || 'new'}" type="button">Modifier cette fiche</button>`
     : ''
+
+  const actions = `
+    <div class="row-actions">
+      ${hasPlace ? `<button class="hit btn" data-sim="itineraire">Itinéraire</button>` : ''}
+      ${hasPhone ? `<button class="hit btn primary" data-sim="appeler:${escapeAttr(phone)}">Appeler</button>` : ''}
+    </div>`
 
   return wrap(
     `
     ${photo('Photo…', 'hero')}
     <div class="detail-head">
-      <strong>${title}</strong>
+      <strong>${displayTitle}</strong>
       ${noHours ? '' : '<span class="badge">Ouvert</span>'}
       <p class="meta">${category} · distance…</p>
     </div>
     ${statusBox}
-    <div class="row-actions">
-      <button class="hit btn" data-sim="itineraire">Itinéraire</button>
-      <button class="hit btn primary" data-sim="appeler">Appeler</button>
-    </div>
+    ${actions}
     ${adminEdit}
     <div class="tabs">
       <button class="hit tab ${tab === 'infos' ? 'on' : ''}" data-go="${idInfos}">Informations</button>
@@ -3113,7 +3241,13 @@ function dirFiche(tab = 'infos', { title = 'Fiche détail…', category = 'Caté
     </div>
     ${
       tab === 'infos'
-        ? `${text('Contact / adresse / à propos…')}${photo('Carte…', 'map')}`
+        ? `<h2 class="sec">Contact</h2>
+           <p class="meta">${phone ? `Tél. ${phone}` : 'Pas de téléphone'} · ${address}</p>
+           <h2 class="sec">Adresse</h2>
+           ${text(address)}
+           <h2 class="sec">À propos</h2>
+           ${text(desc)}
+           ${photo('Carte…', 'map')}`
         : horairesBody
     }
     `,
@@ -3124,38 +3258,56 @@ function dirFiche(tab = 'infos', { title = 'Fiche détail…', category = 'Caté
   )
 }
 
-function ficheAnnuaireForm({ title = 'Pharmacie centrale' } = {}) {
+function ficheAnnuaireForm() {
+  const ctx = getFicheContext()
+  const isCreate = !ctx || ctx.mode === 'create' || !ctx.id
+  const fiche = !isCreate && ctx?.id ? getFiche(ctx.id) : null
+  const name = isCreate ? '' : fiche?.title || ctx?.title || ''
+  const address = isCreate ? '' : fiche?.address || ''
+  const phone = isCreate ? '' : fiche?.phone || ''
+  const hours = isCreate ? '' : fiche?.hours || ''
+  const desc = isCreate ? '' : fiche?.description || ''
+  const cat = fiche?.sousCat || ctx?.category || 'Santé / Pharmacies'
+  const backTo = ctx?.backTo || 'admin-annuaire-rubrique'
   return wrap(
     `
-    <div class="form-card">
-      <h2 class="sec">Fiche annuaire</h2>
-      <p class="meta">${title} · formulaire partagé</p>
-      <label class="field"><span>Nom</span><input type="text" value="${title}" /></label>
+    <div class="form-card" data-fiche-id="${fiche?.id || ''}">
+      <h2 class="sec">${isCreate ? 'Nouvelle fiche' : 'Modifier la fiche'}</h2>
+      <p class="meta">${isCreate ? 'Création · champs vides' : `${name} · édition`} · formulaire partagé</p>
+      <label class="field"><span>Nom</span><input type="text" value="${escapeAttr(name)}" placeholder="Nom de la fiche" data-field="fiche-name" /></label>
       <label class="field"><span>Catégorie</span>
-        <select><option>Santé / Pharmacies</option><option>Tourisme</option><option>Éducation</option></select>
+        <select data-field="fiche-category">
+          ${['Santé / Pharmacies', 'Éducation', 'Tourisme', 'Économie', 'Associations', 'Restaurants', 'Transports', 'Autre']
+            .map((c) => `<option ${c === cat || c.includes(cat) ? 'selected' : ''}>${c}</option>`)
+            .join('')}
+        </select>
       </label>
-      <label class="field"><span>Adresse</span><input type="text" placeholder="Adresse…" value="Centre-ville, Kapan" /></label>
-      <label class="field"><span>Téléphone</span><input type="text" placeholder="Tél…" value="+374 …" /></label>
-      <label class="field"><span>Horaires</span><input type="text" placeholder="Horaires…" value="08:00 – 20:00" /></label>
-      <label class="field"><span>Description</span><textarea rows="3" placeholder="Description…"></textarea></label>
+      <label class="field"><span>Adresse</span><input type="text" placeholder="Adresse…" value="${escapeAttr(address)}" data-field="fiche-address" /></label>
+      <label class="field"><span>Téléphone</span><input type="text" placeholder="Tél…" value="${escapeAttr(phone)}" data-field="fiche-phone" /></label>
+      <label class="field"><span>Horaires</span><input type="text" placeholder="Horaires…" value="${escapeAttr(hours)}" data-field="fiche-hours" /></label>
+      <label class="field"><span>Description</span><textarea rows="3" placeholder="Description…" data-field="fiche-desc">${escapeHtml(desc)}</textarea></label>
       <div class="field">
         <span>Photo</span>
         ${photo('Photo fiche…')}
         <button class="hit btn" data-sim="upload" type="button">Ajouter photo (simulé)</button>
       </div>
       <label class="field"><span>Statut</span>
-        <select><option>Brouillon</option><option selected>Publié</option></select>
+        <select data-field="fiche-status"><option>Brouillon</option><option ${!isCreate ? 'selected' : ''}>Publié</option></select>
       </label>
       ${lifecycleBar('brouillon')}
       <div class="row-actions">
-        <button class="hit btn" data-sim="brouillon" type="button">Brouillon</button>
-        <button class="hit btn" data-go="sante-pharmacie-infos" type="button">Prévisualiser</button>
-        <button class="hit btn primary" data-sim="publier" type="button">Publier</button>
+        <button class="hit btn" data-sim="fiche-save-draft" type="button">Brouillon</button>
+        <button class="hit btn" data-sim="fiche-preview" type="button">Prévisualiser</button>
+        <button class="hit btn primary" data-sim="fiche-publish" type="button">Publier</button>
       </div>
     </div>
     `,
     {
-      header: phoneHeader({ title: 'Modifier la fiche', backTo: 'sante-pharmacie-infos', chrome: 'form' }),
+      header: phoneHeader({
+        title: isCreate ? 'Nouvelle fiche' : 'Modifier la fiche',
+        backTo,
+        chrome: 'form',
+      }),
       footer: '',
     }
   )
@@ -3775,17 +3927,18 @@ function adminHome() {
 }
 
 function adminMairie() {
+  const pubs = listAdminPubs()
   return wrap(
     `
     <h2 class="sec">Ma mairie</h2>
     <button class="hit btn primary block" data-go="mairie-gerer-page" type="button">Gérer la page</button>
     <h2 class="sec">Publications</h2>
-    <button class="hit btn block" data-go="mairie-nouvelle-publication" type="button">+ Créer une publication</button>
-    ${['Horaires d’accueil — brouillon', 'Routes — publié', 'Conseil municipal — archivé']
+    <button class="hit btn block" data-sim="pub-create" type="button">+ Créer une publication</button>
+    ${pubs
       .map(
-        (t) => `
-      <button class="hit row-link" data-go="mairie-pub-edit" type="button">
-        <span><strong>${t}</strong><br/><span class="meta">Mairie de Kapan</span></span>
+        (p) => `
+      <button class="hit row-link" data-sim="pub-edit:${p.id}" type="button">
+        <span><strong>${p.title || 'Sans titre'}</strong><br/><span class="meta">Mairie de Kapan · ${pubStateLabel(p.state)}</span></span>
         <span>›</span>
       </button>`
       )
@@ -3841,8 +3994,8 @@ function evenementsAValider() {
         ${text(e.description || '')}
         <div class="row-actions">
           <button class="hit btn primary" data-sim="event-approve:${e.id}" type="button">Approuver</button>
-          <button class="hit btn" data-sim="event-correct:${e.id}" type="button">Demander corrections</button>
-          <button class="hit btn outline" data-sim="event-refuse:${e.id}" type="button">Refuser</button>
+          <button class="hit btn" data-sim="event-correct-ask:${e.id}" type="button">Demander corrections</button>
+          <button class="hit btn outline" data-sim="event-refuse-ask:${e.id}" type="button">Refuser</button>
         </div>
       </article>`
             )
@@ -3852,6 +4005,31 @@ function evenementsAValider() {
     `,
     {
       header: phoneHeader({ title: 'À valider', backTo: 'admin-evenements' }),
+    }
+  )
+}
+
+function evenementValidationMotif({ mode = 'refuse', eventId } = {}) {
+  const e = getEventFull(eventId)
+  const title = mode === 'refuse' ? 'Refuser l’événement' : 'Demander des corrections'
+  const sim = mode === 'refuse' ? `event-refuse-confirm:${eventId}` : `event-correct-confirm:${eventId}`
+  return wrap(
+    `
+    <div class="form-card">
+      <h2 class="sec">${title}</h2>
+      <p class="meta">${e?.title || eventId} · ${e?.orgLabel || 'Habitant'}</p>
+      <label class="field"><span>Motif (obligatoire)</span>
+        <textarea rows="4" placeholder="Indiquez le motif…" data-field="motif"></textarea>
+      </label>
+      <div class="row-actions">
+        <button class="hit btn" data-go="evenements-a-valider" type="button">Annuler</button>
+        <button class="hit btn primary" data-sim="${sim}" type="button">Confirmer</button>
+      </div>
+    </div>
+    `,
+    {
+      header: phoneHeader({ title: 'Motif', backTo: 'evenements-a-valider', chrome: 'form' }),
+      footer: '',
     }
   )
 }
@@ -3939,34 +4117,23 @@ function adminOffreForm() {
 }
 
 function adminAnnuaires() {
-  const rubriques = [
-    { label: 'Santé', go: 'admin-annuaire-sante', meta: 'Pharmacies, hôpitaux…' },
-    { label: 'Éducation', go: 'admin-annuaire-rubrique', meta: 'Écoles, formations…' },
-    { label: 'Tourisme', go: 'admin-annuaire-rubrique', meta: 'Patrimoine, nature…' },
-    { label: 'Économie', go: 'admin-annuaire-rubrique', meta: 'Entreprises, commerces…' },
-    { label: 'Cinéma & Théâtres', go: 'admin-annuaire-rubrique', meta: 'Salles, spectacles…' },
-    { label: 'Aide sociale', go: 'admin-annuaire-rubrique', meta: 'Services sociaux…' },
-    { label: 'Associations', go: 'admin-annuaire-rubrique', meta: 'Clubs, collectifs…' },
-    { label: 'Banques & Assurances', go: 'admin-annuaire-rubrique', meta: 'Agences…' },
-    { label: 'Restaurants', go: 'admin-annuaire-rubrique', meta: 'Restauration…' },
-    { label: 'Transports', go: 'admin-annuaire-rubrique', meta: 'Gares, lignes…' },
-    { label: 'Bibliothèque', go: 'admin-annuaire-rubrique', meta: 'Médiathèques…' },
-    { label: 'Permanences', go: 'admin-annuaire-rubrique', meta: 'Guichets…' },
-    { label: 'Sécurité', go: 'admin-annuaire-rubrique', meta: 'Commissariats…' },
-    { label: 'Patrimoine', go: 'admin-annuaire-rubrique', meta: 'Sites…' },
-  ]
   return wrap(
     `
     <h2 class="sec">Annuaires · Vie locale</h2>
     <p class="meta">Gestion admin de toutes les rubriques (≠ hub public)</p>
-    ${rubriques
-      .map(
-        (r) => `
-    <button class="hit row-link" data-go="${r.go}" type="button">
+    ${ANN_RUBRIQUES.map((r) => {
+      const go = r.id === 'sante' ? 'admin-annuaire-sante' : 'admin-annuaire-rubrique'
+      if (r.id === 'sante') {
+        return `
+    <button class="hit row-link" data-go="admin-annuaire-sante" type="button">
       <span><strong>${r.label}</strong><br/><span class="meta">${r.meta}</span></span><span>›</span>
     </button>`
-      )
-      .join('')}
+      }
+      return `
+    <button class="hit row-link" data-sim="annuaire-rubrique:${r.id}" type="button">
+      <span><strong>${r.label}</strong><br/><span class="meta">${r.meta}</span></span><span>›</span>
+    </button>`
+    }).join('')}
     <div class="card" style="margin-top:12px">
       <strong>Autres rubriques</strong>
       <p class="meta">Note de gestion admin : ajouter / retirer une rubrique Vie locale se fait ici (prototype). Météo et Urgences restent hors annuaire.</p>
@@ -3979,17 +4146,35 @@ function adminAnnuaires() {
 }
 
 function adminAnnuaireRubrique() {
+  const rid = getAnnuaireRubriqueId()
+  const rub = getRubrique(rid) || getRubrique('education')
   return wrap(
     `
-    <h2 class="sec">Rubrique annuaire</h2>
-    <p class="meta">Liste admin (stub) · même formulaire fiche que Santé</p>
-    <button class="hit btn primary block" data-go="admin-fiche-form" type="button">+ Nouvelle fiche</button>
-    <button class="hit row-link" data-go="admin-fiche-form" type="button">
-      <span><strong>Fiche exemple</strong><br/><span class="meta">Brouillon</span></span><span>›</span>
-    </button>
+    <h2 class="sec">${rub.label}</h2>
+    <p class="meta">Sous-catégories · fiches demo · gestion admin</p>
+    <h2 class="sec">Sous-catégories</h2>
+    ${(rub.sousCats || [])
+      .map(
+        (s) => `
+    <div class="row-link static">
+      <span><strong>${s.label}</strong></span>
+      <span class="meta">sous-cat</span>
+    </div>`
+      )
+      .join('')}
+    <h2 class="sec">Fiches</h2>
+    <button class="hit btn primary block" data-sim="fiche-create:${rub.id}" type="button">+ Nouvelle fiche</button>
+    ${(rub.fiches || [])
+      .map(
+        (f) => `
+    <button class="hit row-link" data-sim="fiche-edit:${f.id}" type="button">
+      <span><strong>${f.title}</strong><br/><span class="meta">${f.sousCat} · ${f.status}</span></span><span>›</span>
+    </button>`
+      )
+      .join('') || emptyState('Aucune fiche')}
     `,
     {
-      header: phoneHeader({ title: 'Rubrique', backTo: 'admin-annuaires' }),
+      header: phoneHeader({ title: rub.label, backTo: 'admin-annuaires' }),
     }
   )
 }
@@ -4012,15 +4197,16 @@ function adminAnnuaireSante() {
 }
 
 function adminAnnuairePharmacies() {
+  const fiches = listPharmacieFiches()
   return wrap(
     `
     <h2 class="sec">Pharmacies</h2>
-    <button class="hit btn primary block" data-go="fiche-annuaire-form" type="button">+ Nouvelle fiche</button>
-    ${['Pharmacie centrale', 'Pharmacie du Parc', 'Pharmacie de nuit']
+    <button class="hit btn primary block" data-sim="fiche-create:sante" type="button">+ Nouvelle fiche</button>
+    ${fiches
       .map(
-        (t) => `
-      <button class="hit row-link" data-go="fiche-annuaire-form" type="button">
-        <span><strong>${t}</strong><br/><span class="meta">Publié</span></span><span>›</span>
+        (f) => `
+      <button class="hit row-link" data-sim="fiche-edit:${f.id}" type="button">
+        <span><strong>${f.title}</strong><br/><span class="meta">${f.status}</span></span><span>›</span>
       </button>`
       )
       .join('')}
@@ -4032,17 +4218,115 @@ function adminAnnuairePharmacies() {
 }
 
 function adminRdv() {
+  const tab = getAdminRdvTab()
+  const tabs = [
+    { id: 'rdv', label: 'RDV' },
+    { id: 'motifs', label: 'Motifs' },
+    { id: 'dispos', label: 'Dispos' },
+    { id: 'indispos', label: 'Indispos' },
+  ]
+  const tabBar = `
+    <div class="tabs">
+      ${tabs
+        .map(
+          (t) =>
+            `<button class="hit tab ${tab === t.id ? 'on' : ''}" data-sim="rdv-admin-tab:${t.id}" type="button">${t.label}</button>`
+        )
+        .join('')}
+    </div>`
+
+  let body = ''
+  if (tab === 'motifs') {
+    const motifs = listMotifs()
+    const editId = getEditMotifId()
+    const edit = editId ? getMotif(editId) : null
+    body = `
+      <button class="hit btn primary block" data-sim="rdv-motif-create" type="button">+ Nouveau motif</button>
+      ${motifs
+        .map(
+          (m) => `
+        <button class="hit row-link" data-sim="rdv-motif-edit:${m.id}" type="button">
+          <span><strong>${m.label}</strong><br/><span class="meta">${m.duration} min · ${m.active ? 'Actif' : 'Inactif'}</span></span>
+          <span>›</span>
+        </button>`
+        )
+        .join('')}
+      ${
+        edit
+          ? `
+      <div class="form-card" style="margin-top:12px">
+        <h2 class="sec">Modifier le motif</h2>
+        <label class="field"><span>Libellé</span><input type="text" value="${escapeAttr(edit.label)}" data-field="motif-label" /></label>
+        <label class="field"><span>Durée (min)</span><input type="number" value="${edit.duration}" data-field="motif-duration" /></label>
+        <label class="field"><span>Actif</span>
+          <select data-field="motif-active"><option value="1" ${edit.active ? 'selected' : ''}>Oui</option><option value="0" ${!edit.active ? 'selected' : ''}>Non</option></select>
+        </label>
+        <div class="row-actions">
+          <button class="hit btn" data-sim="rdv-motif-deactivate:${edit.id}" type="button">Désactiver</button>
+          <button class="hit btn primary" data-sim="rdv-motif-save:${edit.id}" type="button">Enregistrer</button>
+        </div>
+      </div>`
+          : ''
+      }`
+  } else if (tab === 'dispos') {
+    const days = [
+      [1, 'Lundi'],
+      [2, 'Mardi'],
+      [3, 'Mercredi'],
+      [4, 'Jeudi'],
+      [5, 'Vendredi'],
+    ]
+    body = `
+      <p class="meta">Créneaux par jour · modifier sans effacer les RDV pris</p>
+      ${days
+        .map(([wd, label]) => {
+          const slots = getDispoSlots(wd)
+          return `
+        <article class="card">
+          <strong>${label}</strong>
+          <p class="meta">${slots.join(' · ') || 'Aucun'}</p>
+          <button class="hit btn" data-sim="rdv-dispo-edit:${wd}" type="button">Modifier les créneaux</button>
+        </article>`
+        })
+        .join('')}`
+  } else if (tab === 'indispos') {
+    body = `
+      <p class="meta">Jours / plages indisponibles</p>
+      ${listIndispos()
+        .map(
+          (i) => `
+        <div class="row-link static">
+          <span><strong>${i.date}</strong><br/><span class="meta">${i.label}</span></span>
+        </div>`
+        )
+        .join('')}`
+  } else {
+    const bookings = listBookings()
+    body = bookings
+      .map((b) => {
+        const motif = getMotif(b.motifId)
+        return `
+      <article class="card" data-rdv-id="${b.id}">
+        <p class="meta">${b.slotLabel} · ${rdvStatusLabel(b.status)}</p>
+        <p><strong>Motif</strong> · ${motif?.label || b.motifId}</p>
+        <p class="meta">Habitant · ${b.user}</p>
+        <div class="row-actions">
+          ${b.status === 'pending' ? `<button class="hit btn primary" data-sim="rdv-admin-confirm:${b.id}" type="button">Confirmer</button>` : ''}
+          <button class="hit btn" data-sim="rdv-admin-move:${b.id}" type="button">Déplacer</button>
+          <button class="hit btn" data-sim="rdv-admin-cancel-ask:${b.id}" type="button">Annuler</button>
+          <button class="hit btn outline" data-sim="rdv-admin-done:${b.id}" type="button">Effectué</button>
+          <button class="hit btn outline" data-sim="rdv-admin-absent:${b.id}" type="button">Absent</button>
+        </div>
+      </article>`
+      })
+      .join('')
+  }
+
   return wrap(
     `
     <h2 class="sec">Rendez-vous</h2>
-    <article class="card rdv-en-cours">
-      <p class="meta">Aujourd’hui · 10:00</p>
-      <p><strong>Motif</strong> · Carte d’identité / Passeport</p>
-      <p class="meta">Habitant · Lilit A.</p>
-    </article>
-    <button class="hit row-link" data-go="mairie-rdv" type="button">
-      <span>Voir le parcours RDV (app)</span><span>›</span>
-    </button>
+    ${tabBar}
+    ${body}
     `,
     {
       header: phoneHeader({ title: 'Rendez-vous', backTo: 'admin-home' }),
@@ -4051,20 +4335,115 @@ function adminRdv() {
 }
 
 function adminModeration() {
+  const filter = getModFilter()
+  const cases = listModCases(filter)
   return wrap(
     `
     <h2 class="sec">Modération</h2>
-    <p class="meta">Contenus signalés (publications / profils) — distinct de la boîte quartier.</p>
-    <button class="hit row-link" data-sim="signalement" type="button">
-      <span><strong>Signalement #1</strong><br/><span class="meta">Publication · En attente</span></span><span>›</span>
-    </button>
+    <p class="meta">Contenus signalés — distinct de la boîte quartier (Signalements).</p>
+    <div class="tabs">
+      <button class="hit tab ${filter === 'open' ? 'on' : ''}" data-sim="mod-filter:open" type="button">À traiter</button>
+      <button class="hit tab ${filter === 'resolved' ? 'on' : ''}" data-sim="mod-filter:resolved" type="button">Traités</button>
+    </div>
+    ${
+      cases.length
+        ? cases
+            .map(
+              (c) => `
+    <button class="hit row-link" data-open-mod-case="${c.id}" type="button">
+      <span><strong>${c.title}</strong><br/><span class="meta">${modTypeLabel(c.type)} · ${c.author} · ${c.date}</span></span>
+      <span class="badge">${c.state === 'open' ? 'À traiter' : 'Traité'}</span>
+    </button>`
+            )
+            .join('')
+        : emptyState(filter === 'open' ? 'Aucun dossier à traiter' : 'Aucun dossier traité')
+    }
     <button class="hit row-link" data-go="signalements" type="button">
       <span><strong>Signalements quartier</strong><br/><span class="meta">Boîte mairie · Voirie, éclairage…</span></span><span>›</span>
     </button>
-    ${emptyState('File courte — wireframe')}
     `,
     {
       header: phoneHeader({ title: 'Modération', backTo: 'admin-home' }),
+    }
+  )
+}
+
+function moderationCase() {
+  const id = getOpenModCaseId()
+  const c = getModCase(id)
+  if (!c) {
+    return wrap(
+      `
+      ${emptyState('Dossier introuvable')}
+      <button class="hit btn block" data-go="admin-moderation" type="button">Retour</button>
+      `,
+      { header: phoneHeader({ title: 'Dossier', backTo: 'admin-moderation' }) }
+    )
+  }
+  const ficheBtn =
+    c.type === 'fiche'
+      ? `<button class="hit btn block" data-sim="mod-open-fiche:${c.id}" type="button">Ouvrir le formulaire fiche</button>`
+      : ''
+  const retablir =
+    c.masked && !c.authorDeleted
+      ? `<button class="hit btn" data-sim="mod-decide:retablir:${c.id}" type="button">Rétablir</button>`
+      : c.authorDeleted
+        ? `<p class="meta">Rétablir indisponible — contenu supprimé par l’auteur</p>`
+        : ''
+  return wrap(
+    `
+    <div class="form-card">
+      <h2 class="sec">Dossier de modération</h2>
+      <p class="meta">${c.id} · ${c.state === 'open' ? 'À traiter' : 'Traité'}</p>
+      <div class="row-link static"><span>Type</span><span>${modTypeLabel(c.type)}</span></div>
+      <div class="row-link static"><span>Titre</span><span>${c.title}</span></div>
+      <div class="row-link static"><span>Auteur</span><span>${c.author}</span></div>
+      <div class="row-link static"><span>Motif</span><span>${c.motif}</span></div>
+      <div class="row-link static"><span>Date</span><span>${c.date}</span></div>
+      <div class="row-link static"><span>État</span><span>${c.state === 'open' ? 'Ouvert' : `Résolu · ${modDecisionLabel(c.decision)}`}</span></div>
+      ${c.decisionMotif ? `<p class="meta">Motif décision · ${c.decisionMotif}</p>` : ''}
+      <button class="hit row-link" data-go="${c.contentGo}" type="button">
+        <span><strong>Contenu concerné</strong><br/><span class="meta">${c.contentLabel}</span></span><span>›</span>
+      </button>
+      ${ficheBtn}
+      ${
+        c.state === 'open'
+          ? `
+      <h2 class="sec">Décision</h2>
+      <label class="field"><span>Motif (requis pour masquer / retirer)</span>
+        <textarea rows="3" placeholder="Motif de la décision…" data-field="mod-motif"></textarea>
+      </label>
+      <div class="row-actions">
+        <button class="hit btn" data-sim="mod-decide:classer:${c.id}" type="button">Classer sans suite</button>
+        <button class="hit btn" data-sim="mod-decide:masquer:${c.id}" type="button">Masquer</button>
+        <button class="hit btn outline" data-sim="mod-decide:retirer:${c.id}" type="button">Retirer</button>
+      </div>`
+          : `<div class="row-actions">${retablir}</div>`
+      }
+    </div>
+    `,
+    {
+      header: phoneHeader({ title: 'Dossier', backTo: 'admin-moderation' }),
+    }
+  )
+}
+
+function adminRdvCancelMotif() {
+  const id = (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('ma-ville-rdv-cancel-id')) || ''
+  return wrap(
+    `
+    <div class="form-card">
+      <h2 class="sec">Annuler le rendez-vous</h2>
+      <label class="field"><span>Motif</span><textarea rows="3" data-field="rdv-cancel-motif" placeholder="Motif d’annulation…"></textarea></label>
+      <div class="row-actions">
+        <button class="hit btn" data-go="admin-rdv" type="button">Retour</button>
+        <button class="hit btn primary" data-sim="rdv-admin-cancel-confirm:${id}" type="button">Confirmer l’annulation</button>
+      </div>
+    </div>
+    `,
+    {
+      header: phoneHeader({ title: 'Annuler RDV', backTo: 'admin-rdv', chrome: 'form' }),
+      footer: '',
     }
   )
 }
@@ -4099,7 +4478,7 @@ function adminContenus() {
 }
 
 function adminFicheEdit() {
-  return ficheAnnuaireForm({ title: 'Pharmacie centrale' })
+  return ficheAnnuaireForm()
 }
 
 function adminStub(title) {
@@ -4328,7 +4707,7 @@ export const SCREENS = {
     title: 'Fiche annuaire — Formulaire',
     side: 'user',
     group: 'Ma mairie',
-    render: () => ficheAnnuaireForm({ title: 'Pharmacie centrale' }),
+    render: ficheAnnuaireForm,
   },
   'mairie-plan': {
     title: 'Plan de la ville',
@@ -4406,6 +4785,16 @@ export const SCREENS = {
     side: 'admin',
     group: 'Admin',
     render: evenementsAValider,
+  },
+  'evenement-validation-motif': {
+    title: 'Motif validation',
+    side: 'admin',
+    group: 'Admin',
+    render: () => {
+      const mode = sessionStorage.getItem('ma-ville-evt-motif-mode') || 'refuse'
+      const eventId = sessionStorage.getItem('ma-ville-evt-motif-id') || ''
+      return evenementValidationMotif({ mode, eventId })
+    },
   },
   'evenement-options': {
     title: 'Événement — Options',
@@ -6570,7 +6959,7 @@ export const SCREENS = {
     title: 'Admin — Fiche annuaire',
     side: 'admin',
     group: 'Admin',
-    render: () => ficheAnnuaireForm({ title: 'Pharmacie centrale' }),
+    render: ficheAnnuaireForm,
   },
   'admin-rdv': {
     title: 'Admin — RDV',
@@ -6578,11 +6967,23 @@ export const SCREENS = {
     group: 'Admin',
     render: adminRdv,
   },
+  'admin-rdv-cancel': {
+    title: 'Admin — Annuler RDV',
+    side: 'admin',
+    group: 'Admin',
+    render: adminRdvCancelMotif,
+  },
   'admin-moderation': {
     title: 'Modération',
     side: 'admin',
     group: 'Admin',
     render: adminModeration,
+  },
+  'moderation-case': {
+    title: 'Dossier de modération',
+    side: 'admin',
+    group: 'Admin',
+    render: moderationCase,
   },
   'admin-equipe': {
     title: 'Équipe et permissions',

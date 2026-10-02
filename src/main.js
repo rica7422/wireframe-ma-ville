@@ -37,6 +37,7 @@ import {
   getEditEventId,
   setOpenEventId,
   setFormStep,
+  getFormStep,
   setListTab,
   setMesSub,
   submitForValidation,
@@ -49,6 +50,36 @@ import {
   getEvent as getEventFull,
 } from './events-data.js'
 import { SIM_VIEWER_ID } from './demo-data.js'
+import {
+  setOpenModCaseId,
+  setModFilter,
+  decideModCase,
+  getModCase,
+} from './moderation-data.js'
+import {
+  setRdvPick,
+  getRdvPick,
+  createBooking,
+  updateBooking,
+  setAdminRdvTab,
+  setEditMotifId,
+  getEditMotifId,
+  upsertMotif,
+  deactivateMotif,
+  getMotif,
+  setDispoSlots,
+  getDispoSlots,
+  listMotifs,
+} from './rdv-data.js'
+import {
+  setAnnuaireRubriqueId,
+  setFicheContext,
+  createEmptyPub,
+  setPubEditId,
+  getPubEditId,
+  updateAdminPub,
+  getAdminPub,
+} from './annuaire-data.js'
 
 const historyStack = []
 let currentId = 'ville-bienvenue'
@@ -97,24 +128,56 @@ function readEventFormFields() {
   if (description !== undefined) patch.description = description
   const category = val('category')
   if (category !== undefined) patch.category = category
+  const orgLabel = val('orgLabel')
+  if (orgLabel !== undefined) patch.orgLabel = orgLabel
+  const ville = val('ville')
+  if (ville !== undefined) {
+    patch.ville = ville
+    patch.cityLabel = `${ville}, Arménie`
+  }
   const dateLabel = val('dateLabel')
   if (dateLabel !== undefined) patch.dateLabel = dateLabel
+  const dateEndLabel = val('dateEndLabel')
+  if (dateEndLabel !== undefined) patch.dateEndLabel = dateEndLabel
   const time = val('time')
   if (time !== undefined) patch.time = time
+  const timeEnd = val('timeEnd')
+  if (timeEnd !== undefined) patch.timeEnd = timeEnd
   const lieu = val('lieu')
   if (lieu !== undefined) {
     patch.lieu = lieu
     patch.lieuDetail = lieu
   }
-  const price = val('price')
-  if (price !== undefined) patch.price = price
+  const priceMode = val('priceMode')
+  if (priceMode !== undefined) {
+    if (priceMode === 'free') {
+      patch.isFree = true
+      patch.price = 'Gratuit'
+    } else {
+      patch.isFree = false
+      const amount = val('priceAmount')
+      patch.price = amount || 'Payant'
+    }
+  } else {
+    const price = val('price')
+    if (price !== undefined) patch.price = price
+  }
   const inscriptionMode = val('inscriptionMode')
   if (inscriptionMode !== undefined) patch.inscriptionMode = inscriptionMode
-  const capacityRaw = val('capacity')
-  if (capacityRaw !== undefined) {
-    const t = String(capacityRaw).trim()
-    patch.capacity = t === '' ? null : Number(t) || null
+  const capacityMode = val('capacityMode')
+  if (capacityMode === 'unlimited') {
+    patch.capacity = null
+  } else {
+    const capacityRaw = val('capacity')
+    if (capacityRaw !== undefined) {
+      const t = String(capacityRaw).trim()
+      patch.capacity = t === '' ? null : Number(t) || null
+    }
   }
+  const inscriptionDeadline = val('inscriptionDeadline')
+  if (inscriptionDeadline !== undefined) patch.inscriptionDeadline = inscriptionDeadline
+  const conditions = val('conditions')
+  if (conditions !== undefined) patch.conditions = conditions
   if (patch.title || patch.category || patch.price) {
     const tags = []
     if (patch.category || getEventFull(getEditEventId())?.category)
@@ -124,6 +187,11 @@ function readEventFormFields() {
     patch.tags = tags.filter(Boolean)
   }
   return patch
+}
+
+function readField(name) {
+  const el = document.querySelector(`[data-field="${name}"]`)
+  return el ? el.value : ''
 }
 
 function refuseManage(id) {
@@ -314,7 +382,25 @@ function handleSim(kind) {
     return
   }
   if (action === 'event-form-step' && arg) {
+    const id = getEditEventId()
+    if (id) updateEvent(id, readEventFormFields())
     setFormStep(Number(arg) || 1)
+    render()
+    return
+  }
+  if (action === 'event-form-next') {
+    const id = getEditEventId()
+    if (id) updateEvent(id, readEventFormFields())
+    const step = getFormStep() || 1
+    setFormStep(Math.min(3, step + 1))
+    render()
+    return
+  }
+  if (action === 'event-form-prev') {
+    const id = getEditEventId()
+    if (id) updateEvent(id, readEventFormFields())
+    const step = getFormStep() || 1
+    setFormStep(Math.max(1, step - 1))
     render()
     return
   }
@@ -405,28 +491,71 @@ function handleSim(kind) {
     render()
     return
   }
-  if (action === 'event-refuse' && arg) {
+  if (action === 'event-refuse-ask' && arg) {
     if (!isAdminRole()) {
       toast('Accès refusé pour ce rôle (simulé)')
       return
     }
-    refuseEvent(arg, 'Motif (simulé)')
+    sessionStorage.setItem('ma-ville-evt-motif-mode', 'refuse')
+    sessionStorage.setItem('ma-ville-evt-motif-id', arg)
+    go('evenement-validation-motif')
+    return
+  }
+  if (action === 'event-correct-ask' && arg) {
+    if (!isAdminRole()) {
+      toast('Accès refusé pour ce rôle (simulé)')
+      return
+    }
+    sessionStorage.setItem('ma-ville-evt-motif-mode', 'correct')
+    sessionStorage.setItem('ma-ville-evt-motif-id', arg)
+    go('evenement-validation-motif')
+    return
+  }
+  if (action === 'event-refuse-confirm' && arg) {
+    if (!isAdminRole()) {
+      toast('Accès refusé pour ce rôle (simulé)')
+      return
+    }
+    const motif = readField('motif').trim()
+    if (!motif) {
+      toast('Motif obligatoire')
+      return
+    }
+    refuseEvent(arg, motif)
     toast('Événement refusé')
-    render()
+    go('evenements-a-valider', { push: false })
+    return
+  }
+  if (action === 'event-correct-confirm' && arg) {
+    if (!isAdminRole()) {
+      toast('Accès refusé pour ce rôle (simulé)')
+      return
+    }
+    const motif = readField('motif').trim()
+    if (!motif) {
+      toast('Motif obligatoire')
+      return
+    }
+    requestCorrections(arg, motif)
+    toast('Corrections demandées')
+    go('evenements-a-valider', { push: false })
+    return
+  }
+  if (action === 'event-refuse' && arg) {
+    sessionStorage.setItem('ma-ville-evt-motif-mode', 'refuse')
+    sessionStorage.setItem('ma-ville-evt-motif-id', arg)
+    go('evenement-validation-motif')
     return
   }
   if (action === 'event-correct' && arg) {
-    if (!isAdminRole()) {
-      toast('Accès refusé pour ce rôle (simulé)')
-      return
-    }
-    requestCorrections(arg)
-    toast('Corrections demandées')
-    render()
+    sessionStorage.setItem('ma-ville-evt-motif-mode', 'correct')
+    sessionStorage.setItem('ma-ville-evt-motif-id', arg)
+    go('evenement-validation-motif')
     return
   }
   if (action === 'supprimer' || action === 'delete-confirm') {
-    toast('Suppression (simulée)')
+    const fromParticipants = (getMenuContext()?.parent || parentForMenuScreen(currentId) || '') === 'evenement-participants' || currentId === 'evenement-supprimer-confirm'
+    toast(fromParticipants ? 'Retiré de l’événement (simulé)' : 'Suppression (simulée)')
     const parent = getMenuContext()?.parent || parentForMenuScreen(currentId) || 'mairie-accueil'
     clearMenuContext()
     // After delete confirm → go list / parent
@@ -439,6 +568,282 @@ function handleSim(kind) {
             ? 'infos-feed'
             : 'mairie-accueil'
     go(list, { push: false })
+    return
+  }
+
+  // ——— Modération ———
+  if (action === 'mod-filter' && arg) {
+    setModFilter(arg)
+    render()
+    return
+  }
+  if (action === 'mod-decide') {
+    // kind = mod-decide:decision:id
+    const parts = String(kind).split(':')
+    const decision = parts[1]
+    const caseId = parts[2]
+    if (!isAdminRole()) {
+      toast('Accès refusé pour ce rôle (simulé)')
+      return
+    }
+    const motif = readField('mod-motif')
+    const res = decideModCase(caseId, decision, motif)
+    if (res?.error === 'motif') {
+      toast('Motif obligatoire pour masquer / retirer')
+      return
+    }
+    if (res?.error === 'author-deleted') {
+      toast('Impossible de rétablir — contenu supprimé par l’auteur')
+      return
+    }
+    toast(
+      decision === 'classer'
+        ? 'Classé sans suite'
+        : decision === 'masquer'
+          ? 'Contenu masqué'
+          : decision === 'retirer'
+            ? 'Contenu retiré'
+            : decision === 'retablir'
+              ? 'Contenu rétabli'
+              : 'Décision enregistrée'
+    )
+    render()
+    return
+  }
+  if (action === 'mod-open-fiche' && arg) {
+    setFicheContext({
+      mode: 'edit',
+      id: 'dir-pharmacie-centrale',
+      title: 'Pharmacie centrale',
+      backTo: 'moderation-case',
+    })
+    go('fiche-annuaire-form')
+    return
+  }
+
+  // ——— Annuaires / fiches ———
+  if (action === 'annuaire-rubrique' && arg) {
+    setAnnuaireRubriqueId(arg)
+    go('admin-annuaire-rubrique')
+    return
+  }
+  if (action === 'fiche-create') {
+    setFicheContext({
+      mode: 'create',
+      id: null,
+      title: '',
+      backTo: arg === 'sante' ? 'admin-annuaire-pharmacies' : 'admin-annuaire-rubrique',
+    })
+    go('fiche-annuaire-form')
+    return
+  }
+  if (action === 'fiche-edit' && arg) {
+    setFicheContext({
+      mode: 'edit',
+      id: arg === 'new' ? null : arg,
+      title: arg === 'new' ? '' : undefined,
+      backTo: currentId,
+    })
+    go('fiche-annuaire-form')
+    return
+  }
+  if (action === 'fiche-save-draft' || action === 'fiche-publish' || action === 'fiche-preview') {
+    toast(
+      action === 'fiche-publish'
+        ? 'Fiche publiée'
+        : action === 'fiche-preview'
+          ? 'Prévisualisation fiche'
+          : 'Brouillon fiche enregistré'
+    )
+    if (action === 'fiche-preview') go('sante-pharmacie-infos')
+    else render()
+    return
+  }
+
+  // ——— Publications BO ———
+  if (action === 'pub-create') {
+    createEmptyPub()
+    go('mairie-nouvelle-publication')
+    return
+  }
+  if (action === 'pub-edit' && arg) {
+    setPubEditId(arg)
+    go('mairie-pub-edit')
+    return
+  }
+  if (action === 'pub-save-draft') {
+    const id = getPubEditId()
+    if (id) {
+      updateAdminPub(id, {
+        title: readField('pub-title') || getAdminPub(id)?.title || '',
+        body: readField('pub-body') || '',
+        state: 'draft',
+      })
+    }
+    toast('Brouillon publication · Mairie de Kapan')
+    render()
+    return
+  }
+  if (action === 'pub-preview') {
+    const id = getPubEditId()
+    if (id) {
+      updateAdminPub(id, {
+        title: readField('pub-title') || getAdminPub(id)?.title || '',
+        body: readField('pub-body') || '',
+      })
+    }
+    go('mairie-pub-preview')
+    return
+  }
+  if (action === 'pub-publish') {
+    const id = getPubEditId()
+    if (id) {
+      updateAdminPub(id, {
+        title: readField('pub-title') || getAdminPub(id)?.title || 'Publication',
+        body: readField('pub-body') || '',
+        state: 'published',
+        authorLabel: 'Mairie de Kapan',
+      })
+    }
+    toast('Publié au nom de la Mairie de Kapan')
+    go('admin-mairie', { push: false })
+    return
+  }
+
+  // ——— RDV ———
+  if (action === 'rdv-pick-day' && arg) {
+    const pick = getRdvPick()
+    const day = Number(arg)
+    setRdvPick({ ...pick, day, slot: undefined })
+    render()
+    return
+  }
+  if (action === 'rdv-pick-slot' && arg) {
+    const pick = getRdvPick()
+    setRdvPick({ ...pick, slot: arg })
+    render()
+    return
+  }
+  if (action === 'rdv-confirm') {
+    const pick = getRdvPick()
+    const motifs = listMotifs({ activeOnly: true })
+    const motifId = pick.motifId || motifs[0]?.id
+    const day = pick.day || 27
+    const slot = pick.slot || '09:30'
+    const slotLabel = `${day} mai 2026 · ${slot}`
+    createBooking({
+      motifId,
+      slot: `2026-05-${String(day).padStart(2, '0')}T${slot}`,
+      slotLabel,
+      user: 'Rica',
+      userId: 'user-rica',
+    })
+    toast('Rendez-vous confirmé · notification simulée')
+    go('mairie-rdv', { push: false })
+    return
+  }
+  if (action === 'rdv-annuler' && arg) {
+    updateBooking(arg, { status: 'cancelled', cancelMotif: 'Annulé par l’habitant' })
+    toast('Rendez-vous annulé · notification simulée')
+    render()
+    return
+  }
+  if (action === 'rdv-annuler') {
+    toast('Rendez-vous annulé (simulé)')
+    render()
+    return
+  }
+  if (action === 'rdv-move' && arg) {
+    const pick = getRdvPick()
+    setRdvPick({ ...pick, moveId: arg })
+    toast('Choisissez un nouveau créneau puis confirmez')
+    go('mairie-rdv')
+    return
+  }
+  if (action === 'rdv-admin-tab' && arg) {
+    setAdminRdvTab(arg)
+    render()
+    return
+  }
+  if (action === 'rdv-motif-create') {
+    const id = `motif-${Date.now()}`
+    upsertMotif({ id, label: 'Nouveau motif', duration: 20, active: true })
+    setEditMotifId(id)
+    toast('Motif créé')
+    setAdminRdvTab('motifs')
+    render()
+    return
+  }
+  if (action === 'rdv-motif-edit' && arg) {
+    setEditMotifId(arg)
+    setAdminRdvTab('motifs')
+    render()
+    return
+  }
+  if (action === 'rdv-motif-save' && arg) {
+    upsertMotif({
+      id: arg,
+      label: readField('motif-label') || getMotif(arg)?.label,
+      duration: Number(readField('motif-duration')) || 20,
+      active: readField('motif-active') !== '0',
+    })
+    toast('Motif enregistré')
+    render()
+    return
+  }
+  if (action === 'rdv-motif-deactivate' && arg) {
+    deactivateMotif(arg)
+    toast('Motif désactivé (pas de suppression)')
+    render()
+    return
+  }
+  if (action === 'rdv-dispo-edit' && arg) {
+    const slots = getDispoSlots(arg)
+    const next = slots.includes('16:30')
+      ? slots.filter((s) => s !== '16:30')
+      : [...slots, '16:30'].sort()
+    setDispoSlots(arg, next)
+    toast('Créneaux mis à jour (RDV existants conservés) · notif simulée')
+    render()
+    return
+  }
+  if (action === 'rdv-admin-confirm' && arg) {
+    updateBooking(arg, { status: 'confirmed' })
+    toast('RDV confirmé · notification simulée')
+    render()
+    return
+  }
+  if (action === 'rdv-admin-move' && arg) {
+    const b = updateBooking(arg, {
+      slotLabel: '13 juin 2026 · 11:00',
+      slot: '2026-06-13T11:00',
+    })
+    toast('RDV déplacé · notification simulée')
+    render()
+    return
+  }
+  if (action === 'rdv-admin-cancel-ask' && arg) {
+    sessionStorage.setItem('ma-ville-rdv-cancel-id', arg)
+    go('admin-rdv-cancel')
+    return
+  }
+  if (action === 'rdv-admin-cancel-confirm' && arg) {
+    const motif = readField('rdv-cancel-motif').trim() || 'Annulé par la mairie'
+    updateBooking(arg, { status: 'cancelled', cancelMotif: motif })
+    toast('RDV annulé · notification simulée')
+    go('admin-rdv', { push: false })
+    return
+  }
+  if (action === 'rdv-admin-done' && arg) {
+    updateBooking(arg, { status: 'done' })
+    toast('Marqué effectué')
+    render()
+    return
+  }
+  if (action === 'rdv-admin-absent' && arg) {
+    updateBooking(arg, { status: 'absent' })
+    toast('Marqué absent')
+    render()
     return
   }
 
@@ -455,8 +860,7 @@ function handleSim(kind) {
     partager: 'Partage simulé',
     suivre: 'Suivi simulé',
     participation: 'Participation mise à jour (simulé)',
-    rdv: 'Rendez-vous — suite À préciser (simulé)',
-    'rdv-annuler': 'Rendez-vous annulé (simulé) — bloc masqué',
+    rdv: 'Rendez-vous — utilisez Confirmer',
     position: 'Partage de position (simulé)',
     upload: 'Upload photo (simulé)',
     sauver: 'Enregistrement admin (simulé)',
@@ -596,7 +1000,7 @@ function render({ focusActive = false, resetNavScroll = false } = {}) {
       <aside class="proto-nav">
         <header class="proto-brand">
           <strong>Ma Ville</strong>
-          <span class="proto-tag">Wireframe · build 1001-j · entetes</span>
+          <span class="proto-tag">Wireframe · build 1001-k · quatre-ensembles</span>
         </header>
         <p class="proto-hint">Navigation du prototype (≠ nav dans le téléphone)</p>
         <div class="nav-tabs" role="tablist" aria-label="Côté prototype">
@@ -683,9 +1087,20 @@ function render({ focusActive = false, resetNavScroll = false } = {}) {
       go('signalement-conversation')
       return
     }
+    const openMod = e.target.closest('[data-open-mod-case]')
+    if (openMod) {
+      e.preventDefault()
+      setOpenModCaseId(openMod.dataset.openModCase)
+      go('moderation-case')
+      return
+    }
     const day = e.target.closest('.cal-day')
     if (day && day.closest('.calendar') && !day.classList.contains('closed')) {
       e.preventDefault()
+      if (day.dataset.sim) {
+        handleSim(day.dataset.sim)
+        return
+      }
       day.parentElement.querySelectorAll('.cal-day').forEach((d) => d.classList.remove('on'))
       day.classList.add('on')
       return
@@ -705,7 +1120,14 @@ function render({ focusActive = false, resetNavScroll = false } = {}) {
       e.preventDefault()
       const box = motifPick.closest('[data-motif-select]')
       const value = box.querySelector('.motif-value')
-      if (value) value.textContent = motifPick.dataset.motifPick
+      const label = motifPick.dataset.motifLabel || motifPick.dataset.motifPick
+      const motifId = motifPick.dataset.motifPick
+      if (value) {
+        value.textContent = label
+        value.dataset.motifId = motifId
+      }
+      const pick = getRdvPick()
+      setRdvPick({ ...pick, motifId })
       box.querySelectorAll('[data-motif-pick]').forEach((o) => o.classList.remove('on'))
       motifPick.classList.add('on')
       box.classList.remove('open')
@@ -713,6 +1135,7 @@ function render({ focusActive = false, resetNavScroll = false } = {}) {
       if (trigger) trigger.setAttribute('aria-expanded', 'false')
       const menu = box.querySelector('.motif-dropdown')
       if (menu) menu.hidden = true
+      render()
       return
     }
     const chip = e.target.closest('.chip')

@@ -477,7 +477,10 @@ export function canAccessManageRoute(screenId, role = getRole()) {
     'admin-annuaire-pharmacies',
     'admin-annuaire-rubrique',
     'admin-rdv',
+    'admin-rdv-cancel',
     'admin-moderation',
+    'moderation-case',
+    'evenement-validation-motif',
     'admin-equipe',
     'admin-stats',
   ])
