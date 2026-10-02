@@ -1,0 +1,146 @@
+{
+  "passed": 28,
+  "failed": 0,
+  "results": [
+    {
+      "name": "Stamp 1001-k quatre-ensembles",
+      "ok": true,
+      "detail": "Wireframe · build 1001-k · quatre-ensembles"
+    },
+    {
+      "name": "Create ≠ atelier",
+      "ok": true,
+      "detail": "evt-1790923587281 · Habitant · Brouillon"
+    },
+    {
+      "name": "Step1 orga Rica",
+      "ok": true,
+      "detail": "Rica"
+    },
+    {
+      "name": "Step1 ville Kapan",
+      "ok": true,
+      "detail": "Kapan"
+    },
+    {
+      "name": "Step2 has date début",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Step2 has date fin",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Step2 has priceMode",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Step2 has Précédent",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Step3 deadline",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Step3 conditions",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Refuse button present",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Motif screen opened",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Refuse toast",
+      "ok": true,
+      "detail": "Événement refusé"
+    },
+    {
+      "name": "Mod filters",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "No data-sim=signalement rows",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Case row present",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Case dossier title",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Case has Classer",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "No Signalement envoyé toast",
+      "ok": true,
+      "detail": "Événement refusé"
+    },
+    {
+      "name": "Éducation not stub",
+      "ok": true,
+      "detail": "\n    <h2 class=\"sec\">Éducation</h2>\n    <p class=\"meta\">Sous-catégories · fiches demo · gestion admin</p>\n    <h2 class="
+    },
+    {
+      "name": "Fiche create empty",
+      "ok": true,
+      "detail": "value=\"\""
+    },
+    {
+      "name": "Pubs list from store",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Pub create empty",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Admin motifs list",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Booking in en cours",
+      "ok": true,
+      "detail": "\n    \n    <section class=\"rdv-section\">\n      <h2 class=\"sec\">Rendez-vous en cours</h2>\n      \n      <article class=\"card rdv-en-cours\" data-rdv-id=\"r"
+    },
+    {
+      "name": "Signalements screen",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "app-chrome present",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Screenshot taken",
+      "ok": true,
+      "detail": ""
+    }
+  ]
+}
