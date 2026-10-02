@@ -517,7 +517,8 @@ button.tree-node:hover .tree-label {
   min-height: 0;
   overflow-x: hidden;
   overflow-y: auto;
-  padding: var(--space-3) var(--space-page-x) calc(var(--space-4) + env(safe-area-inset-bottom, 0px));
+  padding: var(--space-3) var(--space-page-x)
+    calc(var(--space-section) + env(safe-area-inset-bottom, 0px));
   display: flex;
   flex-direction: column;
   gap: 0;
