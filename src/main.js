@@ -117,18 +117,34 @@ import {
 import {
   setCommunauteKindTab,
   setCommunauteSearch,
+  setCommunauteFilter,
   setOpenCommunauteId,
   getOpenCommunauteId,
+  setCommunautePageView,
   joinCommunaute,
   cancelJoinRequest,
   leaveCommunaute,
   acceptJoin,
   refuseJoin,
   removeMember,
+  acceptInvitation,
+  ignoreInvitation,
+  ignoreSuggestion,
+  updateSettings,
+  assignRole,
+  leaveAdminRole,
+  dissolveCommunaute,
   createCommunautePost,
   deleteCommunautePost,
   reactCommunautePost,
+  createCommunauteFromDraft,
+  startCreateDraft,
+  setCreateDraft,
+  getCreateDraft,
+  setRolePick,
+  getRolePick,
   getCommunaute,
+  isCommunauteAdmin,
 } from './communautes-data.js'
 
 const historyStack = []
@@ -1155,15 +1171,37 @@ function handleSim(kind) {
     render()
     return
   }
+  if (action === 'comm-filter' && arg) {
+    const parts = String(arg).split(':')
+    const kind = parts[0]
+    const filter = parts.slice(1).join(':')
+    setCommunauteFilter(kind, filter)
+    go(kind === 'clubs' ? 'communautes-clubs' : 'communautes-groupes', { push: false })
+    return
+  }
   if (action === 'comm-open' && arg) {
     setOpenCommunauteId(arg)
+    setCommunautePageView('publications')
     go('communaute-page')
     return
   }
   if (action === 'comm-view' && arg) {
-    go(arg === 'apropos' ? 'communaute-apropos' : arg === 'membres' ? 'communaute-membres' : 'communaute-page', {
-      push: false,
-    })
+    const view =
+      arg === 'apropos' || arg === 'informations'
+        ? 'informations'
+        : arg === 'membres'
+          ? 'informations'
+          : arg === 'evenements'
+            ? 'evenements'
+            : 'publications'
+    setCommunautePageView(view)
+    const screen =
+      view === 'informations'
+        ? 'communaute-apropos'
+        : view === 'evenements'
+          ? 'communaute-evenements'
+          : 'communaute-page'
+    go(screen, { push: false })
     return
   }
   if (action === 'comm-join' && arg) {
@@ -1191,17 +1229,35 @@ function handleSim(kind) {
     render()
     return
   }
+  if (action === 'comm-accept-invite' && arg) {
+    acceptInvitation(arg)
+    toast('Invitation acceptée')
+    render()
+    return
+  }
+  if (action === 'comm-ignore-invite' && arg) {
+    ignoreInvitation(arg)
+    toast('Invitation ignorée')
+    render()
+    return
+  }
+  if (action === 'comm-ignore-suggest' && arg) {
+    ignoreSuggestion(arg)
+    toast('Suggestion ignorée')
+    render()
+    return
+  }
   if (action === 'comm-accept' && arg) {
     const [cid, uid] = String(arg).split(':')
     const res = acceptJoin(cid, uid)
-    toast(res?.error ? 'Action réservée aux admins communauté' : 'Demande acceptée')
+    toast(res?.error ? 'Action réservée aux modos/admins communauté' : 'Demande acceptée')
     render()
     return
   }
   if (action === 'comm-refuse' && arg) {
     const [cid, uid] = String(arg).split(':')
     const res = refuseJoin(cid, uid)
-    toast(res?.error ? 'Action réservée aux admins communauté' : 'Demande refusée')
+    toast(res?.error ? 'Action réservée aux modos/admins communauté' : 'Demande refusée')
     render()
     return
   }
@@ -1224,7 +1280,7 @@ function handleSim(kind) {
       toast('Écrivez un texte')
       return
     }
-    toast('Publication ajoutée')
+    toast(res?.pending ? 'Publication en attente d’approbation' : 'Publication ajoutée')
     go('communaute-page', { push: false })
     return
   }
@@ -1240,6 +1296,199 @@ function handleSim(kind) {
     const [cid, pid] = String(arg).split(':')
     reactCommunautePost(cid, pid)
     render()
+    return
+  }
+  if (action === 'comm-invite' && arg) {
+    toast('Invitation simulée (local)')
+    return
+  }
+  if (action === 'comm-stub') {
+    toast(arg ? `Ébauche · ${arg}` : 'Ébauche')
+    return
+  }
+  if (action === 'comm-notif-toggle' && arg) {
+    try {
+      const key = `ma-ville-comm-notif-${arg}`
+      const cur = sessionStorage.getItem(key)
+      sessionStorage.setItem(key, cur === '0' ? '1' : '0')
+    } catch {
+      /* ignore */
+    }
+    toast('Notifications mises à jour')
+    render()
+    return
+  }
+  if (action === 'comm-event-create' && arg) {
+    const c = getCommunaute(arg)
+    createEmptyEvent({ origin: 'citizen', authorId: SIM_VIEWER_ID, orgLabel: 'Rica' })
+    toast(c ? `Événement · contexte ${c.name}` : 'Création d’événement')
+    go('evenement-form')
+    return
+  }
+  if (action === 'comm-open-event' && arg) {
+    setOpenEventId(arg)
+    go('evenement-details')
+    return
+  }
+  if (action === 'comm-member-search') {
+    try {
+      sessionStorage.setItem('ma-ville-comm-member-search', readField('comm-member-search') || '')
+    } catch {
+      /* ignore */
+    }
+    render()
+    return
+  }
+  if (action === 'comm-member-msg' && arg) {
+    setMsgTab('maville')
+    openOrCreateDm(arg, 'maville')
+    go('messages-thread')
+    return
+  }
+  if (action === 'comm-group-msg') {
+    toast('Message groupé simulé (local)')
+    return
+  }
+  if (action === 'comm-toggle-field' && arg) {
+    const id = getOpenCommunauteId()
+    const c = getCommunaute(id)
+    if (!c || !isCommunauteAdmin(c)) {
+      toast('Réservé aux admins de la communauté')
+      return
+    }
+    const patch = {}
+    if (arg === 'autoValidateMembers') {
+      patch.autoValidateMembers = !c.autoValidateMembers
+      patch.access = patch.autoValidateMembers ? 'open' : 'validation'
+    } else if (arg === 'autoApprovePosts') {
+      patch.autoApprovePosts = !c.autoApprovePosts
+    } else return
+    updateSettings(id, patch)
+    render()
+    return
+  }
+  if (action === 'comm-settings-save') {
+    const id = getOpenCommunauteId()
+    const c = getCommunaute(id)
+    if (!c || !isCommunauteAdmin(c)) {
+      toast('Réservé aux admins de la communauté')
+      return
+    }
+    const privacy = readField('comm-privacy') || c.privacy
+    const inviteWho = readField('comm-invite-who') || c.inviteWho
+    updateSettings(id, {
+      privacy: privacy === 'private' ? 'private' : 'public',
+      inviteWho: inviteWho === 'admin' ? 'admin' : 'member',
+    })
+    toast('Paramètres enregistrés')
+    go('communaute-page', { push: false })
+    return
+  }
+  if (action === 'comm-role-pick' && arg) {
+    setRolePick(arg === 'modo' ? 'modo' : 'admin')
+    render()
+    return
+  }
+  if (action === 'comm-assign-role' && arg) {
+    const [cid, uid] = String(arg).split(':')
+    const role = getRolePick() || 'admin'
+    const res = assignRole(cid, uid, role)
+    if (res?.error) {
+      toast('Attribution impossible')
+      return
+    }
+    toast(role === 'modo' ? 'Modérateur ajouté' : 'Administrateur ajouté')
+    go('communaute-parametres', { push: false })
+    return
+  }
+  if (action === 'comm-dissolve' && arg) {
+    if (!confirm('Dissoudre cette communauté ? Action irréversible (prototype).')) return
+    const res = dissolveCommunaute(arg)
+    if (res?.error) {
+      toast('Dissolution non autorisée')
+      return
+    }
+    toast('Communauté dissoute')
+    go(res.kind === 'clubs' ? 'communautes-clubs' : 'communautes-groupes', { push: false })
+    return
+  }
+  if (action === 'comm-leave-admin' && arg) {
+    if (!confirm('Quitter le rôle administrateur ?')) return
+    const res = leaveAdminRole(arg)
+    if (res?.error === 'last_admin') {
+      toast('Impossible : dernier administrateur')
+      return
+    }
+    if (res?.error) {
+      toast('Action non autorisée')
+      return
+    }
+    toast('Rôle administrateur quitté')
+    go('communaute-page', { push: false })
+    return
+  }
+  if (action === 'comm-create-start' && arg) {
+    startCreateDraft(arg)
+    go('communaute-create')
+    return
+  }
+  if (action === 'comm-create-photo' && arg) {
+    const draft = getCreateDraft()
+    if (!draft) return
+    if (arg === 'profile') draft.profilePhoto = 'local-profile'
+    else draft.coverPhoto = 'local-cover'
+    setCreateDraft(draft)
+    toast('Aperçu local (simulé)')
+    render()
+    return
+  }
+  if (action === 'comm-create-toggle' && arg) {
+    const draft = getCreateDraft()
+    if (!draft) return
+    if (arg === 'autoValidateMembers') draft.autoValidateMembers = draft.autoValidateMembers === false
+    else if (arg === 'autoApprovePosts') draft.autoApprovePosts = draft.autoApprovePosts === false
+    setCreateDraft(draft)
+    render()
+    return
+  }
+  if (action === 'comm-create-next') {
+    const draft = getCreateDraft()
+    if (!draft) return
+    draft.name = readField('comm-create-name') || draft.name
+    draft.categoryId = readField('comm-create-category') || draft.categoryId
+    draft.description = readField('comm-create-desc') || draft.description
+    if (!draft.name?.trim()) {
+      toast('Indiquez un nom')
+      return
+    }
+    draft.step = 2
+    setCreateDraft(draft)
+    render()
+    return
+  }
+  if (action === 'comm-create-prev') {
+    const draft = getCreateDraft()
+    if (!draft) return
+    draft.privacy = readField('comm-create-privacy') || draft.privacy
+    draft.inviteWho = readField('comm-create-invite-who') || draft.inviteWho
+    draft.step = 1
+    setCreateDraft(draft)
+    render()
+    return
+  }
+  if (action === 'comm-create-submit') {
+    const draft = getCreateDraft()
+    if (!draft) return
+    draft.privacy = readField('comm-create-privacy') || draft.privacy
+    draft.inviteWho = readField('comm-create-invite-who') || draft.inviteWho
+    const res = createCommunauteFromDraft(draft)
+    if (res?.error) {
+      toast('Création impossible')
+      return
+    }
+    toast(`${res.kind === 'clubs' ? 'Club' : 'Groupe'} créé`)
+    setCommunautePageView('publications')
+    go('communaute-page', { push: false })
     return
   }
 
@@ -1396,7 +1645,7 @@ function render({ focusActive = false, resetNavScroll = false } = {}) {
       <aside class="proto-nav">
         <header class="proto-brand">
           <strong>Ma Ville</strong>
-          <span class="proto-tag">Wireframe · build 1001-m · messagerie-groupes-nav</span>
+          <span class="proto-tag">Wireframe · build 1001-n · groupes-clubs-maquette</span>
         </header>
         <p class="proto-hint">Navigation du prototype (≠ nav dans le téléphone)</p>
         <div class="nav-tabs" role="tablist" aria-label="Côté prototype">

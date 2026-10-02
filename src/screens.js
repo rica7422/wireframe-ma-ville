@@ -129,16 +129,28 @@ import {
 } from './messages-data.js'
 import {
   listCommunautes,
+  feedPosts,
   getCommunaute,
   getOpenCommunauteId,
   getCommunauteKindTab,
   getCommunauteSearch,
+  getCommunauteFilter,
+  getCommunautePageView,
+  getCreateDraft,
+  getRolePick,
   accessLabel,
   myStateLabel,
   kindLabel,
   mesTabLabel,
   canPublish,
+  canInvite,
   isCommunauteAdmin,
+  isCommunauteModo,
+  COMM_CATEGORIES,
+  roleHolders,
+  memberDisplay,
+  privacyLabel,
+  getViewerId,
 } from './communautes-data.js'
 
 /** Screen registry: id → { title, group, render(state) } */
@@ -3163,44 +3175,175 @@ function messagesReactSheet() {
 function communautesList(kind = 'groupes') {
   const tab = getCommunauteKindTab(kind)
   const q = getCommunauteSearch(kind)
-  const list = listCommunautes(kind, { tab, query: q })
+  const filter = getCommunauteFilter(kind)
   const title = kindLabel(kind)
   const mes = mesTabLabel(kind)
-  return wrap(
-    `
-    <h2 class="sec">${title}</h2>
-    <label class="field">
-      <input type="search" placeholder="Rechercher…" value="${escapeAttr(q)}" data-field="comm-search" data-sim-change="comm-search:${kind}" />
-    </label>
-    <div class="tabs">
-      <button class="hit tab ${tab === 'decouvrir' ? 'on' : ''}" data-sim="comm-tab:${kind}:decouvrir" type="button">Découvrir</button>
+  const unit = kind === 'clubs' ? 'club' : 'groupe'
+  const list = listCommunautes(kind, { tab, query: q, filter })
+  const posts = tab === 'actualites' ? feedPosts(kind, { query: q, filter }) : []
+  const showCats = filter === 'categories' || (filter && filter.startsWith('cat:'))
+
+  const tabs = `
+    <div class="tabs h-scroll">
+      <button class="hit tab ${tab === 'actualites' ? 'on' : ''}" data-sim="comm-tab:${kind}:actualites" type="button">Actualités</button>
       <button class="hit tab ${tab === 'mes' ? 'on' : ''}" data-sim="comm-tab:${kind}:mes" type="button">${mes}</button>
+      <button class="hit tab ${tab === 'invitations' ? 'on' : ''}" data-sim="comm-tab:${kind}:invitations" type="button">Invitations</button>
+      <button class="hit tab ${tab === 'suggestions' ? 'on' : ''}" data-sim="comm-tab:${kind}:suggestions" type="button">Suggestions</button>
+    </div>`
+
+  const filters = `
+    <div class="chips filter-chips">
+      <button class="hit chip ${filter === 'populaire' || !filter ? 'on' : ''}" data-sim="comm-filter:${kind}:populaire" type="button">🔥 Populaire</button>
+      <button class="hit chip ${showCats ? 'on' : ''}" data-sim="comm-filter:${kind}:categories" type="button">Catégories ▾</button>
     </div>
     ${
-      list.length
-        ? list
-            .map((c) => {
-              const state = myStateLabel(c.myState)
-              return `
+      showCats
+        ? `<div class="chips filter-chips cat-chip-row">
+      ${COMM_CATEGORIES.map(
+        (cat) => `
+        <button class="hit chip ${filter === `cat:${cat.id}` ? 'on' : ''}" data-sim="comm-filter:${kind}:cat:${cat.id}" type="button">
+          <span class="comm-cat-icon" aria-hidden="true">${cat.icon}</span> ${cat.label}
+        </button>`
+      ).join('')}
+    </div>`
+        : ''
+    }`
+
+  let body = ''
+  if (tab === 'actualites') {
+    body = posts.length
+      ? posts
+          .map((p) => {
+            const c = p.community
+            const cat = c.category || COMM_CATEGORIES.find((x) => x.id === c.categoryId)
+            const join =
+              c.myState === 'member'
+                ? ''
+                : c.myState === 'pending'
+                  ? `<button class="hit btn outline" data-sim="comm-cancel-join:${c.id}" type="button">Annuler</button>`
+                  : `<button class="hit btn outline" data-sim="comm-join:${c.id}" type="button">Rejoindre</button>`
+            return `
+      <article class="comm-feed-card">
+        <div class="comm-feed-head">
+          <button class="hit row-link bare" data-sim="comm-open:${c.id}" type="button">
+            <span class="comm-cat-icon lg" aria-hidden="true">${cat?.icon || '🏷️'}</span>
+            <span class="grow"><strong>${escapeHtml(c.name)}</strong></span>
+          </button>
+          ${join}
+        </div>
+        <div class="post-head">
+          <span class="avatar"></span>
+          <div class="grow">
+            <strong>${escapeHtml(p.author)}</strong>
+            <p class="meta">${formatMsgTime(p.at)} · ${escapeHtml(c.name)}</p>
+          </div>
+        </div>
+        <p>${escapeHtml(p.body)}</p>
+        ${socialActions({
+          likes: String(p.reactions || 0),
+          comments: String(p.comments || 0),
+          shares: '0',
+          contentId: p.id,
+          section: c.kind,
+        })}
+      </article>`
+          })
+          .join('')
+      : q
+        ? emptyState('Aucun résultat')
+        : emptyState(`Aucune actualité ${kind === 'clubs' ? 'de club' : 'de groupe'}`)
+  } else if (tab === 'invitations') {
+    body = list.length
+      ? list
+          .map((c) => {
+            const cat = c.category || COMM_CATEGORIES.find((x) => x.id === c.categoryId)
+            const inv = c.invitationForViewer || {}
+            return `
+      <article class="comm-feed-card">
+        <button class="hit row-link bare" data-sim="comm-open:${c.id}" type="button">
+          <span class="comm-cat-icon lg" aria-hidden="true">${cat?.icon || '🏷️'}</span>
+          <span class="grow">
+            <strong>${escapeHtml(c.name)}</strong>
+            <br/><span class="meta">${c.membersCount} membres · ${accessLabel(c)}</span>
+            <br/><span class="meta">Invité par ${escapeHtml(inv.fromName || '—')} · Admin ${escapeHtml(
+              inv.adminName || inv.fromName || '—'
+            )}</span>
+          </span>
+        </button>
+        <div class="row-actions">
+          <button class="hit btn outline" data-sim="comm-ignore-invite:${c.id}" type="button">Ignorer</button>
+          <button class="hit btn primary" data-sim="comm-accept-invite:${c.id}" type="button">Accepter</button>
+        </div>
+      </article>`
+          })
+          .join('')
+      : emptyState('Aucune invitation')
+  } else if (tab === 'suggestions') {
+    body = list.length
+      ? list
+          .map((c) => {
+            const cat = c.category || COMM_CATEGORIES.find((x) => x.id === c.categoryId)
+            return `
+      <article class="comm-feed-card">
+        <button class="hit row-link bare" data-sim="comm-open:${c.id}" type="button">
+          <span class="comm-cat-icon lg" aria-hidden="true">${cat?.icon || '🏷️'}</span>
+          <span class="grow">
+            <strong>${escapeHtml(c.name)}</strong>
+            <br/><span class="meta">${escapeHtml(c.description)}</span>
+            <br/><span class="meta">${c.membersCount} membres · ${cat?.label || ''}</span>
+          </span>
+        </button>
+        <div class="row-actions">
+          <button class="hit btn outline" data-sim="comm-ignore-suggest:${c.id}" type="button">Ignorer</button>
+          <button class="hit btn primary" data-sim="comm-join:${c.id}" type="button">Rejoindre</button>
+        </div>
+      </article>`
+          })
+          .join('')
+      : emptyState('Aucune suggestion')
+  } else {
+    // mes
+    body = list.length
+      ? list
+          .map((c) => {
+            const cat = c.category || COMM_CATEGORIES.find((x) => x.id === c.categoryId)
+            const friends = (c.friendsIn || []).slice(0, 4)
+            return `
       <button class="hit row-link comm-card" data-sim="comm-open:${c.id}" type="button">
-        <span class="slot-photo tiny" aria-hidden="true"></span>
+        <span class="comm-cat-icon lg" aria-hidden="true">${cat?.icon || '🏷️'}</span>
         <span class="grow">
-          <strong>${c.name}</strong>
+          <strong>${escapeHtml(c.name)}</strong>
+          <br/><span class="meta"><span class="comm-cat-icon sm">${cat?.icon || ''}</span> ${
+            cat?.label || ''
+          } · ${c.membersCount} membres</span>
           <br/><span class="meta">${escapeHtml(c.description)}</span>
-          <br/><span class="meta">${c.membersCount} membres · ${accessLabel(c.access)}${
-                state ? ` · ${state}` : ''
-              }</span>
+          ${
+            friends.length
+              ? `<br/><span class="meta">${avatar(Math.min(friends.length, 3))} ${friends.length} ami(e)s</span>`
+              : ''
+          }
         </span>
         <span>›</span>
       </button>`
-            })
-            .join('')
-        : tab === 'mes'
-          ? emptyState(kind === 'clubs' ? 'Aucune adhésion à un club' : 'Aucune adhésion à un groupe')
-          : q
-            ? emptyState('Aucun résultat')
-            : emptyState(kind === 'clubs' ? 'Aucun club' : 'Aucun groupe')
-    }
+          })
+          .join('')
+      : q
+        ? emptyState('Aucun résultat')
+        : emptyState(kind === 'clubs' ? 'Aucune adhésion à un club' : 'Aucune adhésion à un groupe')
+  }
+
+  return wrap(
+    `
+    <div class="comm-list-head">
+      <h2 class="sec">${title}</h2>
+      <button class="hit icon-btn roundish" data-sim="comm-create-start:${kind}" type="button" title="Créer">+</button>
+    </div>
+    <label class="field">
+      <input type="search" placeholder="Rechercher un ${unit}…" value="${escapeAttr(q)}" data-field="comm-search" data-sim-change="comm-search:${kind}" />
+    </label>
+    ${tabs}
+    ${filters}
+    ${body}
     `,
     {
       header: phoneHeader({ title, backTo: 'accueil-kapan' }),
@@ -3209,7 +3352,30 @@ function communautesList(kind = 'groupes') {
   )
 }
 
-function communautePage(view = 'fil') {
+function communauteActionButtons(c) {
+  const unit = c.kind === 'clubs' ? 'le club' : 'le groupe'
+  const inviteBtn = canInvite(c)
+    ? `<button class="hit btn primary" data-sim="comm-invite:${c.id}" type="button">Inviter</button>`
+    : ''
+  if (c.myState === 'member') {
+    return `
+      <div class="row-actions">
+        <button class="hit btn outline" data-sim="comm-leave-ask:${c.id}" type="button">Quitter ${unit}</button>
+        ${inviteBtn}
+      </div>`
+  }
+  if (c.myState === 'pending') {
+    return `
+      <div class="notice"><strong>Demande en attente</strong></div>
+      <button class="hit btn outline block" data-sim="comm-cancel-join:${c.id}" type="button">Annuler ma demande</button>`
+  }
+  if (c.access === 'open' || c.autoValidateMembers) {
+    return `<button class="hit btn primary block" data-sim="comm-join:${c.id}" type="button">Rejoindre</button>`
+  }
+  return `<button class="hit btn primary block" data-sim="comm-join:${c.id}" type="button">Demander à rejoindre</button>`
+}
+
+function communautePage(forcedView) {
   const id = getOpenCommunauteId()
   const c = id ? getCommunaute(id) : null
   if (!c) {
@@ -3218,74 +3384,112 @@ function communautePage(view = 'fil') {
       footer: phoneFooter('menu'),
     })
   }
+  const viewRaw = forcedView || getCommunautePageView() || 'publications'
+  const view =
+    viewRaw === 'fil' || viewRaw === 'publications'
+      ? 'publications'
+      : viewRaw === 'apropos' || viewRaw === 'informations'
+        ? 'informations'
+        : viewRaw === 'membres'
+          ? 'informations'
+          : viewRaw === 'evenements'
+            ? 'evenements'
+            : 'publications'
   const listBack = c.kind === 'clubs' ? 'communautes-clubs' : 'communautes-groupes'
+  const headerTitle = kindLabel(c.kind)
   const admin = isCommunauteAdmin(c)
+  const modo = isCommunauteModo(c)
   const publishOk = canPublish(c)
-  const joinBtn =
-    c.myState === 'member'
-      ? `<button class="hit btn outline block" data-sim="comm-leave-ask:${c.id}" type="button">${
-          c.kind === 'clubs' ? 'Quitter le club' : 'Quitter le groupe'
-        }</button>`
-      : c.myState === 'pending'
-        ? `<div class="notice"><strong>Demande en attente</strong></div>
-           <button class="hit btn outline block" data-sim="comm-cancel-join:${c.id}" type="button">Annuler ma demande</button>`
-        : c.access === 'open'
-          ? `<button class="hit btn primary block" data-sim="comm-join:${c.id}" type="button">Rejoindre</button>`
-          : `<button class="hit btn primary block" data-sim="comm-join:${c.id}" type="button">Demander à rejoindre</button>`
+  const cat = c.category || COMM_CATEGORIES.find((x) => x.id === c.categoryId)
+  const friends = c.friendsIn || []
+  const unitLabel = c.kind === 'clubs' ? 'Club' : 'Groupe'
 
   const tabs = `
     <div class="tabs">
-      <button class="hit tab ${view === 'fil' ? 'on' : ''}" data-sim="comm-view:fil" type="button">Publications</button>
-      <button class="hit tab ${view === 'apropos' ? 'on' : ''}" data-sim="comm-view:apropos" type="button">À propos</button>
-      <button class="hit tab ${view === 'membres' ? 'on' : ''}" data-sim="comm-view:membres" type="button">Membres</button>
+      <button class="hit tab ${view === 'publications' ? 'on' : ''}" data-sim="comm-view:publications" type="button">Publications</button>
+      <button class="hit tab ${view === 'evenements' ? 'on' : ''}" data-sim="comm-view:evenements" type="button">Événements</button>
+      <button class="hit tab ${view === 'informations' ? 'on' : ''}" data-sim="comm-view:informations" type="button">Informations</button>
     </div>`
 
   let body = ''
-  if (view === 'apropos') {
+  if (view === 'evenements') {
+    const evts = c.events || []
+    body = evts.length
+      ? evts
+          .map(
+            (e) => `
+      <button class="hit row-link" data-sim="comm-open-event:${e.id}" type="button">
+        <span class="grow">
+          <strong>${escapeHtml(e.title)}</strong>
+          <br/><span class="meta">${escapeHtml(e.when || '')} · lié à ${escapeHtml(c.name)}</span>
+        </span>
+        <span>›</span>
+      </button>`
+          )
+          .join('')
+      : emptyState('Aucun événement lié')
+  } else if (view === 'informations') {
+    const roles = roleHolders(c)
     body = `
-      <h2 class="sec">Description</h2>
-      <p>${escapeHtml(c.description)}</p>
-      <h2 class="sec">Règles</h2>
-      <p>${escapeHtml(c.rules || 'Aucune règle renseignée')}</p>
-      <p class="meta">Accès · ${accessLabel(c.access)}</p>
-      <p class="meta">Publications · ${
-        c.publishRule === 'admins' ? 'Administrateurs uniquement' : 'Membres autorisés'
-      }</p>
-      <h2 class="sec">Administrateurs</h2>
-      ${(c.admins || []).map((a) => `<div class="row-link static"><span>${a}</span></div>`).join('')}
-    `
-  } else if (view === 'membres') {
-    body = `
-      <p class="meta">${c.membersCount} membres</p>
-      ${(c.memberIds || [])
-        .map(
-          (m) => `
+      <h2 class="sec">Informations</h2>
+      <button class="hit row-link" data-go="communaute-membres" type="button">
+        <span class="grow"><strong>Membres</strong></span>
+        <span class="meta">${c.membersCount}</span><span>›</span>
+      </button>
+      <button class="hit row-link" data-sim="comm-stub:galeries" type="button">
+        <span class="grow"><strong>Galeries</strong></span>
+        <span class="meta">${c.galleryCount || 0}</span><span>›</span>
+      </button>
+      ${
+        modo
+          ? `<button class="hit row-link" data-go="communaute-parametres" type="button">
+        <span class="grow"><strong>Gestion du ${unitLabel}</strong></span>
+        <span>›</span>
+      </button>`
+          : ''
+      }
+      ${
+        modo
+          ? `
+      <h2 class="sec">Outils d’administration</h2>
+      <button class="hit row-link" data-sim="comm-stub:approbations" type="button">
+        <span class="grow"><strong>Approbations</strong></span>
+        <span class="meta">${c.pendingApprovals || 0}</span><span>›</span>
+      </button>
+      <button class="hit row-link" data-sim="comm-stub:validations" type="button">
+        <span class="grow"><strong>Validations des membres</strong></span>
+        <span class="meta">${(c.pendingIds || []).length}</span><span>›</span>
+      </button>
+      <button class="hit row-link" data-sim="comm-stub:signales" type="button">
+        <span class="grow"><strong>Contenus signalés</strong></span>
+        <span class="meta">${c.reportedCount || 0}</span><span>›</span>
+      </button>
+      <button class="hit row-link" data-sim="comm-stub:regles" type="button">
+        <span class="grow"><strong>Règles</strong></span>
+        <span class="meta">${c.rulesCount || 0}</span><span>›</span>
+      </button>`
+          : ''
+      }
+      <h2 class="sec">Historique</h2>
+      <div class="card soft-card">
+        <p class="meta">Créé le : ${escapeHtml(c.createdAt || '—')}</p>
+        <p class="meta">Dernière modification : ${escapeHtml(c.updatedAt || '—')}</p>
+      </div>
+      <h2 class="sec">Administrateurs &amp; Modérateurs</h2>
+      ${
+        roles.length
+          ? roles
+              .map(
+                (r) => `
         <div class="row-link static">
           <span class="avatar"></span>
-          <span class="grow"><strong>${m === 'user-rica' ? 'Rica (vous)' : m}</strong>
-          ${(c.admins || []).includes(m) ? '<span class="meta"> · Admin</span>' : ''}</span>
-          ${
-            admin && m !== 'user-rica' && !(c.admins || []).includes(m)
-              ? `<button class="hit btn outline" data-sim="comm-remove:${c.id}:${m}" type="button">Retirer</button>`
-              : ''
-          }
+          <span class="grow"><strong>${escapeHtml(r.name)}</strong><br/><span class="meta">${escapeHtml(
+            r.role
+          )}</span></span>
         </div>`
-        )
-        .join('')}
-      ${
-        admin && (c.pendingIds || []).length
-          ? `<h2 class="sec">Demandes</h2>
-        ${c.pendingIds
-          .map(
-            (p) => `
-          <div class="row-actions">
-            <span class="grow"><strong>${p}</strong></span>
-            <button class="hit btn primary" data-sim="comm-accept:${c.id}:${p}" type="button">Accepter</button>
-            <button class="hit btn outline" data-sim="comm-refuse:${c.id}:${p}" type="button">Refuser</button>
-          </div>`
-          )
-          .join('')}`
-          : ''
+              )
+              .join('')
+          : emptyState('Aucun rôle')
       }
     `
   } else {
@@ -3296,10 +3500,8 @@ function communautePage(view = 'fil') {
         <span class="avatar"></span>
         <button class="hit compose-input" data-go="communaute-composer" type="button">Commencer une publication</button>
       </div>`
-          : c.myState === 'member' && c.publishRule === 'admins'
-            ? `<p class="meta">Seuls les administrateurs peuvent publier dans ce ${
-                c.kind === 'clubs' ? 'club' : 'groupe'
-              }.</p>`
+          : c.myState === 'member'
+            ? `<p class="meta">Publication réservée selon les règles du ${unitLabel.toLowerCase()}.</p>`
             : ''
       }
       ${(c.posts || [])
@@ -3310,7 +3512,7 @@ function communautePage(view = 'fil') {
             <span class="avatar"></span>
             <div class="grow">
               <strong>${escapeHtml(p.author)}</strong>
-              <p class="meta">${formatMsgTime(p.at)} · ${c.name}</p>
+              <p class="meta">${formatMsgTime(p.at)}${p.pending ? ' · En attente' : ''}</p>
             </div>
             <button class="hit icon-btn" data-open-menu="publication" data-content-id="${p.id}" data-section="${
               c.kind
@@ -3327,7 +3529,7 @@ function communautePage(view = 'fil') {
           <div class="row-actions">
             <button class="hit btn" data-sim="comm-react:${c.id}:${p.id}" type="button">Réagir</button>
             ${
-              p.authorId === 'user-rica' || admin
+              p.authorId === getViewerId() || modo
                 ? `<button class="hit btn outline" data-sim="comm-del-post:${c.id}:${p.id}" type="button">Supprimer</button>`
                 : ''
             }
@@ -3340,24 +3542,274 @@ function communautePage(view = 'fil') {
 
   return wrap(
     `
-    ${photo(`Couverture ${c.name}…`, 'hero')}
-    <div class="detail-head">
-      <strong class="block-title">${c.name}</strong>
-      <p class="meta">${c.membersCount} membres · ${accessLabel(c.access)}</p>
-      <p>${escapeHtml(c.description)}</p>
+    <div class="comm-cover">
+      ${photo(c.coverPhoto ? `Couverture ${c.name}` : `Couverture ${c.name}…`, 'hero')}
+      <span class="comm-cover-avatar" aria-hidden="true"></span>
     </div>
-    ${joinBtn}
+    <div class="comm-meta-row">
+      <span class="meta">${escapeHtml(c.createdAgo || '')}</span>
+      <span class="meta">${privacyLabel(c.privacy)} · ${accessLabel(c)}</span>
+    </div>
+    <div class="detail-head">
+      <strong class="block-title">${escapeHtml(c.name)}</strong>
+      <div class="comm-meta-row triple">
+        <span class="meta"><span class="avatar tiny"></span> ${escapeHtml(c.creatorName || '')}</span>
+        <span class="meta">${c.membersCount} membres</span>
+        <span class="meta"><span class="comm-cat-icon sm">${cat?.icon || ''}</span> ${escapeHtml(
+          cat?.label || ''
+        )}</span>
+      </div>
+      <p>${escapeHtml(c.description)}</p>
+      ${
+        friends.length
+          ? `<p class="meta">${avatar(Math.min(friends.length, 4))} ${friends.length} ami(e)s y sont membres</p>`
+          : ''
+      }
+    </div>
+    ${communauteActionButtons(c)}
     ${tabs}
     ${body}
     `,
     {
       header: phoneHeader({
-        title: c.name,
+        title: headerTitle,
         backTo: listBack,
-        extraRight: admin
-          ? `<button class="hit icon-btn" data-sim="comm-view:membres" type="button" title="Gérer">⋯</button>`
-          : '',
+        extraRight: `<button class="hit icon-btn" data-go="communaute-menu" type="button" title="Menu">⋯</button>`,
       }),
+      footer: phoneFooter('menu'),
+    }
+  )
+}
+
+function communauteMenu() {
+  const c = getCommunaute(getOpenCommunauteId())
+  if (!c) {
+    return wrap(emptyState('Communauté indisponible'), {
+      header: phoneHeader({ title: 'Menu', chrome: 'panel', closeIcon: true }),
+      footer: '',
+    })
+  }
+  const admin = isCommunauteAdmin(c)
+  const publishOk = canPublish(c)
+  const unit = c.kind === 'clubs' ? 'Club' : 'Groupe'
+  let notifOn = true
+  try {
+    const raw = sessionStorage.getItem(`ma-ville-comm-notif-${c.id}`)
+    if (raw === '0') notifOn = false
+  } catch {
+    /* ignore */
+  }
+  return wrap(`${photo(`Fond ${c.name}…`, 'dim')}`, {
+    header: phoneHeader({ title: `Menu du ${unit}`, chrome: 'panel', closeIcon: true }),
+    footer: '',
+    overlay: modalShell(
+      `Menu du ${unit}`,
+      `
+      ${admin ? sheetOption(`Modifier le ${unit}`, { go: 'communaute-parametres' }) : ''}
+      ${publishOk ? sheetOption('Créer une publication', { go: 'communaute-composer' }) : ''}
+      ${sheetOption('Rencontres', { go: 'communautes-rencontres' })}
+      ${sheetOption('Salons', { sim: 'comm-stub:salons' })}
+      ${sheetOption('Créer un événement', { sim: `comm-event-create:${c.id}` })}
+      ${sheetOption(`Partager le ${unit}`, { sim: 'partage' })}
+      ${sheetOption('Notifications', { sim: `comm-notif-toggle:${c.id}`, toggle: true, on: notifOn })}
+      `
+    ),
+  })
+}
+
+function communauteParametres() {
+  const c = getCommunaute(getOpenCommunauteId())
+  if (!c || !isCommunauteAdmin(c)) {
+    return wrap(emptyState('Paramètres réservés aux administrateurs de la communauté'), {
+      header: phoneHeader({ title: 'Paramètres', chrome: 'form', backTo: 'communaute-page' }),
+      footer: '',
+    })
+  }
+  const unit = c.kind === 'clubs' ? 'Club' : 'Groupe'
+  const roles = roleHolders(c)
+  return wrap(
+    `
+    <h2 class="sec">Paramètres</h2>
+    <label class="field"><span>Confidentialité</span>
+      <select data-field="comm-privacy">
+        <option value="public" ${c.privacy !== 'private' ? 'selected' : ''}>Public</option>
+        <option value="private" ${c.privacy === 'private' ? 'selected' : ''}>Privé</option>
+      </select>
+    </label>
+    <label class="field"><span>Invitations</span>
+      <select data-field="comm-invite-who">
+        <option value="member" ${c.inviteWho !== 'admin' ? 'selected' : ''}>Membre</option>
+        <option value="admin" ${c.inviteWho === 'admin' ? 'selected' : ''}>Administrateur</option>
+      </select>
+      <span class="meta">Qui peut inviter de nouveaux membres.</span>
+    </label>
+    <label class="field row-between">
+      <span>Validation automatique des nouveaux membres</span>
+      <button class="hit toggle ${c.autoValidateMembers ? 'on' : ''}" data-sim="comm-toggle-field:autoValidateMembers" type="button" aria-pressed="${
+        c.autoValidateMembers ? 'true' : 'false'
+      }"></button>
+    </label>
+    <p class="meta">Valider automatiquement l’inscription d’une personne invitée.</p>
+    <label class="field row-between">
+      <span>Approbation automatique des publications</span>
+      <button class="hit toggle ${c.autoApprovePosts ? 'on' : ''}" data-sim="comm-toggle-field:autoApprovePosts" type="button" aria-pressed="${
+        c.autoApprovePosts ? 'true' : 'false'
+      }"></button>
+    </label>
+    <p class="meta">Valider automatiquement les publications des membres.</p>
+    <h2 class="sec">Rôles dans le ${unit}</h2>
+    ${roles
+      .map(
+        (r) => `
+      <div class="row-link static">
+        <span class="avatar"></span>
+        <span class="grow"><strong>${escapeHtml(r.name)}</strong><br/><span class="meta">${escapeHtml(
+          r.role
+        )}</span></span>
+        <span class="meta">⋯</span>
+      </div>`
+      )
+      .join('')}
+    <p class="meta">Vous pouvez ajouter une personne qui aura un rôle pour administrer le ${unit}.</p>
+    <button class="hit btn outline block" data-go="communaute-attribuer-role" type="button">Ajouter un rôle</button>
+    <h2 class="sec">Autres</h2>
+    <button class="hit row-link" data-sim="comm-dissolve:${c.id}" type="button">
+      <span class="grow"><strong>Dissoudre ce ${unit}</strong></span>
+    </button>
+    <button class="hit row-link danger-text" data-sim="comm-leave-admin:${c.id}" type="button">
+      <span class="grow"><strong>Quitter le rôle administrateur</strong></span>
+    </button>
+    <button class="hit btn primary block" data-sim="comm-settings-save" type="button">Terminer</button>
+    `,
+    {
+      header: phoneHeader({
+        title: `Paramètres du ${unit}`,
+        chrome: 'form',
+        backTo: 'communaute-page',
+      }),
+      footer: '',
+    }
+  )
+}
+
+function communauteAttribuerRole() {
+  const c = getCommunaute(getOpenCommunauteId())
+  if (!c || !isCommunauteAdmin(c)) {
+    return wrap(emptyState('Action réservée aux administrateurs de la communauté'), {
+      header: phoneHeader({ title: 'Attribuer un rôle', chrome: 'form', backTo: 'communaute-parametres' }),
+      footer: '',
+    })
+  }
+  const pick = getRolePick() || 'admin'
+  const viewer = getViewerId()
+  const candidates = (c.memberIds || []).filter((uid) => uid !== viewer)
+  return wrap(
+    `
+    <h2 class="sec">Choisir un rôle</h2>
+    <div class="chips filter-chips">
+      <button class="hit chip ${pick === 'admin' ? 'on' : ''}" data-sim="comm-role-pick:admin" type="button">Administrateur</button>
+      <button class="hit chip ${pick === 'modo' ? 'on' : ''}" data-sim="comm-role-pick:modo" type="button">Modérateur</button>
+    </div>
+    <h2 class="sec">Choisir un membre</h2>
+    ${
+      candidates.length
+        ? candidates
+            .map((uid) => {
+              const m = memberDisplay(uid)
+              return `
+      <button class="hit row-link" data-sim="comm-assign-role:${c.id}:${uid}" type="button">
+        <span class="avatar"></span>
+        <span class="grow"><strong>${escapeHtml(m.name)}</strong><br/><span class="meta">${escapeHtml(
+          m.since
+        )}</span></span>
+        <span>›</span>
+      </button>`
+            })
+            .join('')
+        : emptyState('Aucun autre membre')
+    }
+    `,
+    {
+      header: phoneHeader({
+        title: 'Attribuer un rôle',
+        chrome: 'form',
+        backTo: 'communaute-parametres',
+      }),
+      footer: '',
+    }
+  )
+}
+
+function communauteMembres() {
+  const c = getCommunaute(getOpenCommunauteId())
+  if (!c) {
+    return wrap(emptyState('Communauté indisponible'), {
+      header: phoneHeader({ title: 'Membres', backTo: 'communaute-page' }),
+      footer: phoneFooter('menu'),
+    })
+  }
+  let q = ''
+  try {
+    q = sessionStorage.getItem('ma-ville-comm-member-search') || ''
+  } catch {
+    /* ignore */
+  }
+  const admin = isCommunauteAdmin(c)
+  const viewer = getViewerId()
+  const members = (c.memberIds || [])
+    .map((uid) => ({ uid, ...memberDisplay(uid) }))
+    .filter((m) => !q || m.name.toLowerCase().includes(q.toLowerCase()) || m.uid.includes(q))
+  return wrap(
+    `
+    <label class="field">
+      <input type="search" placeholder="Rechercher un membre…" value="${escapeAttr(q)}" data-field="comm-member-search" data-sim-change="comm-member-search" />
+    </label>
+    <p class="meta">${c.membersCount} membres</p>
+    ${members
+      .map((m) => {
+        const isAdmin = (c.admins || []).includes(m.uid)
+        const isModo = (c.moderators || []).includes(m.uid)
+        const role = isAdmin ? 'Administrateur' : isModo ? 'Modérateur' : ''
+        return `
+      <div class="row-link static">
+        <span class="avatar"></span>
+        <span class="grow">
+          <strong>${escapeHtml(m.uid === viewer ? `${m.name} (vous)` : m.name)}</strong>
+          <br/><span class="meta">${escapeHtml(m.since)}${role ? ` · ${role}` : ''}</span>
+        </span>
+        ${
+          m.uid !== viewer
+            ? `<button class="hit icon-btn" data-sim="comm-member-msg:${m.uid}" type="button" title="Message">💬</button>`
+            : ''
+        }
+        ${
+          admin && m.uid !== viewer && !isAdmin
+            ? `<button class="hit btn outline" data-sim="comm-remove:${c.id}:${m.uid}" type="button">Retirer</button>`
+            : ''
+        }
+      </div>`
+      })
+      .join('') || emptyState('Aucun membre')}
+    ${
+      admin && (c.pendingIds || []).length
+        ? `<h2 class="sec">Demandes</h2>
+      ${c.pendingIds
+        .map((uid) => {
+          const m = memberDisplay(uid)
+          return `
+        <div class="row-actions">
+          <span class="grow"><strong>${escapeHtml(m.name)}</strong></span>
+          <button class="hit btn primary" data-sim="comm-accept:${c.id}:${uid}" type="button">Accepter</button>
+          <button class="hit btn outline" data-sim="comm-refuse:${c.id}:${uid}" type="button">Refuser</button>
+        </div>`
+        })
+        .join('')}`
+        : ''
+    }
+    <button class="hit btn block" data-sim="comm-group-msg" type="button">Envoyer un message groupé</button>
+    `,
+    {
+      header: phoneHeader({ title: 'Membres', backTo: 'communaute-page' }),
       footer: phoneFooter('menu'),
     }
   )
@@ -3375,7 +3827,7 @@ function communauteComposer() {
     `
     <div class="form-card">
       <h2 class="sec">Nouvelle publication</h2>
-      <p class="meta">${c.name} · ${kindLabel(c.kind)}</p>
+      <p class="meta">${escapeHtml(c.name)} · ${kindLabel(c.kind)}</p>
       <label class="field"><span>Texte</span>
         <textarea rows="5" placeholder="Écrire une publication…" data-field="comm-post-body"></textarea>
       </label>
@@ -3390,6 +3842,94 @@ function communauteComposer() {
       footer: '',
     }
   )
+}
+
+function communauteCreate() {
+  const draft = getCreateDraft()
+  if (!draft) {
+    return wrap(emptyState('Création non démarrée'), {
+      header: phoneHeader({ title: 'Créer', chrome: 'form', closeIcon: true }),
+      footer: '',
+    })
+  }
+  const unit = draft.kind === 'clubs' ? 'Club' : 'Groupe'
+  const step = draft.step || 1
+  const cat = COMM_CATEGORIES.find((x) => x.id === draft.categoryId) || COMM_CATEGORIES[0]
+  let body = ''
+  if (step === 1) {
+    body = `
+      <h2 class="sec accent">À propos</h2>
+      <label class="field"><span>Quel est le nom de votre ${unit} ?</span>
+        <input type="text" value="${escapeAttr(draft.name || '')}" placeholder="Nom" data-field="comm-create-name" />
+      </label>
+      <label class="field"><span>De quel genre de ${unit} s’agit-il ?</span>
+        <select data-field="comm-create-category">
+          ${COMM_CATEGORIES.map(
+            (c) =>
+              `<option value="${c.id}" ${c.id === draft.categoryId ? 'selected' : ''}>${c.icon} ${c.label}</option>`
+          ).join('')}
+        </select>
+      </label>
+      <p class="meta"><span class="comm-cat-icon">${cat.icon}</span> ${escapeHtml(cat.label)}</p>
+      <label class="field"><span>Description</span>
+        <textarea rows="4" placeholder="Décrire le ${unit}" data-field="comm-create-desc">${escapeHtml(
+          draft.description || ''
+        )}</textarea>
+      </label>
+      <h2 class="sec">Importer une photo de profil</h2>
+      <div class="row-actions">
+        <button class="hit btn outline" data-sim="comm-create-photo:profile" type="button">${
+          draft.profilePhoto ? '✓ Profil (aperçu local)' : '📷 Photo de profil'
+        }</button>
+        <span class="meta">Carrée 1:1 · JPG/PNG · max 5 Mo (simulé)</span>
+      </div>
+      <h2 class="sec">Importer une photo de couverture</h2>
+      <div class="row-actions">
+        <button class="hit btn outline" data-sim="comm-create-photo:cover" type="button">${
+          draft.coverPhoto ? '✓ Couverture (aperçu local)' : '📷 Photo de couverture'
+        }</button>
+        <span class="meta">~375×148 · JPG/PNG · max 5 Mo (simulé)</span>
+      </div>
+      <button class="hit btn primary block" data-sim="comm-create-next" type="button">Suivant</button>
+    `
+  } else {
+    body = `
+      <h2 class="sec accent">Paramètres</h2>
+      <label class="field"><span>Confidentialité</span>
+        <select data-field="comm-create-privacy">
+          <option value="public" ${draft.privacy !== 'private' ? 'selected' : ''}>Public</option>
+          <option value="private" ${draft.privacy === 'private' ? 'selected' : ''}>Privé</option>
+        </select>
+      </label>
+      <label class="field"><span>Invitations</span>
+        <select data-field="comm-create-invite-who">
+          <option value="member" ${draft.inviteWho !== 'admin' ? 'selected' : ''}>Membre</option>
+          <option value="admin" ${draft.inviteWho === 'admin' ? 'selected' : ''}>Administrateur</option>
+        </select>
+      </label>
+      <label class="field row-between">
+        <span>Validation automatique des nouveaux membres</span>
+        <button class="hit toggle ${draft.autoValidateMembers !== false ? 'on' : ''}" data-sim="comm-create-toggle:autoValidateMembers" type="button"></button>
+      </label>
+      <label class="field row-between">
+        <span>Approbation automatique des publications</span>
+        <button class="hit toggle ${draft.autoApprovePosts !== false ? 'on' : ''}" data-sim="comm-create-toggle:autoApprovePosts" type="button"></button>
+      </label>
+      <div class="row-actions">
+        <button class="hit btn" data-sim="comm-create-prev" type="button">Précédent</button>
+        <button class="hit btn primary" data-sim="comm-create-submit" type="button">Créer</button>
+      </div>
+    `
+  }
+  return wrap(body, {
+    header: phoneHeader({
+      title: `Créer un ${unit}`,
+      chrome: 'form',
+      closeIcon: true,
+      backTo: draft.kind === 'clubs' ? 'communautes-clubs' : 'communautes-groupes',
+    }),
+    footer: '',
+  })
 }
 
 function communautesRencontres() {
@@ -7409,25 +7949,55 @@ export const SCREENS = {
     title: 'Communauté',
     side: 'user',
     group: 'Vie locale',
-    render: () => communautePage('fil'),
+    render: () => communautePage('publications'),
   },
   'communaute-apropos': {
-    title: 'Communauté — À propos',
+    title: 'Communauté — Informations',
     side: 'user',
     group: 'Vie locale',
-    render: () => communautePage('apropos'),
+    render: () => communautePage('informations'),
+  },
+  'communaute-evenements': {
+    title: 'Communauté — Événements',
+    side: 'user',
+    group: 'Vie locale',
+    render: () => communautePage('evenements'),
+  },
+  'communaute-menu': {
+    title: 'Menu communauté',
+    side: 'user',
+    group: 'Vie locale',
+    render: communauteMenu,
+  },
+  'communaute-parametres': {
+    title: 'Paramètres communauté',
+    side: 'user',
+    group: 'Vie locale',
+    render: communauteParametres,
+  },
+  'communaute-attribuer-role': {
+    title: 'Attribuer un rôle',
+    side: 'user',
+    group: 'Vie locale',
+    render: communauteAttribuerRole,
   },
   'communaute-membres': {
     title: 'Communauté — Membres',
     side: 'user',
     group: 'Vie locale',
-    render: () => communautePage('membres'),
+    render: communauteMembres,
   },
   'communaute-composer': {
     title: 'Publier',
     side: 'user',
     group: 'Vie locale',
     render: communauteComposer,
+  },
+  'communaute-create': {
+    title: 'Créer une communauté',
+    side: 'user',
+    group: 'Vie locale',
+    render: communauteCreate,
   },
 
   'admin-home': { title: 'Admin — Tableau de bord', side: 'admin', group: 'Admin', render: adminHome },
@@ -7732,9 +8302,14 @@ export const NAV_TREE = {
           },
           { id: 'communautes-groupes', label: 'Groupes', children: [
             { id: 'communaute-page', label: 'Page communauté' },
-            { id: 'communaute-apropos', label: 'À propos' },
+            { id: 'communaute-evenements', label: 'Événements' },
+            { id: 'communaute-apropos', label: 'Informations' },
+            { id: 'communaute-menu', label: 'Menu ⋯' },
+            { id: 'communaute-parametres', label: 'Paramètres' },
+            { id: 'communaute-attribuer-role', label: 'Attribuer un rôle' },
             { id: 'communaute-membres', label: 'Membres' },
             { id: 'communaute-composer', label: 'Composer' },
+            { id: 'communaute-create', label: 'Créer' },
           ] },
           { id: 'communautes-clubs', label: 'Clubs' },
           { id: 'communautes-rencontres', label: 'Mes rencontres (ébauche)' },
