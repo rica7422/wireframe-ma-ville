@@ -43,6 +43,26 @@ const DEFAULT = {
       status: 'confirmed',
       cancelMotif: '',
     },
+    {
+      id: 'rdv-demo-2',
+      motifId: 'motif-etat-civil',
+      slot: '2026-05-27T09:30',
+      slotLabel: '27 mai 2026 · 09:30',
+      user: 'Rica',
+      userId: 'user-rica',
+      status: 'confirmed',
+      cancelMotif: '',
+    },
+    {
+      id: 'rdv-demo-3',
+      motifId: 'motif-urbanisme',
+      slot: '2026-05-28T14:00',
+      slotLabel: '28 mai 2026 · 14:00',
+      user: 'Armen K.',
+      userId: 'user-armen',
+      status: 'pending',
+      cancelMotif: '',
+    },
   ],
 }
 
@@ -54,8 +74,14 @@ export const RDV_STORE = {
 }
 
 function persist() {
+  const raw = JSON.stringify(RDV_STORE)
   try {
-    sessionStorage.setItem(STORE_KEY, JSON.stringify(RDV_STORE))
+    localStorage.setItem(STORE_KEY, raw)
+  } catch {
+    /* ignore */
+  }
+  try {
+    sessionStorage.setItem(STORE_KEY, raw)
   } catch {
     /* ignore */
   }
@@ -63,7 +89,7 @@ function persist() {
 
 function hydrate() {
   try {
-    const raw = sessionStorage.getItem(STORE_KEY)
+    const raw = sessionStorage.getItem(STORE_KEY) || localStorage.getItem(STORE_KEY)
     if (raw) {
       const saved = JSON.parse(raw)
       if (saved?.motifs) {
@@ -143,6 +169,10 @@ export function getBooking(id) {
 }
 
 export function createBooking({ motifId, slot, slotLabel, user = 'Rica', userId = 'user-rica' }) {
+  // Capacité = 1 créneau individuel : refuser collision
+  if (isSlotTaken(slot)) {
+    return { error: 'slot_taken' }
+  }
   const id = `rdv-${Date.now()}`
   const b = {
     id,
@@ -157,6 +187,48 @@ export function createBooking({ motifId, slot, slotLabel, user = 'Rica', userId 
   RDV_STORE.bookings.push(b)
   persist()
   return b
+}
+
+export function moveBooking(id, { slot, slotLabel, motifId }) {
+  const b = getBooking(id)
+  if (!b) return null
+  if (isSlotTaken(slot, id)) return { error: 'slot_taken' }
+  Object.assign(b, {
+    slot,
+    slotLabel,
+    ...(motifId ? { motifId } : {}),
+    status: b.status === 'cancelled' ? 'confirmed' : b.status,
+  })
+  persist()
+  return b
+}
+
+export function isSlotTaken(slotIso, excludeBookingId = null) {
+  return RDV_STORE.bookings.some(
+    (b) =>
+      b.slot === slotIso &&
+      b.id !== excludeBookingId &&
+      (b.status === 'confirmed' || b.status === 'pending')
+  )
+}
+
+export function findNextFreeSlot(excludeBookingId = null) {
+  // Scan May 2026 weekdays for first free slot
+  for (let day = 1; day <= 31; day++) {
+    const slots = slotsForMayDay(day, { excludeBookingId, includeTaken: true })
+    for (const t of slots) {
+      const iso = `2026-05-${String(day).padStart(2, '0')}T${t}`
+      if (!isSlotTaken(iso, excludeBookingId)) {
+        return {
+          day,
+          time: t,
+          slot: iso,
+          slotLabel: `${day} mai 2026 · ${t}`,
+        }
+      }
+    }
+  }
+  return null
 }
 
 export function updateBooking(id, patch) {
@@ -236,10 +308,38 @@ export function weekdayForMay2026(day) {
   return wd === 0 ? 7 : wd
 }
 
-export function slotsForMayDay(day) {
+/**
+ * Available slots for a May day.
+ * By default subtracts confirmed/pending bookings so cancel frees the slot in UI.
+ * Pass includeTaken:true to get the raw dispo grid (admin editor).
+ */
+export function slotsForMayDay(day, { excludeBookingId = null, includeTaken = false } = {}) {
   const wd = weekdayForMay2026(day)
   if (wd > 5) return []
   const date = `2026-05-${String(day).padStart(2, '0')}`
   if (RDV_STORE.indispos.some((i) => i.date === date)) return []
-  return getDispoSlots(wd)
+  const base = getDispoSlots(wd)
+  if (includeTaken) return base
+  return base.filter((t) => {
+    const iso = `${date}T${t}`
+    return !isSlotTaken(iso, excludeBookingId)
+  })
+}
+
+export function setDispoEditWeekday(wd) {
+  try {
+    if (wd != null) sessionStorage.setItem('ma-ville-rdv-dispo-edit', String(wd))
+    else sessionStorage.removeItem('ma-ville-rdv-dispo-edit')
+  } catch {
+    /* ignore */
+  }
+}
+
+export function getDispoEditWeekday() {
+  try {
+    const v = sessionStorage.getItem('ma-ville-rdv-dispo-edit')
+    return v ? Number(v) : null
+  } catch {
+    return null
+  }
 }

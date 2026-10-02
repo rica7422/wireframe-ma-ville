@@ -354,8 +354,99 @@ const PHARMACIE_FICHES = [
   },
 ]
 
+const ANN_STORE_KEY = 'ma-ville-annuaire-store'
+const CUSTOM_RUB_KEY = 'ma-ville-custom-rubriques'
+
+/** Mutable pharmacie list (persisted overlays) */
+export const PHARMACIE_STORE = PHARMACIE_FICHES.map((f) => ({ ...f }))
+
+function persistAnnuaire() {
+  const payload = {
+    rubriques: ANN_RUBRIQUES.map((r) => ({
+      id: r.id,
+      fiches: r.fiches,
+      label: r.label,
+      meta: r.meta,
+      sousCats: r.sousCats,
+      custom: r.custom || false,
+    })),
+    pharmacies: PHARMACIE_STORE,
+  }
+  const raw = JSON.stringify(payload)
+  try {
+    localStorage.setItem(ANN_STORE_KEY, raw)
+  } catch {
+    /* ignore */
+  }
+  try {
+    sessionStorage.setItem(ANN_STORE_KEY, raw)
+  } catch {
+    /* ignore */
+  }
+}
+
+function hydrateAnnuaire() {
+  try {
+    const raw = sessionStorage.getItem(ANN_STORE_KEY) || localStorage.getItem(ANN_STORE_KEY)
+    if (!raw) return
+    const saved = JSON.parse(raw)
+    if (saved?.rubriques?.length) {
+      saved.rubriques.forEach((sr) => {
+        const existing = ANN_RUBRIQUES.find((r) => r.id === sr.id)
+        if (existing) {
+          if (Array.isArray(sr.fiches)) existing.fiches = sr.fiches
+        } else if (sr.custom) {
+          ANN_RUBRIQUES.push({
+            id: sr.id,
+            label: sr.label || 'Rubrique',
+            meta: sr.meta || 'Ajoutée (admin)',
+            sousCats: sr.sousCats || [{ label: 'Général', id: 'general' }],
+            fiches: sr.fiches || [],
+            custom: true,
+          })
+        }
+      })
+    }
+    if (saved?.pharmacies?.length) {
+      PHARMACIE_STORE.length = 0
+      saved.pharmacies.forEach((p) => PHARMACIE_STORE.push(p))
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
+hydrateAnnuaire()
+
 export function getRubrique(id) {
   return ANN_RUBRIQUES.find((r) => r.id === id) || null
+}
+
+export function listRubriques() {
+  return ANN_RUBRIQUES
+}
+
+export function addCustomRubrique(label) {
+  const id = `rub-${Date.now()}`
+  const rub = {
+    id,
+    label: label || 'Nouvelle rubrique',
+    meta: 'Ajoutée (admin)',
+    sousCats: [{ label: 'Général', id: 'general' }],
+    fiches: [],
+    custom: true,
+  }
+  ANN_RUBRIQUES.push(rub)
+  persistAnnuaire()
+  return rub
+}
+
+export function removeCustomRubrique(id) {
+  const i = ANN_RUBRIQUES.findIndex((r) => r.id === id && r.custom)
+  if (i < 0) return { error: 'not_custom' }
+  ANN_RUBRIQUES.splice(i, 1)
+  persistAnnuaire()
+  return { ok: true }
 }
 
 export function getFiche(id) {
@@ -364,13 +455,51 @@ export function getFiche(id) {
     const f = r.fiches.find((x) => x.id === id)
     if (f) return { ...f, rubriqueId: r.id, rubriqueLabel: r.label }
   }
-  const p = PHARMACIE_FICHES.find((x) => x.id === id)
+  const p = PHARMACIE_STORE.find((x) => x.id === id)
   if (p) return { ...p, rubriqueId: 'sante', rubriqueLabel: 'Santé' }
   return null
 }
 
+export function upsertFiche({ id, rubriqueId, title, address, phone, hours, description, status, sousCat }) {
+  const rid = rubriqueId || getAnnuaireRubriqueId() || 'education'
+  const phoneClean = (phone || '').trim()
+  const addressClean = (address || '').trim()
+  const payload = {
+    id: id || `fiche-${Date.now()}`,
+    title: (title || '').trim() || 'Sans titre',
+    sousCat: sousCat || 'Général',
+    status: status || 'Brouillon',
+    address: addressClean,
+    phone: phoneClean,
+    hours: (hours || '').trim(),
+    description: (description || '').trim(),
+    hasPhone: Boolean(phoneClean && phoneClean.length >= 6),
+    hasPlace: Boolean(addressClean && !addressClean.endsWith('…')),
+  }
+
+  if (rid === 'sante' || rid === 'pharmacies') {
+    const i = PHARMACIE_STORE.findIndex((f) => f.id === payload.id)
+    if (i >= 0) PHARMACIE_STORE[i] = { ...PHARMACIE_STORE[i], ...payload }
+    else PHARMACIE_STORE.push({ ...payload, sousCat: 'Pharmacies' })
+    persistAnnuaire()
+    setFicheContext({ mode: 'edit', id: payload.id, backTo: 'admin-annuaire-pharmacies' })
+    return getFiche(payload.id)
+  }
+
+  let rub = getRubrique(rid)
+  if (!rub) {
+    rub = getRubrique('education')
+  }
+  const i = rub.fiches.findIndex((f) => f.id === payload.id)
+  if (i >= 0) rub.fiches[i] = { ...rub.fiches[i], ...payload }
+  else rub.fiches.push(payload)
+  persistAnnuaire()
+  setFicheContext({ mode: 'edit', id: payload.id, backTo: 'admin-annuaire-rubrique' })
+  return getFiche(payload.id)
+}
+
 export function listPharmacieFiches() {
-  return PHARMACIE_FICHES
+  return PHARMACIE_STORE.filter((f) => f.status !== 'Non publié')
 }
 
 export function setAnnuaireRubriqueId(id) {
@@ -435,8 +564,14 @@ const DEFAULT_PUBS = [
 export const ADMIN_PUBS = {}
 
 function persistPubs() {
+  const raw = JSON.stringify(ADMIN_PUBS)
   try {
-    sessionStorage.setItem(PUB_STORE_KEY, JSON.stringify(ADMIN_PUBS))
+    localStorage.setItem(PUB_STORE_KEY, raw)
+  } catch {
+    /* ignore */
+  }
+  try {
+    sessionStorage.setItem(PUB_STORE_KEY, raw)
   } catch {
     /* ignore */
   }
@@ -445,7 +580,7 @@ function persistPubs() {
 function hydratePubs() {
   Object.keys(ADMIN_PUBS).forEach((k) => delete ADMIN_PUBS[k])
   try {
-    const raw = sessionStorage.getItem(PUB_STORE_KEY)
+    const raw = sessionStorage.getItem(PUB_STORE_KEY) || localStorage.getItem(PUB_STORE_KEY)
     if (raw) {
       Object.assign(ADMIN_PUBS, JSON.parse(raw))
       return

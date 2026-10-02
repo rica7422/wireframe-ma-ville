@@ -72,8 +72,14 @@ const DEFAULT_CASES = [
 export const MOD_CASES = {}
 
 function persist() {
+  const raw = JSON.stringify(MOD_CASES)
   try {
-    sessionStorage.setItem(STORE_KEY, JSON.stringify(MOD_CASES))
+    localStorage.setItem(STORE_KEY, raw)
+  } catch {
+    /* ignore */
+  }
+  try {
+    sessionStorage.setItem(STORE_KEY, raw)
   } catch {
     /* ignore */
   }
@@ -82,7 +88,7 @@ function persist() {
 function hydrate() {
   Object.keys(MOD_CASES).forEach((k) => delete MOD_CASES[k])
   try {
-    const raw = sessionStorage.getItem(STORE_KEY)
+    const raw = sessionStorage.getItem(STORE_KEY) || localStorage.getItem(STORE_KEY)
     if (raw) {
       const saved = JSON.parse(raw)
       if (saved && typeof saved === 'object') {

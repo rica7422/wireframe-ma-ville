@@ -190,8 +190,14 @@ const FORM_STEP_KEY = 'ma-ville-event-form-step'
 const STORE_KEY = 'ma-ville-event-store'
 
 function persistStore() {
+  const raw = JSON.stringify(EVENT_STORE)
   try {
-    sessionStorage.setItem(STORE_KEY, JSON.stringify(EVENT_STORE))
+    localStorage.setItem(STORE_KEY, raw)
+  } catch {
+    /* ignore */
+  }
+  try {
+    sessionStorage.setItem(STORE_KEY, raw)
   } catch {
     /* ignore */
   }
@@ -199,11 +205,11 @@ function persistStore() {
 
 function hydrateStore() {
   try {
-    const raw = sessionStorage.getItem(STORE_KEY)
+    // Prefer in-tab session (active work), then durable localStorage — never wipe.
+    const raw = sessionStorage.getItem(STORE_KEY) || localStorage.getItem(STORE_KEY)
     if (!raw) return
     const saved = JSON.parse(raw)
     if (saved && typeof saved === 'object') {
-      // merge saved over defaults (keeps new ids + mutations)
       Object.keys(saved).forEach((id) => {
         EVENT_STORE[id] = saved[id]
       })
@@ -211,6 +217,58 @@ function hydrateStore() {
   } catch {
     /* ignore */
   }
+}
+
+const FORM_FIELD_KEYS = [
+  'title',
+  'description',
+  'category',
+  'dateLabel',
+  'dateEndLabel',
+  'time',
+  'timeEnd',
+  'lieu',
+  'lieuDetail',
+  'price',
+  'isFree',
+  'capacity',
+  'inscriptionMode',
+  'inscriptionDeadline',
+  'conditions',
+  'ville',
+  'cityLabel',
+  'orgLabel',
+  'dateShort',
+  'countdown',
+  'tags',
+]
+
+/** Form view: merge pendingRevision onto event without mutating public fields. */
+export function getFormEvent(id) {
+  const e = EVENT_STORE[id]
+  if (!e) return null
+  if (e.pendingRevision) return { ...e, ...e.pendingRevision }
+  return e
+}
+
+function isCitizenPublished(e) {
+  return e && e.publication === 'published' && e.origin === 'citizen'
+}
+
+/** Patch form fields: published citizen → pendingRevision (public unchanged). */
+export function applyFormPatch(id, fields = {}) {
+  const e = EVENT_STORE[id]
+  if (!e) return null
+  if (isCitizenPublished(e)) {
+    e.pendingRevision = { ...(e.pendingRevision || {}), ...fields }
+    if (!e.revisionStatus) e.revisionStatus = 'draft'
+    persistStore()
+    return e
+  }
+  Object.assign(e, fields)
+  syncDemoEvent(id)
+  persistStore()
+  return e
 }
 
 hydrateStore()
@@ -280,7 +338,28 @@ export function listMyCreations(viewerId = SIM_VIEWER_ID) {
 }
 
 export function listPendingValidation() {
-  return Object.values(EVENT_STORE).filter((e) => e.publication === 'pending')
+  return Object.values(EVENT_STORE).filter(
+    (e) => e.publication === 'pending' || e.revisionStatus === 'pending'
+  )
+}
+
+/** Public agenda card fields — ignores pendingRevision. */
+export function publicEventFields(e) {
+  if (!e) return null
+  return e
+}
+
+/** Queue / Mes créations label for revision state */
+export function revisionLabel(e) {
+  if (!e?.revisionStatus) return null
+  return (
+    {
+      draft: 'Révision en cours',
+      pending: 'Révision à examiner',
+      to_correct: 'Révision à corriger',
+      refused: 'Révision refusée',
+    }[e.revisionStatus] || e.revisionStatus
+  )
 }
 
 export function listAdminManaged() {
@@ -398,6 +477,15 @@ export function createEmptyEvent({ origin = 'citizen', authorId = SIM_VIEWER_ID,
 export function updateEvent(id, patch) {
   const e = EVENT_STORE[id]
   if (!e) return null
+  // Never demote a live published citizen event via raw publication patch —
+  // revision flow keeps the public version until approve.
+  if (isCitizenPublished(e) && patch.publication && patch.publication !== 'published') {
+    const { publication: _drop, ...rest } = patch
+    e.pendingRevision = { ...(e.pendingRevision || {}), ...rest }
+    if (patch.publication === 'draft') e.revisionStatus = e.revisionStatus === 'pending' ? 'pending' : 'draft'
+    persistStore()
+    return e
+  }
   Object.assign(e, patch)
   syncDemoEvent(id)
   persistStore()
@@ -407,7 +495,23 @@ export function updateEvent(id, patch) {
 export function submitForValidation(id) {
   const e = EVENT_STORE[id]
   if (!e) return null
+  if (isCitizenPublished(e) || (e.publication === 'published' && e.origin === 'citizen')) {
+    // Keep public live; queue revision
+    if (!e.pendingRevision) e.pendingRevision = {}
+    FORM_FIELD_KEYS.forEach((k) => {
+      if (e.pendingRevision[k] === undefined && e[k] !== undefined) {
+        /* revision may already hold edits; leave as-is */
+      }
+    })
+    e.revisionStatus = 'pending'
+    e.refuseMotif = ''
+    e.correctMotif = ''
+    syncDemoEvent(id)
+    persistStore()
+    return e
+  }
   e.publication = 'pending'
+  e.revisionStatus = null
   syncDemoEvent(id)
   persistStore()
   return e
@@ -416,6 +520,13 @@ export function submitForValidation(id) {
 export function approveEvent(id) {
   const e = EVENT_STORE[id]
   if (!e) return null
+  if (e.pendingRevision && (e.revisionStatus === 'pending' || e.revisionStatus === 'to_correct')) {
+    Object.assign(e, e.pendingRevision)
+    e.pendingRevision = null
+    e.revisionStatus = null
+    e.refuseMotif = ''
+    e.correctMotif = ''
+  }
   e.publication = 'published'
   e.inscriptionsOpen = true
   // keep citizen origin — do not make municipal
@@ -427,6 +538,14 @@ export function approveEvent(id) {
 export function refuseEvent(id, motif = '') {
   const e = EVENT_STORE[id]
   if (!e) return null
+  if (e.revisionStatus === 'pending' || (e.publication === 'published' && e.pendingRevision)) {
+    e.revisionStatus = 'refused'
+    e.refuseMotif = motif
+    // public publication stays published; pendingRevision kept for author visibility
+    syncDemoEvent(id)
+    persistStore()
+    return e
+  }
   e.publication = 'refused'
   e.refuseMotif = motif
   syncDemoEvent(id)
@@ -437,6 +556,13 @@ export function refuseEvent(id, motif = '') {
 export function requestCorrections(id, motif = '') {
   const e = EVENT_STORE[id]
   if (!e) return null
+  if (e.revisionStatus === 'pending' || (e.publication === 'published' && e.pendingRevision)) {
+    e.revisionStatus = 'to_correct'
+    e.correctMotif = motif
+    syncDemoEvent(id)
+    persistStore()
+    return e
+  }
   e.publication = 'to_correct'
   e.correctMotif = motif
   syncDemoEvent(id)
@@ -467,6 +593,15 @@ export function cancelEvent(id, motif = '') {
 export function withdrawValidationRequest(id) {
   const e = EVENT_STORE[id]
   if (!e) return null
+  if (e.publication === 'published' && e.revisionStatus) {
+    e.pendingRevision = null
+    e.revisionStatus = null
+    e.refuseMotif = ''
+    e.correctMotif = ''
+    syncDemoEvent(id)
+    persistStore()
+    return e
+  }
   e.publication = 'draft'
   syncDemoEvent(id)
   persistStore()

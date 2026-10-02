@@ -47,7 +47,9 @@ import {
   refuseEvent,
   requestCorrections,
   updateEvent,
+  applyFormPatch,
   getEvent as getEventFull,
+  getFormEvent,
 } from './events-data.js'
 import { SIM_VIEWER_ID } from './demo-data.js'
 import {
@@ -61,6 +63,8 @@ import {
   getRdvPick,
   createBooking,
   updateBooking,
+  moveBooking,
+  findNextFreeSlot,
   setAdminRdvTab,
   setEditMotifId,
   getEditMotifId,
@@ -69,11 +73,18 @@ import {
   getMotif,
   setDispoSlots,
   getDispoSlots,
+  setDispoEditWeekday,
+  getDispoEditWeekday,
   listMotifs,
 } from './rdv-data.js'
 import {
   setAnnuaireRubriqueId,
   setFicheContext,
+  getFicheContext,
+  getAnnuaireRubriqueId,
+  upsertFiche,
+  addCustomRubrique,
+  removeCustomRubrique,
   createEmptyPub,
   setPubEditId,
   getPubEditId,
@@ -383,14 +394,14 @@ function handleSim(kind) {
   }
   if (action === 'event-form-step' && arg) {
     const id = getEditEventId()
-    if (id) updateEvent(id, readEventFormFields())
+    if (id) applyFormPatch(id, readEventFormFields())
     setFormStep(Number(arg) || 1)
     render()
     return
   }
   if (action === 'event-form-next') {
     const id = getEditEventId()
-    if (id) updateEvent(id, readEventFormFields())
+    if (id) applyFormPatch(id, readEventFormFields())
     const step = getFormStep() || 1
     setFormStep(Math.min(3, step + 1))
     render()
@@ -398,7 +409,7 @@ function handleSim(kind) {
   }
   if (action === 'event-form-prev') {
     const id = getEditEventId()
-    if (id) updateEvent(id, readEventFormFields())
+    if (id) applyFormPatch(id, readEventFormFields())
     const step = getFormStep() || 1
     setFormStep(Math.max(1, step - 1))
     render()
@@ -418,8 +429,14 @@ function handleSim(kind) {
   if (action === 'event-save-draft') {
     const id = getEditEventId()
     if (id) {
-      updateEvent(id, { publication: 'draft', ...readEventFormFields() })
-      toast('Brouillon enregistré')
+      const cur = getEventFull(id)
+      if (cur?.publication === 'published' && cur.origin === 'citizen') {
+        applyFormPatch(id, readEventFormFields())
+        toast('Révision enregistrée · version publique inchangée')
+      } else {
+        updateEvent(id, { publication: 'draft', ...readEventFormFields() })
+        toast('Brouillon enregistré')
+      }
     } else toast('Brouillon enregistré (simulé)')
     render()
     return
@@ -427,7 +444,7 @@ function handleSim(kind) {
   if (action === 'event-preview') {
     const id = getEditEventId()
     if (id) {
-      updateEvent(id, readEventFormFields())
+      applyFormPatch(id, readEventFormFields())
       setOpenEventId(id)
       go('evenement-details')
     } else toast('Prévisualisation (simulé)')
@@ -439,13 +456,18 @@ function handleSim(kind) {
       toast('Aucun événement à envoyer')
       return
     }
-    updateEvent(id, readEventFormFields())
-    const e = getEventFull(id)
+    applyFormPatch(id, readEventFormFields())
+    const e = getFormEvent(id) || getEventFull(id)
     if (e && !e.title) {
-      updateEvent(id, { title: 'Nouvel événement (brouillon)' })
+      applyFormPatch(id, { title: 'Nouvel événement (brouillon)' })
     }
+    const before = getEventFull(id)
     submitForValidation(id)
-    toast('Envoyé pour validation mairie')
+    toast(
+      before?.publication === 'published'
+        ? 'Révision envoyée · agenda public inchangé'
+        : 'Envoyé pour validation mairie'
+    )
     go('evenements-liste', { push: false })
     return
   }
@@ -482,10 +504,13 @@ function handleSim(kind) {
       toast('Accès refusé pour ce rôle (simulé)')
       return
     }
+    const before = getEventFull(arg)
     const e = approveEvent(arg)
     toast(
       e
-        ? `Approuvé · reste ${e.origin === 'citizen' ? 'habitant' : 'municipal'}`
+        ? before?.revisionStatus === 'pending'
+          ? 'Révision approuvée · agenda mis à jour'
+          : `Approuvé · reste ${e.origin === 'citizen' ? 'habitant' : 'municipal'}`
         : 'Approuvé'
     )
     render()
@@ -628,10 +653,12 @@ function handleSim(kind) {
     return
   }
   if (action === 'fiche-create') {
+    const rubriqueId = arg || getAnnuaireRubriqueId() || 'education'
     setFicheContext({
       mode: 'create',
       id: null,
       title: '',
+      rubriqueId,
       backTo: arg === 'sante' ? 'admin-annuaire-pharmacies' : 'admin-annuaire-rubrique',
     })
     go('fiche-annuaire-form')
@@ -642,12 +669,27 @@ function handleSim(kind) {
       mode: 'edit',
       id: arg === 'new' ? null : arg,
       title: arg === 'new' ? '' : undefined,
+      rubriqueId: getAnnuaireRubriqueId(),
       backTo: currentId,
     })
     go('fiche-annuaire-form')
     return
   }
   if (action === 'fiche-save-draft' || action === 'fiche-publish' || action === 'fiche-preview') {
+    const ctx = getFicheContext() || {}
+    const status =
+      action === 'fiche-publish' ? 'Publié' : action === 'fiche-save-draft' ? 'Brouillon' : undefined
+    const saved = upsertFiche({
+      id: ctx.id || null,
+      rubriqueId: ctx.rubriqueId || getAnnuaireRubriqueId(),
+      title: readField('fiche-name'),
+      address: readField('fiche-address'),
+      phone: readField('fiche-phone'),
+      hours: readField('fiche-hours'),
+      description: readField('fiche-desc'),
+      sousCat: readField('fiche-category') || ctx.category || 'Général',
+      status: status || readField('fiche-status') || 'Brouillon',
+    })
     toast(
       action === 'fiche-publish'
         ? 'Fiche publiée'
@@ -655,8 +697,32 @@ function handleSim(kind) {
           ? 'Prévisualisation fiche'
           : 'Brouillon fiche enregistré'
     )
-    if (action === 'fiche-preview') go('sante-pharmacie-infos')
-    else render()
+    if (action === 'fiche-preview' && saved?.id) {
+      setFicheContext({ ...ctx, mode: 'edit', id: saved.id })
+      go('sante-pharmacie-infos')
+    } else render()
+    return
+  }
+  if (action === 'rubrique-add') {
+    if (!isAdminRole()) {
+      toast('Accès refusé pour ce rôle (simulé)')
+      return
+    }
+    const label = readField('rubrique-label').trim() || 'Nouvelle rubrique'
+    const rub = addCustomRubrique(label)
+    toast(`Rubrique « ${rub.label} » ajoutée`)
+    setAnnuaireRubriqueId(rub.id)
+    go('admin-annuaire-rubrique')
+    return
+  }
+  if (action === 'rubrique-remove' && arg) {
+    if (!isAdminRole()) {
+      toast('Accès refusé pour ce rôle (simulé)')
+      return
+    }
+    const res = removeCustomRubrique(arg)
+    toast(res?.error ? 'Rubrique native — non retirée' : 'Rubrique retirée')
+    render()
     return
   }
 
@@ -730,21 +796,38 @@ function handleSim(kind) {
     const motifId = pick.motifId || motifs[0]?.id
     const day = pick.day || 27
     const slot = pick.slot || '09:30'
+    const slotIso = `2026-05-${String(day).padStart(2, '0')}T${slot}`
     const slotLabel = `${day} mai 2026 · ${slot}`
-    createBooking({
+    if (pick.moveId) {
+      const moved = moveBooking(pick.moveId, { slot: slotIso, slotLabel, motifId })
+      if (moved?.error === 'slot_taken') {
+        toast('Créneau déjà pris — choisissez un autre')
+        return
+      }
+      setRdvPick({ motifId, day, slot, moveId: undefined })
+      toast('Rendez-vous déplacé · notification simulée')
+      go('mairie-rdv', { push: false })
+      return
+    }
+    const created = createBooking({
       motifId,
-      slot: `2026-05-${String(day).padStart(2, '0')}T${slot}`,
+      slot: slotIso,
       slotLabel,
       user: 'Rica',
       userId: 'user-rica',
     })
+    if (created?.error === 'slot_taken') {
+      toast('Créneau déjà pris — choisissez un autre')
+      return
+    }
+    setRdvPick({ motifId })
     toast('Rendez-vous confirmé · notification simulée')
     go('mairie-rdv', { push: false })
     return
   }
   if (action === 'rdv-annuler' && arg) {
     updateBooking(arg, { status: 'cancelled', cancelMotif: 'Annulé par l’habitant' })
-    toast('Rendez-vous annulé · notification simulée')
+    toast('Rendez-vous annulé · créneau libéré · notification simulée')
     render()
     return
   }
@@ -755,7 +838,7 @@ function handleSim(kind) {
   }
   if (action === 'rdv-move' && arg) {
     const pick = getRdvPick()
-    setRdvPick({ ...pick, moveId: arg })
+    setRdvPick({ ...pick, moveId: arg, slot: undefined })
     toast('Choisissez un nouveau créneau puis confirmez')
     go('mairie-rdv')
     return
@@ -798,12 +881,26 @@ function handleSim(kind) {
     return
   }
   if (action === 'rdv-dispo-edit' && arg) {
-    const slots = getDispoSlots(arg)
-    const next = slots.includes('16:30')
-      ? slots.filter((s) => s !== '16:30')
-      : [...slots, '16:30'].sort()
-    setDispoSlots(arg, next)
-    toast('Créneaux mis à jour (RDV existants conservés) · notif simulée')
+    setDispoEditWeekday(arg)
+    setAdminRdvTab('dispos')
+    render()
+    return
+  }
+  if (action === 'rdv-dispo-save' && arg) {
+    const raw = readField('dispo-slots') || ''
+    const slots = raw
+      .split(/[\s,;·]+/)
+      .map((s) => s.trim())
+      .filter((s) => /^\d{1,2}:\d{2}$/.test(s))
+      .sort()
+    setDispoSlots(arg, slots)
+    setDispoEditWeekday(null)
+    toast('Créneaux enregistrés · RDV existants conservés · notif simulée')
+    render()
+    return
+  }
+  if (action === 'rdv-dispo-cancel') {
+    setDispoEditWeekday(null)
     render()
     return
   }
@@ -814,11 +911,13 @@ function handleSim(kind) {
     return
   }
   if (action === 'rdv-admin-move' && arg) {
-    const b = updateBooking(arg, {
-      slotLabel: '13 juin 2026 · 11:00',
-      slot: '2026-06-13T11:00',
-    })
-    toast('RDV déplacé · notification simulée')
+    const next = findNextFreeSlot(arg)
+    if (!next) {
+      toast('Aucun créneau libre trouvé')
+      return
+    }
+    moveBooking(arg, { slot: next.slot, slotLabel: next.slotLabel })
+    toast(`RDV déplacé → ${next.slotLabel} · notification simulée`)
     render()
     return
   }
@@ -1000,7 +1099,7 @@ function render({ focusActive = false, resetNavScroll = false } = {}) {
       <aside class="proto-nav">
         <header class="proto-brand">
           <strong>Ma Ville</strong>
-          <span class="proto-tag">Wireframe · build 1001-k · quatre-ensembles</span>
+          <span class="proto-tag">Wireframe · build 1001-l · quatre-ensembles-final</span>
         </header>
         <p class="proto-hint">Navigation du prototype (≠ nav dans le téléphone)</p>
         <div class="nav-tabs" role="tablist" aria-label="Côté prototype">

@@ -59,6 +59,7 @@ import {
 } from './signalements-data.js'
 import {
   getEvent as getEventFull,
+  getFormEvent,
   listPublicEvents,
   listMyParticipations,
   listMyCreations,
@@ -72,6 +73,7 @@ import {
   getMesSub,
   getFormStep,
   publicationLabel,
+  revisionLabel,
 } from './events-data.js'
 import {
   listModCases,
@@ -91,6 +93,7 @@ import {
   getRdvPick,
   getEditMotifId,
   getAdminRdvTab,
+  getDispoEditWeekday,
   statusLabel as rdvStatusLabel,
   slotsForMayDay,
   weekdayForMay2026,
@@ -564,11 +567,14 @@ function santeHopitalDetails(tab = 'infos') {
     </div>`
   const infos = `
     <h2 class="sec">Contact</h2>
-    ${text('Coordonnées…')}
+    <p class="meta">Tél. standard · À préciser (non cliquable)</p>
+    <p class="meta">Urgences · 103 (indicatif public)</p>
     <h2 class="sec">Adresse</h2>
-    ${photo('Carte…', 'map')}
+    <p>Grand Hôpital de Kapan · quartier centre</p>
+    <p class="meta">Adresse complète non publiée — itinéraire indisponible</p>
+    ${photo('Plan de situation…', 'map')}
     <h2 class="sec">À propos</h2>
-    ${text('Description…')}
+    <p>Établissement hospitalier de référence à Kapan. Urgences 24h/24. Consultations selon planning interne.</p>
   `
   const horaires = `
     <h2 class="sec">Horaires</h2>
@@ -577,11 +583,11 @@ function santeHopitalDetails(tab = 'infos') {
         (d) => `
       <div class="row-link static">
         <span>${d}</span>
-        <span class="meta">${d === 'Dimanche' ? 'À préciser' : 'Ouvert…'}</span>
+        <span class="meta">${d === 'Dimanche' ? 'Urgences seulement' : 'Accueil · horaires à confirmer'}</span>
       </div>`
       )
       .join('')}
-    ${tbd('Horaires manquants éventuels — À préciser')}
+    <div class="notice"><strong>Horaires manquants</strong><p class="meta">Les plages exactes d’accueil ne sont pas encore publiées.</p></div>
     <button class="hit btn block" data-go="etat-horaires-manquants">Voir état « horaires manquants »</button>
   `
   return wrap(
@@ -590,11 +596,10 @@ function santeHopitalDetails(tab = 'infos') {
     <div class="detail-head">
       <strong>Grand Hôpital de Kapan</strong>
       <span class="badge">Ouvert</span>
-      <p class="meta">Hôpital · 1,5 km</p>
+      <p class="meta">Hôpital · distance inconnue</p>
     </div>
     <div class="row-actions">
-      <button class="hit btn" data-sim="itineraire">Itinéraire</button>
-      <button class="hit btn primary" data-sim="appeler">Appeler</button>
+      <button class="hit btn primary" data-sim="appeler:103" type="button">Appeler urgences</button>
     </div>
     ${tabs}
     ${tab === 'infos' ? infos : horaires}
@@ -865,18 +870,18 @@ function mairieRdvEnCoursBlock(bookings) {
 
 function mairieRdvDateSlots(pick = {}) {
   const day = pick.day || 27
-  const slots = slotsForMayDay(day)
+  const slots = slotsForMayDay(day, { excludeBookingId: pick.moveId || null })
   const morning = slots.filter((t) => Number(t.split(':')[0]) < 12)
   const afternoon = slots.filter((t) => Number(t.split(':')[0]) >= 12)
   const selectedSlot = pick.slot || morning[0] || afternoon[0] || ''
   return `
     <h2 class="sec">Choisir une date</h2>
-    <p class="meta">Mai 2026</p>
+    <p class="meta">Mai 2026${pick.moveId ? ' · déplacement en cours' : ''}</p>
     <div class="calendar">
       ${Array.from({ length: 31 }, (_, i) => {
         const d = i + 1
         const wd = weekdayForMay2026(d)
-        const closed = wd > 5 || slotsForMayDay(d).length === 0
+        const closed = wd > 5 || slotsForMayDay(d, { excludeBookingId: pick.moveId || null }).length === 0
         const cls = d === day ? 'on' : closed ? 'closed' : ''
         return `<button class="hit cal-day ${cls}" type="button" data-sim="rdv-pick-day:${d}">${d}</button>`
       }).join('')}
@@ -911,8 +916,8 @@ function mairieRdvDateSlots(pick = {}) {
           : '<span class="meta">Aucun</span>'
       }
     </div>
-    <button class="hit btn primary block" data-go="mairie-rdv-suite">Continuer</button>`
-        : `<p class="meta">Aucun créneau ce jour (week-end ou indisponibilité).</p>`
+    <button class="hit btn primary block" data-go="mairie-rdv-suite">${pick.moveId ? 'Continuer le déplacement' : 'Continuer'}</button>`
+        : `<p class="meta">Aucun créneau ce jour (week-end, indisponibilité ou complet).</p>`
     }
   `
 }
@@ -981,7 +986,7 @@ function mairieRdvSuite() {
     </article>
     <div class="row-actions">
       <button class="hit btn" data-go="mairie-rdv">Retour</button>
-      <button class="hit btn primary" data-sim="rdv-confirm" type="button">Confirmer</button>
+      <button class="hit btn primary" data-sim="rdv-confirm" type="button">${pick.moveId ? 'Confirmer le déplacement' : 'Confirmer'}</button>
     </div>
     `,
     {
@@ -1958,6 +1963,7 @@ function infosPartage() {
 }
 
 function mapEventCard(e) {
+  const rev = revisionLabel(e)
   return {
     id: e.id,
     title: e.title || 'Sans titre',
@@ -1965,7 +1971,10 @@ function mapEventCard(e) {
     time: e.time || '',
     countdown: e.countdown || '',
     lieu: e.lieu || '',
-    tags: e.tags || [],
+    tags: [
+      ...(e.tags || []),
+      ...(rev ? [rev] : e.publication && e.publication !== 'published' ? [publicationLabel(e.publication)] : []),
+    ],
     limited: isLimited(e),
   }
 }
@@ -2214,16 +2223,18 @@ function placesRestantesNum(e) {
 
 function evenementForm() {
   const id = getEditEventId()
-  const e = id ? getEventFull(id) : null
-  const isCreate = !e || !e.title
+  const live = id ? getEventFull(id) : null
+  const e = id ? getFormEvent(id) : null
+  const isCreate = !live || (!live.title && !e?.title)
   const step = getFormStep() || 1
   const admin = isAdminRole()
-  const municipal = e?.origin === 'municipal' || (admin && isCreate && e?.origin !== 'citizen')
-  const pending = e?.publication === 'pending'
+  const municipal = live?.origin === 'municipal' || (admin && isCreate && live?.origin !== 'citizen')
+  const pending = live?.publication === 'pending' || live?.revisionStatus === 'pending'
+  const publishedCitizen = live?.publication === 'published' && live?.origin === 'citizen'
   const title = e?.title || ''
-  const backTo = admin && !e?.origin?.includes?.('citizen') ? 'admin-evenements' : 'evenements-liste'
+  const backTo = admin && !live?.origin?.includes?.('citizen') ? 'admin-evenements' : 'evenements-liste'
   const orgaLabel =
-    e?.orgLabel || (municipal || (admin && e?.origin !== 'citizen') ? 'Mairie de Kapan' : 'Rica')
+    e?.orgLabel || (municipal || (admin && live?.origin !== 'citizen') ? 'Mairie de Kapan' : 'Rica')
   const isFree = e?.isFree !== false && (!e?.price || e.price === 'Gratuit')
   const capacityUnlimited = e?.capacity == null
 
@@ -2306,15 +2317,29 @@ function evenementForm() {
   const habitantCtas =
     step === 3
       ? `
-    <p class="meta">Il sera visible après validation par la mairie.</p>
+    <p class="meta">${
+      publishedCitizen
+        ? 'Modification d’un événement publié · la version publique reste visible jusqu’à validation.'
+        : 'Il sera visible après validation par la mairie.'
+    }</p>
+    ${
+      live?.correctMotif
+        ? `<div class="notice"><strong>Corrections demandées</strong><p class="meta">${escapeHtml(live.correctMotif)}</p></div>`
+        : ''
+    }
+    ${
+      live?.refuseMotif && live?.revisionStatus === 'refused'
+        ? `<div class="notice"><strong>Révision refusée</strong><p class="meta">${escapeHtml(live.refuseMotif)}</p></div>`
+        : ''
+    }
     <div class="row-actions">
-      <button class="hit btn" data-sim="event-save-draft" type="button">Enregistrer brouillon</button>
+      <button class="hit btn" data-sim="event-save-draft" type="button">${publishedCitizen ? 'Enregistrer la révision' : 'Enregistrer brouillon'}</button>
       <button class="hit btn" data-sim="event-preview" type="button">Prévisualiser</button>
-      <button class="hit btn primary" data-sim="event-submit-validation" type="button">Envoyer pour validation</button>
+      <button class="hit btn primary" data-sim="event-submit-validation" type="button">${publishedCitizen ? 'Envoyer la révision' : 'Envoyer pour validation'}</button>
     </div>
     ${
       pending
-        ? `<button class="hit btn block outline" data-sim="event-withdraw" type="button">Retirer ma demande</button>`
+        ? `<button class="hit btn block outline" data-sim="event-withdraw" type="button">${publishedCitizen ? 'Retirer la révision' : 'Retirer ma demande'}</button>`
         : ''
     }
   `
@@ -2330,11 +2355,22 @@ function evenementForm() {
   `
       : ''
 
+  const pubMeta = publishedCitizen
+    ? ` · Publié${live?.revisionStatus ? ` · ${revisionLabel(live)}` : ''}`
+    : live?.publication
+      ? ` · ${publicationLabel(live.publication)}`
+      : ''
+
   return wrap(
     `
-    <div class="form-card" data-event-id="${e?.id || ''}">
+    <div class="form-card" data-event-id="${live?.id || e?.id || ''}">
       <h2 class="sec">${isCreate || !title ? 'Créer un événement' : 'Modifier l’événement'}</h2>
-      <p class="meta">${e?.id || 'nouvel id'} · ${e?.origin === 'citizen' ? 'Habitant' : municipal ? 'Municipal' : '—'}${e?.publication ? ` · ${publicationLabel(e.publication)}` : ''}</p>
+      <p class="meta">${live?.id || e?.id || 'nouvel id'} · ${live?.origin === 'citizen' ? 'Habitant' : municipal ? 'Municipal' : '—'}${pubMeta}</p>
+      ${
+        !admin && !municipal
+          ? `<p class="meta">Créez votre événement. Il sera visible dans l’agenda après validation par la mairie.</p>`
+          : ''
+      }
       <div class="chips form-steps">
         ${stepChip(1, 'Présentation')}
         ${stepChip(2, 'Pratique')}
@@ -2342,7 +2378,7 @@ function evenementForm() {
       </div>
       ${fields}
       ${navSteps}
-      ${admin && e?.origin !== 'citizen' ? adminCtas : habitantCtas}
+      ${admin && (municipal || live?.origin === 'municipal') ? adminCtas : habitantCtas}
     </div>
     `,
     {
@@ -3982,23 +4018,26 @@ function evenementsAValider() {
   return wrap(
     `
     <h2 class="sec">Événements à valider</h2>
-    <p class="meta">Propositions habitantes · distinct des inscriptions participants</p>
+    <p class="meta">Propositions habitantes · révisions publiées · distinct des inscriptions</p>
     ${
       list.length
         ? list
-            .map(
-              (e) => `
+            .map((e) => {
+              const view = e.pendingRevision ? { ...e, ...e.pendingRevision } : e
+              const isRev = e.revisionStatus === 'pending'
+              return `
       <article class="card">
-        <strong>${e.title || 'Sans titre'}</strong>
-        <p class="meta">${e.orgLabel || 'Habitant'} · ${e.dateLabel || 'Date à préciser'} · ${e.lieu || 'Lieu…'}</p>
-        ${text(e.description || '')}
+        <strong>${view.title || 'Sans titre'}</strong>
+        <p class="meta">${e.orgLabel || 'Habitant'} · ${view.dateLabel || 'Date à préciser'} · ${view.lieu || 'Lieu…'}</p>
+        <p class="meta">${isRev ? 'Révision d’un événement publié · version publique inchangée' : 'Nouvelle proposition'}</p>
+        ${text(view.description || '')}
         <div class="row-actions">
           <button class="hit btn primary" data-sim="event-approve:${e.id}" type="button">Approuver</button>
           <button class="hit btn" data-sim="event-correct-ask:${e.id}" type="button">Demander corrections</button>
           <button class="hit btn outline" data-sim="event-refuse-ask:${e.id}" type="button">Refuser</button>
         </div>
       </article>`
-            )
+            })
             .join('')
         : emptyState('Aucun événement en attente')
     }
@@ -4117,12 +4156,12 @@ function adminOffreForm() {
 }
 
 function adminAnnuaires() {
+  const custom = ANN_RUBRIQUES.filter((r) => r.custom)
   return wrap(
     `
     <h2 class="sec">Annuaires · Vie locale</h2>
     <p class="meta">Gestion admin de toutes les rubriques (≠ hub public)</p>
     ${ANN_RUBRIQUES.map((r) => {
-      const go = r.id === 'sante' ? 'admin-annuaire-sante' : 'admin-annuaire-rubrique'
       if (r.id === 'sante') {
         return `
     <button class="hit row-link" data-go="admin-annuaire-sante" type="button">
@@ -4131,12 +4170,27 @@ function adminAnnuaires() {
       }
       return `
     <button class="hit row-link" data-sim="annuaire-rubrique:${r.id}" type="button">
-      <span><strong>${r.label}</strong><br/><span class="meta">${r.meta}</span></span><span>›</span>
+      <span><strong>${r.label}</strong>${r.custom ? ' · ajoutée' : ''}<br/><span class="meta">${r.meta}</span></span><span>›</span>
     </button>`
     }).join('')}
-    <div class="card" style="margin-top:12px">
-      <strong>Autres rubriques</strong>
-      <p class="meta">Note de gestion admin : ajouter / retirer une rubrique Vie locale se fait ici (prototype). Météo et Urgences restent hors annuaire.</p>
+    <div class="form-card" style="margin-top:12px">
+      <h2 class="sec">Autres rubriques</h2>
+      <p class="meta">Ajouter ou retirer une rubrique Vie locale. Météo et Urgences restent hors annuaire.</p>
+      <label class="field"><span>Nom de la rubrique</span><input type="text" placeholder="ex. Sport" data-field="rubrique-label" /></label>
+      <button class="hit btn primary block" data-sim="rubrique-add" type="button">Ajouter une rubrique</button>
+      ${
+        custom.length
+          ? custom
+              .map(
+                (r) => `
+      <div class="row-actions" style="margin-top:8px">
+        <span class="meta grow">${r.label}</span>
+        <button class="hit btn outline" data-sim="rubrique-remove:${r.id}" type="button">Retirer</button>
+      </div>`
+              )
+              .join('')
+          : `<p class="meta">Aucune rubrique ajoutée pour l’instant.</p>`
+      }
     </div>
     `,
     {
@@ -4276,11 +4330,25 @@ function adminRdv() {
       [4, 'Jeudi'],
       [5, 'Vendredi'],
     ]
+    const editWd = getDispoEditWeekday()
     body = `
       <p class="meta">Créneaux par jour · modifier sans effacer les RDV pris</p>
       ${days
         .map(([wd, label]) => {
           const slots = getDispoSlots(wd)
+          if (editWd === wd) {
+            return `
+        <article class="form-card">
+          <strong>${label} · modifier</strong>
+          <label class="field"><span>Créneaux (HH:MM séparés par espace ou virgule)</span>
+            <textarea rows="3" data-field="dispo-slots">${slots.join(' ')}</textarea>
+          </label>
+          <div class="row-actions">
+            <button class="hit btn" data-sim="rdv-dispo-cancel" type="button">Annuler</button>
+            <button class="hit btn primary" data-sim="rdv-dispo-save:${wd}" type="button">Enregistrer</button>
+          </div>
+        </article>`
+          }
           return `
         <article class="card">
           <strong>${label}</strong>
