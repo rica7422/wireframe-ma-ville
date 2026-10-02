@@ -1,0 +1,74 @@
+{
+  "stamp": "1001-t",
+  "base": "http://127.0.0.1:4317",
+  "passed": 13,
+  "failed": 0,
+  "total": 13,
+  "results": [
+    {
+      "name": "Stamp 1001-t",
+      "ok": true,
+      "detail": "Wireframe · build 1001-t · signalements-mairie"
+    },
+    {
+      "name": "Accueil: pas de tuile Signalements",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Vie locale hub: pas Signalements",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Ma mairie: RDV + Signalements côte à côte",
+      "ok": true,
+      "detail": "labels=Prendre rendez-vous|Signalements theme=mairie accent=#29676d"
+    },
+    {
+      "name": "Accent mairie #29676D",
+      "ok": true,
+      "detail": "labels=Prendre rendez-vous|Signalements theme=mairie accent=#29676d"
+    },
+    {
+      "name": "Signalements pas dans les 4 sous-cats",
+      "ok": true,
+      "detail": "Présentation de la ville|Maire & Conseil municipal|Infos Mairie|Plan de la ville"
+    },
+    {
+      "name": "Ouvre #signalements",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Signalements theme = mairie (plus bordeaux)",
+      "ok": true,
+      "detail": "{\"hasBack\":true,\"go\":\"accueil-kapan\",\"accent\":\"#29676d\",\"theme\":\"mairie\",\"title\":\"Signalements\"}"
+    },
+    {
+      "name": "Pas #9F1239",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Redirect page-signalement → signalements",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Redirect dir-signalement → signalements",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Métier Q/R: Nouveau signalement",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Arbre: Signalements présent",
+      "ok": true,
+      "detail": "{\"hasSig\":true,\"mairieIdx\":4,\"sigIdx\":11,\"vieIdx\":278,\"near\":true}"
+    }
+  ]
+}

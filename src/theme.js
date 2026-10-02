@@ -26,7 +26,7 @@ export const SECTION = {
   tourisme: '#CC8040',
   meteo: '#CA8A04',
   urgence: '#DC2626',
-  signalement: '#9F1239',
+  signalement: '#29676D',
   patrimoine: '#CC8040',
   restaurants: '#AF734A',
   neutral: '#001339',
@@ -107,8 +107,8 @@ export function sectionFor(id) {
   )
     return 'tourisme'
   if (id.startsWith('page-meteo') || id.startsWith('meteo-')) return 'meteo'
-  if (id === 'signalements' || id.startsWith('signalement-')) return 'signalement'
-  if (id.startsWith('page-signalement') || id.startsWith('dir-signalement')) return 'signalement'
+  if (id === 'signalements' || id.startsWith('signalement-')) return 'mairie'
+  if (id.startsWith('page-signalement') || id.startsWith('dir-signalement')) return 'mairie'
   if (id.startsWith('dir-patrimoine')) return 'patrimoine'
   if (id.startsWith('dir-restaurants')) return 'restaurants'
   if (isSharedFiche(id) && stickySection) return stickySection

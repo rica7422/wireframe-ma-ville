@@ -354,7 +354,6 @@ function accueilKapan() {
     { label: 'Sécurité', go: 'dir-securite', section: 'securite' },
     { label: 'Tourisme', go: 'dir-tourisme', section: 'tourisme' },
     { label: 'Météo', go: 'page-meteo', section: 'meteo' },
-    { label: 'Signalements', go: 'signalements', section: 'signalement' },
   ]
   const hex = (s) => colorFor(s)
 
@@ -861,8 +860,13 @@ function mairieSearchHit() {
   return `<button class="hit search search-hit" data-go="mairie-recherche" type="button"><span class="search-ico">⌕</span><span class="compose-input">Effectuer une recherche…</span></button>`
 }
 
-function mairieRdvCta() {
-  return `<button class="hit btn primary block rdv-cta" data-go="mairie-rdv">Prendre rendez-vous</button>`
+function mairieServicesCitoyens() {
+  /* Citizen services row — RDV + Signalements (not a 5th sous-cat card) */
+  return `
+    <div class="mairie-services">
+      <button class="hit btn primary block" data-go="mairie-rdv" type="button">Prendre rendez-vous</button>
+      <button class="hit btn primary block" data-go="signalements" type="button">Signalements</button>
+    </div>`
 }
 
 function mairieAccueil() {
@@ -872,7 +876,7 @@ function mairieAccueil() {
     ${mairieShellTop()}
     ${mairieSearchHit()}
     ${mairieAccesGrid()}
-    ${mairieRdvCta()}
+    ${mairieServicesCitoyens()}
     ${mairieAdminGerShortcut()}
     ${mairieTabs('publications')}
     ${admin ? mairieComposer() : ''}
@@ -907,7 +911,7 @@ function mairieAccueilEvenements() {
     ${mairieShellTop()}
     ${mairieSearchHit()}
     ${mairieAccesGrid()}
-    ${mairieRdvCta()}
+    ${mairieServicesCitoyens()}
     ${mairieAdminGerShortcut()}
     ${mairieTabs('evenements')}
     ${evenementsListeBody({ events: listPublicEvents().map(mapEventCard) })}
@@ -5489,7 +5493,6 @@ function vieLocaleHub() {
     ['Bibliothèque', 'dir-bibliotheques'],
     ['Permanences', 'dir-permanences'],
     ['Sécurité', 'dir-securite'],
-    ['Signalements', 'signalements'],
     ['Météo', 'page-meteo'],
   ]
   const other = [
@@ -5955,8 +5958,8 @@ function signalementsInbox() {
     <div class="signal-list">${rows}</div>
     `,
     {
-      header: phoneHeader({ title, backTo: 'accueil-kapan' }),
-      footer: phoneFooter('menu'),
+      header: phoneHeader({ title, backTo: 'mairie-accueil' }),
+      footer: phoneFooter('mairie'),
     }
   )
 }
@@ -6007,7 +6010,7 @@ function signalementConversation() {
       `,
       {
         header: phoneHeader({ title: 'Signalement', backTo: 'signalements' }),
-        footer: phoneFooter('menu'),
+        footer: phoneFooter('mairie'),
       }
     )
   }
@@ -6073,7 +6076,7 @@ function signalementConversation() {
         title: s.subject,
         backTo: 'signalements',
       }),
-      footer: phoneFooter('menu'),
+      footer: phoneFooter('mairie'),
     }
   )
 }
@@ -8240,23 +8243,23 @@ export const SCREENS = {
       }),
   },
 
-  /* —— Signalements (Q&A privé) —— */
+  /* —— Signalements (Q&A privé · service Ma mairie) —— */
   signalements: {
     title: 'Signalements',
     side: 'user',
-    group: 'Vie locale',
+    group: 'Ma mairie',
     render: signalementsInbox,
   },
   'signalement-nouveau': {
     title: 'Nouveau signalement',
     side: 'user',
-    group: 'Vie locale',
+    group: 'Ma mairie',
     render: signalementNouveau,
   },
   'signalement-conversation': {
     title: 'Conversation signalement',
     side: 'user',
-    group: 'Vie locale',
+    group: 'Ma mairie',
     render: signalementConversation,
   },
 
@@ -9631,6 +9634,14 @@ export const NAV_TREE = {
                 ],
               },
               {
+                id: 'signalements',
+                label: 'Signalements',
+                children: [
+                  { id: 'signalement-nouveau', label: 'Nouveau' },
+                  { id: 'signalement-conversation', label: 'Conversation' },
+                ],
+              },
+              {
                 id: 'mairie-presentation',
                 label: 'Présentation de la ville',
                 children: [
@@ -10271,14 +10282,6 @@ export const NAV_TREE = {
               },
             ],
           },
-          {
-            id: 'signalements',
-            label: 'Signalements',
-            children: [
-              { id: 'signalement-nouveau', label: 'Nouveau' },
-              { id: 'signalement-conversation', label: 'Conversation' },
-            ],
-          },
           { id: 'urgence-numeros', label: 'N° Urgence' },
           {
             id: 'messages',
@@ -10327,6 +10330,7 @@ export const NAV_TREE = {
             children: [
               { id: 'admin-mairie-page', label: 'Gérer la page' },
               { id: 'admin-mairie-pub-form', label: 'Formulaire publication' },
+              { id: 'signalements', label: 'Signalements reçus' },
             ],
           },
           {
@@ -10369,7 +10373,6 @@ export const NAV_TREE = {
             ],
           },
           { id: 'admin-rdv', label: 'Rendez-vous' },
-          { id: 'signalements', label: 'Signalements reçus' },
           { id: 'admin-moderation', label: 'Modération' },
           { id: 'admin-equipe', label: 'Équipe et permissions' },
           { id: 'admin-stats', label: 'Statistiques' },
