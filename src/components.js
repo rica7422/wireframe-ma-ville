@@ -17,26 +17,15 @@ export function statusBar() {
 }
 
 export function appChromeBar() {
-  return `
-    <div class="app-chrome" role="navigation" aria-label="Accueils">
-      <button type="button" class="hit app-chrome-btn" data-sim="miasin" title="Accueil MIASIN">
-        <span class="ico-svg ico-miasin" aria-hidden="true">◎</span>
-        <span>MIASIN</span>
-      </button>
-      <button type="button" class="hit app-chrome-btn" data-go="accueil-kapan" title="Accueil Ma Ville">
-        <span class="ico-svg" aria-hidden="true">⌂</span>
-        <span>Ma Ville</span>
-      </button>
-    </div>`
+  /* Deprecated — accueils live in phoneHeader row (1001-q). Kept for imports. */
+  return ''
 }
 
 /**
  * chrome: 'full' | 'form' | 'panel'
- * full = sticky MIASIN|Ma Ville + page header (Retour·title·pageMenu)
- * form = page header only (no app chrome, typically no footer at call site)
- * panel = local Retour/Fermer + title only (no app chrome)
- * NEVER put Accueil icons in the page header row.
- * showHome / showMiasin are deprecated and ignored (compat).
+ * full = one sticky row: Retour — Titre — Accueil Ma Ville — Accueil MIASIN (no ⋯)
+ * form / panel = local Retour/Fermer + title only (exceptions: conversations, sheets)
+ * Menus « … » belong in content identity rows, never in full header.
  */
 export function phoneHeader({
   title = '',
@@ -44,9 +33,9 @@ export function phoneHeader({
   showCity = false,
   city = 'Kapan',
   backTo = null, // ignored for nav — data-back
-  extraRight = '', // page ⋯ only
+  extraRight = '', // panel/form only — ignored on full chrome
   chrome = 'full',
-  closeLabel = '←', // panel can use ✕ via closeIcon
+  closeLabel = '←',
   closeIcon = false,
   showHome = true, // deprecated — ignored
   showMiasin = true, // deprecated — ignored
@@ -59,20 +48,26 @@ export function phoneHeader({
     ? `<button class="hit icon-btn" data-back title="${closeIcon ? 'Fermer' : 'Retour'}">${closeIcon ? '✕' : '←'}</button>`
     : `<span class="icon-btn ghost"></span>`
   const mid = showCity
-    ? `<button class="hit city-pill" data-go="ville-modale-choisir">🇦🇲 ${city} ▾</button>`
+    ? `<div class="phone-title">${city}</div>`
     : `<div class="phone-title">${title}</div>`
+  const homeBtns = `
+    <button type="button" class="hit icon-btn header-home" data-go="accueil-kapan" title="Accueil Ma Ville" aria-label="Accueil Ma Ville">
+      <span class="ico-svg" aria-hidden="true">⌂</span>
+    </button>
+    <button type="button" class="hit icon-btn header-home" data-sim="miasin" title="Accueil MIASIN" aria-label="Accueil MIASIN">
+      <span class="ico-svg ico-miasin" aria-hidden="true">◎</span>
+    </button>`
+  const isLocal = chrome === 'panel' || chrome === 'form'
+  const right = isLocal ? extraRight || '' : homeBtns
   const pageRow = `
-    <div class="phone-header">
+    <div class="phone-header ${isLocal ? 'phone-header-local' : 'phone-header-full'}">
       <div class="phone-header-row">
         ${backBtn}
         ${mid}
-        <div class="header-right">${extraRight || ''}</div>
+        <div class="header-right">${right}</div>
       </div>
     </div>`
-  if (chrome === 'panel' || chrome === 'form') {
-    return `${statusBar()}${pageRow}`
-  }
-  return `${statusBar()}${appChromeBar()}${pageRow}`
+  return `${statusBar()}${pageRow}`
 }
 
 /** Provisional contextual footer — draft, always clickable */

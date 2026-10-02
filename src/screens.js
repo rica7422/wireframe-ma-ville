@@ -338,7 +338,12 @@ function accueilKapan() {
         <span class="badge" style="--accent:#CA8A04;border-color:#CA8A04;color:#CA8A04;background:color-mix(in srgb,#CA8A04 12%,#fff)">22°C Ensoleillé</span>
       </div>
       <div class="hero-caption">
-        <h1>Kapan</h1>
+        <div class="identity-row">
+          <div class="identity-main">
+            <h1>Kapan — Arménie</h1>
+          </div>
+          <button class="hit icon-btn" data-go="ville-modale-choisir" title="Options ville" aria-label="Options ville">⋯</button>
+        </div>
         ${text('Courte présentation de la ville…')}
       </div>
     </section>
@@ -392,7 +397,7 @@ function accueilKapan() {
     </section>
     `,
     {
-      header: phoneHeader({ showCity: true, city: 'Kapan' }),
+      header: phoneHeader({ title: 'Accueil', showBack: false }),
       footer: phoneFooter('accueil'),
     }
   )
@@ -765,7 +770,12 @@ function mairieShellTop() {
     ${photo('Photo de la mairie…', 'hero')}
     <div class="overlay-badges"><span class="badge">☀ 14° / 4°</span></div>
     <div class="detail-head">
-      <strong>Kapan · Arménie</strong>
+      <div class="identity-row">
+        <div class="identity-main">
+          <strong>Kapan — Arménie</strong>
+        </div>
+        <button class="hit icon-btn" data-go="mairie-menu" title="Menu Ma mairie" aria-label="Menu Ma mairie">⋯</button>
+      </div>
       ${text('Présentation courte de la mairie…')}
     </div>
     <div class="members-row">
@@ -801,7 +811,6 @@ function mairieHeader(title = 'Ma mairie') {
   return phoneHeader({
     title,
     chrome: 'full',
-    extraRight: `<button class="hit icon-btn" data-go="mairie-menu" title="Menu Ma mairie">⋯</button>`,
   })
 }
 
@@ -923,8 +932,8 @@ function mairieRecherche() {
 function mairieMenu() {
   const admin = isAdminRole()
   return wrap(`${photo('Fond Ma mairie…', 'dim')}`, {
-    header: mairieHeader(),
-    footer: phoneFooter('mairie'),
+    header: phoneHeader({ title: 'Menu Ma mairie', chrome: 'panel', closeIcon: true }),
+    footer: '',
     overlay: modalShell(
       'Menu de Ma Mairie',
       `
@@ -1053,7 +1062,7 @@ function mairieRdv() {
     </section>
     `,
     {
-      header: phoneHeader({ title: 'Prendre rendez-vous', backTo: 'mairie-accueil', showCity: true }),
+      header: phoneHeader({ title: 'Prendre rendez-vous', backTo: 'mairie-accueil' }),
       footer: phoneFooter('mairie'),
     }
   )
@@ -3604,7 +3613,12 @@ function communautePage(forcedView) {
       <span class="meta">${privacyLabel(c.privacy)} · ${accessLabel(c)}</span>
     </div>
     <div class="detail-head">
-      <strong class="block-title">${escapeHtml(c.name)}</strong>
+      <div class="identity-row">
+        <div class="identity-main">
+          <strong class="block-title">${escapeHtml(c.name)}</strong>
+        </div>
+        <button class="hit icon-btn" data-go="communaute-menu" type="button" title="Menu" aria-label="Menu">⋯</button>
+      </div>
       <div class="comm-meta-row triple">
         <span class="meta"><span class="avatar tiny"></span> ${escapeHtml(c.creatorName || '')}</span>
         <span class="meta">${c.membersCount} membres</span>
@@ -3627,7 +3641,6 @@ function communautePage(forcedView) {
       header: phoneHeader({
         title: headerTitle,
         backTo: listBack,
-        extraRight: `<button class="hit icon-btn" data-go="communaute-menu" type="button" title="Menu">⋯</button>`,
       }),
       footer: phoneFooter('menu'),
     }
@@ -4318,7 +4331,12 @@ function rencontreDetails() {
     <div class="renc-detail" data-renc-id="${r.id}">
       ${r.photo ? photo('Photo rencontre…', 'hero') : photo('Pas de photo', 'hero dim')}
       <div class="detail-head">
-        <strong class="block-title">${escapeHtml(r.title)}</strong>
+        <div class="identity-row">
+          <div class="identity-main">
+            <strong class="block-title">${escapeHtml(r.title)}</strong>
+          </div>
+          <button class="hit icon-btn" data-go="rencontre-menu" type="button" title="Menu" aria-label="Menu">⋯</button>
+        </div>
         <p class="meta">${kindLabel} · ${modeLabel}${
           r.status === 'cancelled' ? ' · Annulée' : r.status === 'draft' ? ' · Brouillon' : ''
         }</p>
@@ -4368,7 +4386,6 @@ function rencontreDetails() {
       header: phoneHeader({
         title: 'Détails',
         backTo: 'communautes-rencontres',
-        extraRight: `<button class="hit icon-btn" data-go="rencontre-menu" type="button" title="Menu">⋯</button>`,
       }),
       footer: phoneFooter('menu'),
     }

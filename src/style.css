@@ -414,65 +414,57 @@ button.tree-node:hover .tree-label {
 }
 
 .app-chrome {
-  position: sticky;
-  top: 0;
-  z-index: 20;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0;
-  background: #fff;
-  border-bottom: 1px solid var(--line-soft);
-  flex-shrink: 0;
-}
-
-.app-chrome-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  min-height: 40px;
-  border: none;
-  background: transparent;
-  font: inherit;
-  font-size: 0.78rem;
-  font-weight: 600;
-  color: var(--ink);
-  cursor: pointer;
-  padding: 6px 8px;
-}
-
-.app-chrome-btn + .app-chrome-btn {
-  border-left: 1px solid var(--line-soft);
+  display: none;
 }
 
 .phone-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
   border-bottom: 1px solid var(--line-soft);
   background: #f7f7f7;
   flex-shrink: 0;
 }
 
+.phone-header-full {
+  background: color-mix(in srgb, var(--section, #64748b) 8%, #f7f7f7);
+}
+
 .phone-screen.has-app-chrome .phone-scroll {
-  /* sticky chrome is outside scroll (sibling) — content stays clear */
+  /* legacy class — accueils no longer a separate sticky row */
 }
 
 .phone-header-row {
   display: grid;
-  grid-template-columns: 40px 1fr auto;
+  grid-template-columns: 40px minmax(0, 1fr) auto;
   align-items: center;
-  gap: 6px;
-  padding: 4px 8px 6px;
+  gap: 4px;
+  padding: 6px 8px;
+  min-height: 44px;
 }
 
 .phone-title {
   text-align: center;
   font-weight: 600;
   font-size: 0.92rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  padding: 0 2px;
 }
 
 .header-right {
   display: flex;
-  gap: 4px;
+  gap: 2px;
   justify-content: flex-end;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.header-right .header-home {
+  min-width: 36px;
+  min-height: 36px;
 }
 
 .icon-btn .ico-svg {
@@ -482,6 +474,23 @@ button.tree-node:hover .tree-label {
 
 .icon-btn .ico-miasin {
   font-weight: 700;
+}
+
+.identity-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.identity-row > .identity-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.identity-row > .icon-btn {
+  flex-shrink: 0;
+  margin-top: 2px;
 }
 
 .linkish {
