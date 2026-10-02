@@ -104,6 +104,9 @@ import {
   getFiche,
   getFicheContext,
   getAnnuaireRubriqueId,
+  getOpenDirFicheId,
+  listRowsForRubrique,
+  ensureDemoFiche,
   listPharmacieFiches,
   listAdminPubs,
   getAdminPub,
@@ -416,18 +419,23 @@ function santeAccueil() {
         meta: 'Hôpitaux · 0,8 km',
         badge: 'Ouvert',
         go: 'sante-hopital-details',
+        ficheGo: 'sante-hopital-details',
+        openFiche: 'dir-hopital-grand',
       },
       {
         title: 'Pharmacie centrale',
         meta: 'Pharmacies · 1,2 km',
         badge: 'Ouvert',
         go: 'sante-pharmacie-infos',
+        ficheGo: 'sante-pharmacie-infos',
+        openFiche: 'dir-pharmacie-centrale',
       },
       {
         title: 'SAMU Kapan',
         meta: 'Ambulance · …',
         badge: 'Disponible',
         go: 'sante-ambulances',
+        ficheGo: 'sante-ambulances',
       },
     ],
     useful: [
@@ -472,28 +480,37 @@ function santeUrgences() {
 }
 
 function santePharmacies() {
+  const rows = [
+    {
+      id: 'dir-pharmacie-centrale',
+      title: 'Pharmacie centrale',
+      meta: 'Rue Principale · 1,2 km',
+      badge: 'En garde 24h/24',
+    },
+    {
+      id: 'dir-pharmacie-parc',
+      title: 'Pharmacie du Parc',
+      meta: 'Avenue Verte · 2,1 km',
+      badge: 'Ouvert',
+    },
+  ]
   return wrap(
     `
     ${search('Rechercher une pharmacie…')}
     ${chips(['Toutes', 'Ouvertes', 'En garde', 'À proximité'])}
-    ${listCard({
-      title: 'Pharmacie centrale',
-      meta: 'Rue Principale · 1,2 km',
-      badge: 'En garde 24h/24',
-      actions: [
-        { label: 'Détails', go: 'sante-pharmacie-infos', primary: true },
-        { label: 'Appeler', sim: 'appeler' },
-      ],
-    })}
-    ${listCard({
-      title: 'Pharmacie du Parc',
-      meta: 'Avenue Verte · 2,1 km',
-      badge: 'Ouvert',
-      actions: [
-        { label: 'Détails', go: 'sante-pharmacie-infos', primary: true },
-        { label: 'Appeler', sim: 'appeler' },
-      ],
-    })}
+    ${rows
+      .map((row) =>
+        listCard({
+          title: row.title,
+          meta: row.meta,
+          badge: row.badge,
+          actions: [
+            { label: 'Détails', go: 'sante-pharmacie-infos', openFiche: row.id, primary: true },
+            { label: 'Appeler', sim: 'appeler' },
+          ],
+        })
+      )
+      .join('')}
     `,
     {
       header: phoneHeader({ title: 'Pharmacies', backTo: 'sante-accueil' }),
@@ -518,9 +535,13 @@ function dirUnavailable(title = 'Cette fiche n’est plus disponible') {
   )
 }
 
-function pharmacieDetails(tab = 'infos', contentId = 'dir-pharmacie-centrale') {
-  const dir = getDirectory(contentId)
-  const fiche = getFiche(contentId) || getFiche('dir-pharmacie-centrale')
+function pharmacieDetails(tab = 'infos', contentId = null) {
+  const id = contentId || getOpenDirFicheId() || 'dir-pharmacie-centrale'
+  const dir = getDirectory(id)
+  const fiche = getFiche(id)
+  if (!fiche && !dir) {
+    return dirUnavailable('Cette pharmacie n’est plus disponible')
+  }
   if (dir && dir.state !== 'published' && !isAdminRole()) {
     return dirUnavailable()
   }
@@ -548,18 +569,18 @@ function pharmacieDetails(tab = 'infos', contentId = 'dir-pharmacie-centrale') {
         (d) => `
       <div class="row-link static">
         <span>${d}</span>
-        <span class="meta">${d === 'Dimanche' ? 'Fermé / À préciser' : '08:00 – 20:00'}</span>
+        <span class="meta">${d === 'Dimanche' ? 'Fermé / À préciser' : fiche?.hours || '08:00 – 20:00'}</span>
       </div>`
       )
       .join('')}
   `
   const adminEdit = isAdminRole()
-    ? `<button class="hit btn block outline admin-shortcut" data-sim="fiche-edit:${contentId}" type="button">Modifier cette fiche</button>`
+    ? `<button class="hit btn block outline admin-shortcut" data-sim="fiche-edit:${id}" type="button">Modifier cette fiche</button>`
     : ''
   const stateBadge =
     dir && dir.state !== 'published'
       ? `<span class="badge">${dir.state === 'draft' ? 'Brouillon' : 'Non publiée'}</span>`
-      : `<span class="badge">Ouvert 24h/24</span>`
+      : `<span class="badge">${id === 'dir-pharmacie-centrale' ? 'Ouvert 24h/24' : 'Ouvert'}</span>`
   const actions = `
     <div class="row-actions">
       ${hasPlace ? `<button class="hit btn" data-sim="itineraire">Itinéraire</button>` : ''}
@@ -570,11 +591,11 @@ function pharmacieDetails(tab = 'infos', contentId = 'dir-pharmacie-centrale') {
     ${photo('Photo façade…', 'hero')}
     <div class="detail-head">
       <div class="event-title-row">
-        <strong>${fiche?.title || dir?.title || 'Pharmacie centrale'}</strong>
-        <button class="hit icon-btn" data-open-menu="directory" data-content-id="${contentId}" data-menu-parent="sante-pharmacie-infos" title="Plus d’options" aria-label="Plus d’options">⋯</button>
+        <strong>${fiche?.title || dir?.title || 'Pharmacie'}</strong>
+        <button class="hit icon-btn" data-open-menu="directory" data-content-id="${id}" data-menu-parent="sante-pharmacie-infos" title="Plus d’options" aria-label="Plus d’options">⋯</button>
       </div>
       ${stateBadge}
-      <p class="meta">Pharmacie · 1,2 km</p>
+      <p class="meta">Pharmacie · distance…</p>
     </div>
     ${actions}
     ${adminEdit}
@@ -592,28 +613,37 @@ function pharmacieDetails(tab = 'infos', contentId = 'dir-pharmacie-centrale') {
 }
 
 function santeHopitaux() {
+  const rows = [
+    {
+      id: 'dir-hopital-grand',
+      title: 'Grand Hôpital de Kapan',
+      meta: 'Urgences · 1,5 km',
+      badge: 'Ouvert',
+    },
+    {
+      id: 'dir-hopital-urgence24',
+      title: 'Urgence 24 — Hôpital',
+      meta: 'Urgences · 2,0 km',
+      badge: '24h/24',
+    },
+  ]
   return wrap(
     `
     ${search('Rechercher un hôpital…')}
     ${chips(['Toutes', 'Ouvertes', 'Urgences', 'À proximité'])}
-    ${listCard({
-      title: 'Grand Hôpital de Kapan',
-      meta: 'Urgences · 1,5 km',
-      badge: 'Ouvert',
-      actions: [
-        { label: 'Détails', go: 'sante-hopital-details', primary: true },
-        { label: 'Appeler', sim: 'appeler' },
-      ],
-    })}
-    ${listCard({
-      title: 'Urgence 24 — Hôpital',
-      meta: 'Urgences · 2,0 km',
-      badge: '24h/24',
-      actions: [
-        { label: 'Détails', go: 'sante-hopital-details', primary: true },
-        { label: 'Appeler', sim: 'appeler' },
-      ],
-    })}
+    ${rows
+      .map((row) =>
+        listCard({
+          title: row.title,
+          meta: row.meta,
+          badge: row.badge,
+          actions: [
+            { label: 'Détails', go: 'sante-hopital-details', openFiche: row.id, primary: true },
+            { label: 'Appeler', sim: 'appeler' },
+          ],
+        })
+      )
+      .join('')}
     `,
     {
       header: phoneHeader({ title: 'Hôpitaux', backTo: 'sante-accueil' }),
@@ -623,6 +653,8 @@ function santeHopitaux() {
 }
 
 function santeHopitalDetails(tab = 'infos') {
+  const id = getOpenDirFicheId() || 'dir-hopital-grand'
+  const fiche = getFiche(id) || getFiche('dir-hopital-grand')
   const tabs = `
     <div class="tabs">
       <button class="hit tab ${tab === 'infos' ? 'on' : ''}" data-go="sante-hopital-details">Informations</button>
@@ -630,17 +662,17 @@ function santeHopitalDetails(tab = 'infos') {
     </div>`
   const infos = `
     <h2 class="sec">Contact</h2>
-    <p class="meta">Tél. standard · À préciser (non cliquable)</p>
-    <p class="meta">Urgences · 103 (indicatif public)</p>
+    <p class="meta">${fiche?.phone ? `Tél. urgences · ${fiche.phone}` : 'Tél. standard · À préciser'}</p>
     <h2 class="sec">Adresse</h2>
-    <p>Grand Hôpital de Kapan · quartier centre</p>
-    <p class="meta">Adresse complète non publiée — itinéraire indisponible</p>
+    <p>${fiche?.address || 'Adresse à préciser'}</p>
+    <p class="meta">${fiche?.hasPlace ? '' : 'Adresse complète non publiée — itinéraire indisponible'}</p>
     ${photo('Plan de situation…', 'map')}
     <h2 class="sec">À propos</h2>
-    <p>Établissement hospitalier de référence à Kapan. Urgences 24h/24. Consultations selon planning interne.</p>
+    <p>${fiche?.description || 'Établissement hospitalier.'}</p>
   `
   const horaires = `
     <h2 class="sec">Horaires</h2>
+    <p class="meta">${fiche?.hours || 'Horaires à confirmer'}</p>
     ${['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche']
       .map(
         (d) => `
@@ -657,12 +689,12 @@ function santeHopitalDetails(tab = 'infos') {
     `
     ${photo('Photo hôpital…', 'hero')}
     <div class="detail-head">
-      <strong>Grand Hôpital de Kapan</strong>
+      <strong>${fiche?.title || 'Hôpital'}</strong>
       <span class="badge">Ouvert</span>
-      <p class="meta">Hôpital · distance inconnue</p>
+      <p class="meta">Hôpital · distance…</p>
     </div>
     <div class="row-actions">
-      <button class="hit btn primary" data-sim="appeler:103" type="button">Appeler urgences</button>
+      <button class="hit btn primary" data-sim="appeler:${escapeAttr(fiche?.phone || '103')}" type="button">Appeler urgences</button>
     </div>
     ${tabs}
     ${tab === 'infos' ? infos : horaires}
@@ -4692,10 +4724,17 @@ function enregistrements() {
       actions: [{ label: 'Ouvrir', go: 'annonce-details', primary: true }],
     })}
     ${listCard({
-      title: 'Lieu enregistré…',
-      meta: 'Annuaire · …',
+      title: 'Marché central',
+      meta: 'Économie · Commerces',
       badge: 'Sauvé',
-      actions: [{ label: 'Ouvrir', go: 'dir-fiche', primary: true }],
+      actions: [
+        {
+          label: 'Ouvrir',
+          go: 'dir-economie-commerces-fiche-infos',
+          openFiche: 'fiche-commerce-1',
+          primary: true,
+        },
+      ],
     })}
     <h2 class="sec">État vide</h2>
     ${emptyState('Aucun enregistrement pour le moment')}
@@ -4793,14 +4832,27 @@ function rubriqueAccueil({
       meta: `${c.label} · distance…`,
       badge: i === 0 ? 'Ouvert' : '…',
       ficheGo: c.ficheGo || 'dir-fiche',
+      openFiche: c.openFiche || null,
     }))
-  const defaultActions = (item) =>
-    aroundActions
-      ? aroundActions(item)
-      : [
-          { label: 'Détails', go: item.ficheGo || 'dir-fiche', primary: true },
-          { label: 'Appeler', sim: 'appeler' },
-        ]
+  const defaultActions = (item) => {
+    if (aroundActions) return aroundActions(item)
+    const target = item.ficheGo || item.go || 'dir-fiche'
+    const open = item.openFiche || null
+    if (open) {
+      ensureDemoFiche({
+        id: open,
+        title: item.title,
+        sousCat: (item.meta || '').split('·')[0]?.trim() || 'Catégorie',
+        description: `Présentation de ${item.title}.`,
+      })
+    }
+    return [
+      open
+        ? { label: 'Détails', go: target, openFiche: open, primary: true }
+        : { label: 'Détails', go: target, primary: true },
+      { label: 'Appeler', sim: 'appeler' },
+    ]
+  }
 
   return wrap(
     `
@@ -4849,13 +4901,14 @@ function rubriqueAccueil({
   )
 }
 
-/** Sous-page: no banner, no cat blocks — search, filters, cards → fiche */
-function rubriqueListe(title, parentId, { ficheGo = 'dir-fiche', filters = null, proposition = false, cardActions = null } = {}) {
-  const actions = (go) =>
+/** Sous-page: no banner, no cat blocks — search, filters, cards → fiche (par id) */
+function rubriqueListe(title, parentId, { ficheGo = 'dir-fiche', filters = null, proposition = false, cardActions = null, known = null } = {}) {
+  const rows = listRowsForRubrique(title, ficheGo, { parentId, known })
+  const actions = (item) =>
     cardActions
-      ? cardActions(go)
+      ? cardActions(item)
       : [
-          { label: 'Détails', go, primary: true },
+          { label: 'Détails', go: item.ficheGo || ficheGo, openFiche: item.id, primary: true },
           { label: 'Appeler', sim: 'appeler' },
         ]
   return wrap(
@@ -4863,18 +4916,16 @@ function rubriqueListe(title, parentId, { ficheGo = 'dir-fiche', filters = null,
     ${proposition ? tbd('Sous-page proposition — À valider') : ''}
     ${search(`Rechercher dans ${title}…`)}
     ${chips(filters || ['Tous', 'Ouverts', 'À proximité', 'Enregistrés'])}
-    ${listCard({
-      title: `${title} — fiche A…`,
-      meta: 'Adresse · distance…',
-      badge: '…',
-      actions: actions(ficheGo),
-    })}
-    ${listCard({
-      title: `${title} — fiche B…`,
-      meta: 'Adresse · …',
-      badge: '…',
-      actions: actions(ficheGo),
-    })}
+    ${rows
+      .map((item) =>
+        listCard({
+          title: item.title,
+          meta: item.meta,
+          badge: item.badge,
+          actions: actions(item),
+        })
+      )
+      .join('')}
     `,
     {
       header: phoneHeader({ title, backTo: parentId }),
@@ -4966,14 +5017,18 @@ function vieLocaleHub() {
  * noHours: Nature / Activités → « Pas d’horaire d’ouverture » (ne pas inventer)
  */
 function dirFiche(tab = 'infos', { title = 'Fiche détail…', category = 'Catégorie', noHours = false, backTo = 'vie-locale-hub', idInfos = 'dir-fiche', idHoraires = 'dir-fiche-horaires', ficheId = null } = {}) {
-  const fiche = ficheId ? getFiche(ficheId) : null
+  const openId = ficheId || getOpenDirFicheId()
+  const fiche = openId ? getFiche(openId) : null
   const displayTitle = fiche?.title || title
+  const displayCat = fiche?.sousCat || category
   const address = fiche?.address || '12 rue exemple, Kapan'
   const phone = fiche?.phone || ''
   const hours = fiche?.hours || (noHours ? '' : '08:00 – 18:00')
   const desc = fiche?.description || `Présentation de ${displayTitle}.`
   const hasPhone = fiche ? fiche.hasPhone && !!phone : !!phone
   const hasPlace = fiche ? fiche.hasPlace : true
+  const resolvedBack = fiche?.listBackTo || backTo
+  const resolvedId = fiche?.id || openId || null
 
   const statusBox = noHours
     ? `<div class="notice"><strong>Pas d’horaire d’ouverture</strong>${text('À vérifier sur place')}</div>`
@@ -4995,7 +5050,7 @@ function dirFiche(tab = 'infos', { title = 'Fiche détail…', category = 'Caté
          .join('')}`
 
   const adminEdit = isAdminRole()
-    ? `<button class="hit btn block outline admin-shortcut" data-sim="fiche-edit:${ficheId || 'new'}" type="button">Modifier cette fiche</button>`
+    ? `<button class="hit btn block outline admin-shortcut" data-sim="fiche-edit:${resolvedId || 'new'}" type="button">Modifier cette fiche</button>`
     : ''
 
   const actions = `
@@ -5010,7 +5065,7 @@ function dirFiche(tab = 'infos', { title = 'Fiche détail…', category = 'Caté
     <div class="detail-head">
       <strong>${displayTitle}</strong>
       ${noHours ? '' : '<span class="badge">Ouvert</span>'}
-      <p class="meta">${category} · distance…</p>
+      <p class="meta">${displayCat} · distance…</p>
     </div>
     ${statusBox}
     ${actions}
@@ -5032,7 +5087,7 @@ function dirFiche(tab = 'infos', { title = 'Fiche détail…', category = 'Caté
     }
     `,
     {
-      header: phoneHeader({ title: 'Détails', backTo }),
+      header: phoneHeader({ title: 'Détails', backTo: resolvedBack }),
       footer: phoneFooter('menu'),
     }
   )
@@ -6763,9 +6818,27 @@ export const SCREENS = {
           { label: 'Activités', go: 'dir-tourisme-activites' },
         ],
         around: [
-          { title: 'Monastère de Vahanavank', meta: 'Patrimoine · 0,8 km', badge: 'Ouvert', ficheGo: 'dir-tourisme-fiche-infos' },
-          { title: 'Parc / Nature…', meta: 'Nature · …', badge: '…', ficheGo: 'dir-nature-fiche-infos' },
-          { title: 'Activité…', meta: 'Activités · …', badge: '…', ficheGo: 'dir-activites-fiche-infos' },
+          {
+            title: 'Monastère de Vahanavank',
+            meta: 'Patrimoine · 0,8 km',
+            badge: 'Ouvert',
+            ficheGo: 'dir-tourisme-fiche-infos',
+            openFiche: 'fiche-vahanavank',
+          },
+          {
+            title: 'Parc / Nature…',
+            meta: 'Nature · …',
+            badge: '…',
+            ficheGo: 'dir-nature-fiche-infos',
+            openFiche: 'dir-nature-a',
+          },
+          {
+            title: 'Activité…',
+            meta: 'Activités · …',
+            badge: '…',
+            ficheGo: 'dir-activites-fiche-infos',
+            openFiche: 'dir-activites-a',
+          },
         ],
         useful: [
           { label: 'Plan touristique', meta: 'Voir les lieux à visiter…', go: 'dir-tourisme-plan' },
@@ -6789,7 +6862,10 @@ export const SCREENS = {
     title: 'Culture',
     side: 'user',
     group: 'Vie locale',
-    render: () => rubriqueListe('Culture', 'dir-tourisme', { ficheGo: 'dir-tourisme-fiche-infos' }),
+    render: () =>
+      rubriqueListe('Culture', 'dir-tourisme', {
+        ficheGo: 'dir-tourisme-culture-fiche-infos',
+      }),
   },
   'dir-tourisme-activites': {
     title: 'Activités',
@@ -6823,6 +6899,34 @@ export const SCREENS = {
         backTo: 'dir-tourisme-patrimoine',
         idInfos: 'dir-tourisme-fiche-infos',
         idHoraires: 'dir-tourisme-fiche-horaires',
+      }),
+  },
+  'dir-tourisme-culture-fiche-infos': {
+    title: 'Culture fiche — Infos',
+    side: 'user',
+    group: 'Vie locale',
+    render: () =>
+      dirFiche('infos', {
+        title: 'Lieu culturel…',
+        category: 'Culture',
+        noHours: false,
+        backTo: 'dir-tourisme-culture',
+        idInfos: 'dir-tourisme-culture-fiche-infos',
+        idHoraires: 'dir-tourisme-culture-fiche-horaires',
+      }),
+  },
+  'dir-tourisme-culture-fiche-horaires': {
+    title: 'Culture fiche — Horaires',
+    side: 'user',
+    group: 'Vie locale',
+    render: () =>
+      dirFiche('horaires', {
+        title: 'Lieu culturel…',
+        category: 'Culture',
+        noHours: false,
+        backTo: 'dir-tourisme-culture',
+        idInfos: 'dir-tourisme-culture-fiche-infos',
+        idHoraires: 'dir-tourisme-culture-fiche-horaires',
       }),
   },
   'dir-nature-fiche-infos': {
@@ -6916,7 +7020,32 @@ export const SCREENS = {
     title: 'Écoles',
     side: 'user',
     group: 'Vie locale',
-    render: () => rubriqueListe('Écoles', 'dir-education', { ficheGo: 'dir-education-ecoles-fiche-infos' }),
+    render: () =>
+      rubriqueListe('Écoles', 'dir-education', {
+        ficheGo: 'dir-education-ecoles-fiche-infos',
+        known: [
+          {
+            id: 'fiche-ecole-1',
+            title: 'École primaire N°1',
+            meta: 'Écoles · 0,5 km',
+            badge: 'Ouvert',
+            address: '12 rue de l’École, Kapan',
+            phone: '+374 285 20 110',
+            hours: '08:00 – 17:00',
+            description: 'École primaire municipale.',
+          },
+          {
+            id: 'dir-education-ecoles-b',
+            title: 'Collège de Kapan',
+            meta: 'Écoles · 1,1 km',
+            badge: 'Ouvert',
+            address: '5 rue des Collèges, Kapan',
+            phone: '+374 285 20 120',
+            hours: '08:00 – 17:30',
+            description: 'Collège public.',
+          },
+        ],
+      }),
   },
   'dir-education-formations': {
     title: 'Formations',
@@ -7035,9 +7164,31 @@ export const SCREENS = {
     group: 'Vie locale',
     render: () =>
       rubriqueListe('Commerces', 'dir-economie', {
-        ficheGo: 'dir-education-ecoles-fiche-infos',
+        ficheGo: 'dir-economie-commerces-fiche-infos',
         filters: ['Tous', 'Ouverts', 'À proximité', 'Enregistrés'],
         proposition: true,
+        known: [
+          {
+            id: 'fiche-commerce-1',
+            title: 'Marché central',
+            meta: 'Commerces · Place du Marché',
+            badge: 'Ouvert',
+            address: 'Place du Marché, Kapan',
+            phone: '+374 285 22 010',
+            hours: '07:00 – 14:00',
+            description: 'Marché municipal.',
+          },
+          {
+            id: 'dir-economie-commerces-b',
+            title: 'Épicerie du centre',
+            meta: 'Commerces · 0,4 km',
+            badge: 'Ouvert',
+            address: '4 rue du Commerce, Kapan',
+            phone: '+374 285 22 020',
+            hours: '08:00 – 20:00',
+            description: 'Épicerie de proximité.',
+          },
+        ],
       }),
   },
   'dir-economie-entreprises': {
@@ -7046,7 +7197,7 @@ export const SCREENS = {
     group: 'Vie locale',
     render: () =>
       rubriqueListe('Entreprises', 'dir-economie', {
-        ficheGo: 'dir-education-formations-fiche-infos',
+        ficheGo: 'dir-economie-entreprises-fiche-infos',
         filters: ['Tous', 'Ouverts', 'À proximité', 'Enregistrés'],
         proposition: true,
       }),
@@ -7057,7 +7208,7 @@ export const SCREENS = {
     group: 'Vie locale',
     render: () =>
       rubriqueListe('Artisans', 'dir-economie', {
-        ficheGo: 'dir-education-universites-fiche-infos',
+        ficheGo: 'dir-economie-artisans-fiche-infos',
         filters: ['Tous', 'Ouverts', 'À proximité', 'Enregistrés'],
         proposition: true,
       }),
@@ -7068,7 +7219,7 @@ export const SCREENS = {
     group: 'Vie locale',
     render: () =>
       rubriqueListe('Services', 'dir-economie', {
-        ficheGo: 'dir-education-activites-fiche-infos',
+        ficheGo: 'dir-economie-services-fiche-infos',
         filters: ['Tous', 'Ouverts', 'À proximité', 'Enregistrés'],
         proposition: true,
       }),
@@ -7113,7 +7264,7 @@ export const SCREENS = {
     group: 'Vie locale',
     render: () =>
       rubriqueListe('Familles', 'dir-aide-sociale', {
-        ficheGo: 'dir-cinemas-cinemas-fiche-infos',
+        ficheGo: 'dir-aide-familles-fiche-infos',
         filters: ['Tous', 'Ouverts', 'À proximité', 'Enregistrés'],
         proposition: true,
       }),
@@ -7124,7 +7275,7 @@ export const SCREENS = {
     group: 'Vie locale',
     render: () =>
       rubriqueListe('Seniors', 'dir-aide-sociale', {
-        ficheGo: 'dir-cinemas-theatres-fiche-infos',
+        ficheGo: 'dir-aide-seniors-fiche-infos',
         filters: ['Tous', 'Ouverts', 'À proximité', 'Enregistrés'],
         proposition: true,
       }),
@@ -7135,7 +7286,7 @@ export const SCREENS = {
     group: 'Vie locale',
     render: () =>
       rubriqueListe('Handicap', 'dir-aide-sociale', {
-        ficheGo: 'dir-cinemas-programmes-fiche-infos',
+        ficheGo: 'dir-aide-handicap-fiche-infos',
         filters: ['Tous', 'Ouverts', 'À proximité', 'Enregistrés'],
         proposition: true,
       }),
@@ -7146,7 +7297,7 @@ export const SCREENS = {
     group: 'Vie locale',
     render: () =>
       rubriqueListe('Accompagnement', 'dir-aide-sociale', {
-        ficheGo: 'dir-cinemas-spectacles-fiche-infos',
+        ficheGo: 'dir-aide-accompagnement-fiche-infos',
         filters: ['Tous', 'Ouverts', 'À proximité', 'Enregistrés'],
         proposition: true,
       }),
@@ -7179,7 +7330,7 @@ export const SCREENS = {
     group: 'Vie locale',
     render: () =>
       rubriqueListe('Solidarité', 'dir-associations', {
-        ficheGo: 'dir-economie-commerces-fiche-infos',
+        ficheGo: 'dir-associations-solidarite-fiche-infos',
         filters: ['Tous', 'À proximité', 'Enregistrés'],
         proposition: true,
       }),
@@ -7190,7 +7341,7 @@ export const SCREENS = {
     group: 'Vie locale',
     render: () =>
       rubriqueListe('Culture', 'dir-associations', {
-        ficheGo: 'dir-economie-entreprises-fiche-infos',
+        ficheGo: 'dir-associations-culture-fiche-infos',
         filters: ['Tous', 'À proximité', 'Enregistrés'],
         proposition: true,
       }),
@@ -7201,7 +7352,7 @@ export const SCREENS = {
     group: 'Vie locale',
     render: () =>
       rubriqueListe('Sport', 'dir-associations', {
-        ficheGo: 'dir-economie-artisans-fiche-infos',
+        ficheGo: 'dir-associations-sport-fiche-infos',
         filters: ['Tous', 'À proximité', 'Enregistrés'],
         proposition: true,
       }),
@@ -7212,7 +7363,7 @@ export const SCREENS = {
     group: 'Vie locale',
     render: () =>
       rubriqueListe('Environnement', 'dir-associations', {
-        ficheGo: 'dir-economie-services-fiche-infos',
+        ficheGo: 'dir-associations-environnement-fiche-infos',
         filters: ['Tous', 'À proximité', 'Enregistrés'],
         proposition: true,
       }),
@@ -7243,13 +7394,23 @@ export const SCREENS = {
     title: 'Banques — À valider',
     side: 'user',
     group: 'Vie locale',
-    render: () => rubriqueListe('Banques', 'dir-banques', { filters: ['Tous', 'Ouverts', 'À proximité', 'Enregistrés'], proposition: true }),
+    render: () =>
+      rubriqueListe('Banques', 'dir-banques', {
+        ficheGo: 'dir-banques-banques-fiche-infos',
+        filters: ['Tous', 'Ouverts', 'À proximité', 'Enregistrés'],
+        proposition: true,
+      }),
   },
   'dir-banques-assurances': {
     title: 'Assurances — À valider',
     side: 'user',
     group: 'Vie locale',
-    render: () => rubriqueListe('Assurances', 'dir-banques', { filters: ['Tous', 'Ouverts', 'À proximité', 'Enregistrés'], proposition: true }),
+    render: () =>
+      rubriqueListe('Assurances', 'dir-banques', {
+        ficheGo: 'dir-banques-assurances-fiche-infos',
+        filters: ['Tous', 'Ouverts', 'À proximité', 'Enregistrés'],
+        proposition: true,
+      }),
   },
   'dir-banques-distributeurs': {
     title: 'Distributeurs — À valider',
@@ -7266,7 +7427,12 @@ export const SCREENS = {
     title: 'Change — À valider',
     side: 'user',
     group: 'Vie locale',
-    render: () => rubriqueListe('Change', 'dir-banques', { filters: ['Tous', 'Ouverts', 'À proximité', 'Enregistrés'], proposition: true }),
+    render: () =>
+      rubriqueListe('Change', 'dir-banques', {
+        ficheGo: 'dir-banques-change-fiche-infos',
+        filters: ['Tous', 'Ouverts', 'À proximité', 'Enregistrés'],
+        proposition: true,
+      }),
   },
   'dir-banques-distributeur-infos': {
     title: 'Distributeur — Infos',
@@ -7308,7 +7474,7 @@ export const SCREENS = {
     group: 'Vie locale',
     render: () =>
       rubriqueListe('Bus', 'dir-transports', {
-        ficheGo: 'dir-aide-familles-fiche-infos',
+        ficheGo: 'dir-transports-bus-fiche-infos',
         filters: ['Tous', 'Ouverts', 'À proximité', 'Enregistrés'],
         proposition: true,
       }),
@@ -7319,7 +7485,7 @@ export const SCREENS = {
     group: 'Vie locale',
     render: () =>
       rubriqueListe('Taxis', 'dir-transports', {
-        ficheGo: 'dir-aide-seniors-fiche-infos',
+        ficheGo: 'dir-transports-taxis-fiche-infos',
         filters: ['Tous', 'Ouverts', 'À proximité', 'Enregistrés'],
         proposition: true,
       }),
@@ -7330,7 +7496,7 @@ export const SCREENS = {
     group: 'Vie locale',
     render: () =>
       rubriqueListe('Gares', 'dir-transports', {
-        ficheGo: 'dir-aide-handicap-fiche-infos',
+        ficheGo: 'dir-transports-gares-fiche-infos',
         filters: ['Tous', 'Ouverts', 'À proximité', 'Enregistrés'],
         proposition: true,
       }),
@@ -7341,7 +7507,7 @@ export const SCREENS = {
     group: 'Vie locale',
     render: () =>
       rubriqueListe('Location', 'dir-transports', {
-        ficheGo: 'dir-aide-accompagnement-fiche-infos',
+        ficheGo: 'dir-transports-location-fiche-infos',
         filters: ['Tous', 'Ouverts', 'À proximité', 'Enregistrés'],
         proposition: true,
       }),
@@ -7374,7 +7540,7 @@ export const SCREENS = {
     group: 'Vie locale',
     render: () =>
       rubriqueListe('Bibliothèques', 'dir-bibliotheques', {
-        ficheGo: 'dir-associations-solidarite-fiche-infos',
+        ficheGo: 'dir-bibliotheques-bibliotheques-fiche-infos',
         filters: ['Toutes', 'Ouvertes', 'À proximité', 'Enregistrées'],
         proposition: true,
       }),
@@ -7385,7 +7551,7 @@ export const SCREENS = {
     group: 'Vie locale',
     render: () =>
       rubriqueListe('Médiathèques', 'dir-bibliotheques', {
-        ficheGo: 'dir-associations-culture-fiche-infos',
+        ficheGo: 'dir-bibliotheques-mediatheques-fiche-infos',
         filters: ['Toutes', 'Ouvertes', 'À proximité', 'Enregistrées'],
         proposition: true,
       }),
@@ -7396,7 +7562,7 @@ export const SCREENS = {
     group: 'Vie locale',
     render: () =>
       rubriqueListe('Universitaires', 'dir-bibliotheques', {
-        ficheGo: 'dir-associations-sport-fiche-infos',
+        ficheGo: 'dir-bibliotheques-universitaires-fiche-infos',
         filters: ['Toutes', 'Ouvertes', 'À proximité', 'Enregistrées'],
         proposition: true,
       }),
@@ -7407,7 +7573,7 @@ export const SCREENS = {
     group: 'Vie locale',
     render: () =>
       rubriqueListe('Salles de lecture', 'dir-bibliotheques', {
-        ficheGo: 'dir-associations-environnement-fiche-infos',
+        ficheGo: 'dir-bibliotheques-salles-de-lecture-fiche-infos',
         filters: ['Toutes', 'Ouvertes', 'À proximité', 'Enregistrées'],
         proposition: true,
       }),
@@ -7440,7 +7606,7 @@ export const SCREENS = {
     group: 'Vie locale',
     render: () =>
       rubriqueListe('Administratives', 'dir-permanences', {
-        ficheGo: 'dir-banques-banques-fiche-infos',
+        ficheGo: 'dir-permanences-administratives-fiche-infos',
         filters: ['Toutes', 'Aujourd’hui', 'Cette semaine', 'À proximité'],
         proposition: true,
       }),
@@ -7451,7 +7617,7 @@ export const SCREENS = {
     group: 'Vie locale',
     render: () =>
       rubriqueListe('Sociales', 'dir-permanences', {
-        ficheGo: 'dir-banques-assurances-fiche-infos',
+        ficheGo: 'dir-permanences-sociales-fiche-infos',
         filters: ['Toutes', 'Aujourd’hui', 'Cette semaine', 'À proximité'],
         proposition: true,
       }),
@@ -7462,7 +7628,7 @@ export const SCREENS = {
     group: 'Vie locale',
     render: () =>
       rubriqueListe('Juridiques', 'dir-permanences', {
-        ficheGo: 'dir-banques-change-fiche-infos',
+        ficheGo: 'dir-permanences-juridiques-fiche-infos',
         filters: ['Toutes', 'Aujourd’hui', 'Cette semaine', 'À proximité'],
         proposition: true,
       }),
@@ -7473,7 +7639,7 @@ export const SCREENS = {
     group: 'Vie locale',
     render: () =>
       rubriqueListe('Médicales', 'dir-permanences', {
-        ficheGo: 'dir-transports-bus-fiche-infos',
+        ficheGo: 'dir-permanences-medicales-fiche-infos',
         filters: ['Toutes', 'Aujourd’hui', 'Cette semaine', 'À proximité'],
         proposition: true,
       }),
@@ -7506,7 +7672,7 @@ export const SCREENS = {
     group: 'Vie locale',
     render: () =>
       rubriqueListe('Police', 'dir-securite', {
-        ficheGo: 'dir-transports-taxis-fiche-infos',
+        ficheGo: 'dir-securite-police-fiche-infos',
         filters: ['Tous', 'Ouverts', 'À proximité', 'Enregistrés'],
         proposition: true,
       }),
@@ -7517,7 +7683,7 @@ export const SCREENS = {
     group: 'Vie locale',
     render: () =>
       rubriqueListe('Secours', 'dir-securite', {
-        ficheGo: 'dir-transports-gares-fiche-infos',
+        ficheGo: 'dir-securite-secours-fiche-infos',
         filters: ['Tous', 'Ouverts', 'À proximité', 'Enregistrés'],
         proposition: true,
       }),
@@ -7528,7 +7694,7 @@ export const SCREENS = {
     group: 'Vie locale',
     render: () =>
       rubriqueListe('Prévention', 'dir-securite', {
-        ficheGo: 'dir-transports-location-fiche-infos',
+        ficheGo: 'dir-securite-prevention-fiche-infos',
         filters: ['Tous', 'Ouverts', 'À proximité', 'Enregistrés'],
         proposition: true,
       }),
@@ -7539,7 +7705,7 @@ export const SCREENS = {
     group: 'Vie locale',
     render: () =>
       rubriqueListe('Assistance', 'dir-securite', {
-        ficheGo: 'dir-bibliotheques-bibliotheques-fiche-infos',
+        ficheGo: 'dir-securite-assistance-fiche-infos',
         filters: ['Tous', 'Ouverts', 'À proximité', 'Enregistrés'],
         proposition: true,
       }),
@@ -9520,8 +9686,8 @@ export const NAV_TREE = {
                 id: 'dir-tourisme-culture',
                 label: 'Culture',
                 children: [
-                  { id: 'dir-tourisme-fiche-infos', label: 'Détail' },
-                  { id: 'dir-tourisme-fiche-horaires', label: 'Horaires' },
+                  { id: 'dir-tourisme-culture-fiche-infos', label: 'Détail' },
+                  { id: 'dir-tourisme-culture-fiche-horaires', label: 'Horaires' },
                 ],
               },
               {

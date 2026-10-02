@@ -128,11 +128,16 @@ export function listCard({
         ${
           actions.length
             ? `<div class="row-actions">${actions
-                .map((a) =>
-                  a.sim
-                    ? `<button class="hit btn ${a.primary ? 'primary' : ''}" data-sim="${a.sim}">${a.label}</button>`
-                    : `<button class="hit btn ${a.primary ? 'primary' : ''}" data-go="${a.go}">${a.label}</button>`
-                )
+                .map((a) => {
+                  const cls = `hit btn ${a.primary ? 'primary' : ''}`
+                  if (a.sim) {
+                    return `<button class="${cls}" data-sim="${a.sim}">${a.label}</button>`
+                  }
+                  if (a.openFiche) {
+                    return `<button class="${cls}" data-open-fiche="${a.openFiche}" data-go="${a.go || 'dir-fiche'}">${a.label}</button>`
+                  }
+                  return `<button class="${cls}" data-go="${a.go}">${a.label}</button>`
+                })
                 .join('')}</div>`
             : ''
         }

@@ -3,9 +3,13 @@
  */
 
 const FICHE_CTX_KEY = 'ma-ville-fiche-ctx'
+const OPEN_DIR_KEY = 'ma-ville-dir-fiche-open'
 const RUBRIQUE_KEY = 'ma-ville-annuaire-rubrique'
 const PUB_EDIT_KEY = 'ma-ville-pub-edit'
 const PUB_STORE_KEY = 'ma-ville-admin-pubs'
+
+/** Demo list-row fiches (user annuaire) — not in BO rubriques */
+const DIR_DEMO_FICHES = {}
 
 export const ANN_RUBRIQUES = [
   {
@@ -354,6 +358,36 @@ const PHARMACIE_FICHES = [
   },
 ]
 
+const HOPITAL_FICHES = [
+  {
+    id: 'dir-hopital-grand',
+    title: 'Grand Hôpital de Kapan',
+    sousCat: 'Hôpitaux',
+    status: 'Publié',
+    address: 'Grand Hôpital de Kapan · quartier centre',
+    phone: '103',
+    hours: 'Urgences 24h/24 · Accueil selon planning',
+    description:
+      'Établissement hospitalier de référence à Kapan. Urgences 24h/24. Consultations selon planning interne.',
+    hasPhone: true,
+    hasPlace: false,
+    listBackTo: 'sante-hopitaux',
+  },
+  {
+    id: 'dir-hopital-urgence24',
+    title: 'Urgence 24 — Hôpital',
+    sousCat: 'Hôpitaux',
+    status: 'Publié',
+    address: 'Urgence 24 · sud de Kapan',
+    phone: '103',
+    hours: '24h/24',
+    description: 'Pôle urgences dédié. Accueil permanent.',
+    hasPhone: true,
+    hasPlace: false,
+    listBackTo: 'sante-hopitaux',
+  },
+]
+
 const ANN_STORE_KEY = 'ma-ville-annuaire-store'
 const CUSTOM_RUB_KEY = 'ma-ville-custom-rubriques'
 
@@ -457,7 +491,103 @@ export function getFiche(id) {
   }
   const p = PHARMACIE_STORE.find((x) => x.id === id)
   if (p) return { ...p, rubriqueId: 'sante', rubriqueLabel: 'Santé' }
+  const h = HOPITAL_FICHES.find((x) => x.id === id)
+  if (h) return { ...h, rubriqueId: 'sante', rubriqueLabel: 'Santé' }
+  const demo = DIR_DEMO_FICHES[id]
+  if (demo) return { ...demo }
   return null
+}
+
+export function setOpenDirFicheId(id) {
+  try {
+    if (id) sessionStorage.setItem(OPEN_DIR_KEY, id)
+    else sessionStorage.removeItem(OPEN_DIR_KEY)
+  } catch {
+    /* ignore */
+  }
+}
+
+export function getOpenDirFicheId() {
+  try {
+    return sessionStorage.getItem(OPEN_DIR_KEY)
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Ensure a list-row demo fiche exists (stable id). Used by annuaire list → détail.
+ */
+export function ensureDemoFiche(partial) {
+  if (!partial?.id) return null
+  const existing = getFiche(partial.id)
+  if (existing && !DIR_DEMO_FICHES[partial.id]) return existing
+  const phone = (partial.phone || existing?.phone || '').trim()
+  const address = (partial.address || existing?.address || '').trim()
+  const next = {
+    id: partial.id,
+    title: partial.title || existing?.title || 'Fiche…',
+    sousCat: partial.sousCat || partial.category || existing?.sousCat || 'Catégorie',
+    status: partial.status || existing?.status || 'Publié',
+    address: address || 'Adresse · Kapan',
+    phone,
+    hours: partial.hours || existing?.hours || '08:00 – 18:00',
+    description: partial.description || existing?.description || '',
+    hasPhone: partial.hasPhone ?? existing?.hasPhone ?? Boolean(phone && phone.length >= 3),
+    hasPlace: partial.hasPlace ?? existing?.hasPlace ?? true,
+    listBackTo: partial.listBackTo || existing?.listBackTo || null,
+    rubriqueId: partial.rubriqueId || existing?.rubriqueId || null,
+    rubriqueLabel: partial.rubriqueLabel || existing?.rubriqueLabel || null,
+  }
+  if (!existing || DIR_DEMO_FICHES[partial.id]) {
+    DIR_DEMO_FICHES[partial.id] = next
+  }
+  return getFiche(partial.id)
+}
+
+/** Two list rows for a rubrique sous-cat — distinct ids, shared detail screen id (ficheGo). */
+export function listRowsForRubrique(title, ficheGo, { parentId = null, known = null } = {}) {
+  const base = String(ficheGo || 'dir-fiche')
+    .replace(/-fiche-infos$/, '')
+    .replace(/-infos$/, '')
+    .replace(/-horaires$/, '')
+  const presets = known || [
+    {
+      id: `${base}-a`,
+      title: `${title} — fiche A…`,
+      meta: 'Adresse · distance…',
+      badge: 'Ouvert',
+      address: `12 rue ${title}, Kapan`,
+      phone: '+374 285 20 100',
+      hours: '08:00 – 18:00',
+      description: `Présentation de ${title} — fiche A.`,
+    },
+    {
+      id: `${base}-b`,
+      title: `${title} — fiche B…`,
+      meta: 'Adresse · …',
+      badge: '…',
+      address: `8 av. ${title}, Kapan`,
+      phone: '+374 285 20 200',
+      hours: '09:00 – 17:00',
+      description: `Présentation de ${title} — fiche B.`,
+    },
+  ]
+  return presets.map((row) => {
+    ensureDemoFiche({
+      ...row,
+      sousCat: title,
+      category: title,
+      listBackTo: parentId,
+    })
+    return {
+      id: row.id,
+      title: row.title,
+      meta: row.meta || `${title} · distance…`,
+      badge: row.badge || 'Ouvert',
+      ficheGo,
+    }
+  })
 }
 
 export function upsertFiche({ id, rubriqueId, title, address, phone, hours, description, status, sousCat }) {
