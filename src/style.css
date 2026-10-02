@@ -410,12 +410,49 @@ button.tree-node:hover .tree-label {
   font-size: 0.7rem;
   padding: 10px 16px 0;
   color: var(--muted);
+  flex-shrink: 0;
+}
+
+.app-chrome {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  background: #fff;
+  border-bottom: 1px solid var(--line-soft);
+  flex-shrink: 0;
+}
+
+.app-chrome-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 40px;
+  border: none;
+  background: transparent;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+  padding: 6px 8px;
+}
+
+.app-chrome-btn + .app-chrome-btn {
+  border-left: 1px solid var(--line-soft);
 }
 
 .phone-header {
   border-bottom: 1px solid var(--line-soft);
   background: #f7f7f7;
   flex-shrink: 0;
+}
+
+.phone-screen.has-app-chrome .phone-scroll {
+  /* sticky chrome is outside scroll (sibling) — content stays clear */
 }
 
 .phone-header-row {

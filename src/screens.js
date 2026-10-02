@@ -146,8 +146,8 @@ function modaleChoisir() {
     ${photo('Fond accueil (atténué)…', 'dim')}
     `,
     {
-      header: phoneHeader({ title: 'Accueil', showCity: true }),
-      footer: phoneFooter('accueil'),
+      header: phoneHeader({ title: 'Accueil', chrome: 'panel' }),
+      footer: '',
       overlay: modalShell(
         'Choisir une ville',
         `
@@ -174,8 +174,8 @@ function modaleConfirmer() {
   return wrap(
     `${photo('Fond…', 'dim')}`,
     {
-      header: phoneHeader({ title: 'Confirmer', showCity: true }),
-      footer: phoneFooter('accueil'),
+      header: phoneHeader({ title: 'Confirmer', chrome: 'panel' }),
+      footer: '',
       overlay: modalShell(
         'Confirmer la ville',
         `
@@ -659,13 +659,11 @@ function mairieTabs(active = 'publications') {
   `
 }
 
-function mairieHeader(title = 'Ma mairie', backTo = 'accueil-kapan') {
-  /* Retour · Accueil · ⋯ Menu Ma mairie */
+function mairieHeader(title = 'Ma mairie') {
   return phoneHeader({
     title,
-    backTo,
-    showMiasin: false,
-    extraRight: `<button class="hit icon-btn" data-go="mairie-menu" title="Menu Ma mairie" aria-label="Menu Ma mairie">⋯</button>`,
+    chrome: 'full',
+    extraRight: `<button class="hit icon-btn" data-go="mairie-menu" title="Menu Ma mairie">⋯</button>`,
   })
 }
 
@@ -785,6 +783,7 @@ function mairieRecherche() {
 }
 
 function mairieMenu() {
+  const admin = isAdminRole()
   return wrap(`${photo('Fond Ma mairie…', 'dim')}`, {
     header: mairieHeader(),
     footer: phoneFooter('mairie'),
@@ -794,6 +793,7 @@ function mairieMenu() {
       ${sheetOption('Partager Ma Mairie', { sim: 'partage' })}
       ${sheetOption('Notification de Ma Mairie', { toggle: true, on: true })}
       ${sheetOption('Discussions', { go: 'messages' })}
+      ${admin ? sheetOption('Gérer la page', { go: 'mairie-gerer-page' }) : ''}
       ${sheetOption('Quitter Ma Mairie', { sim: 'quitter' })}
       `
     ),
@@ -1022,17 +1022,17 @@ function contentMenu() {
           ? 'Liste participants…'
           : 'Fond publication…'
   return wrap(`${photo(dimLabel, 'dim')}<p class="meta menu-parent-hint">← ${parent}</p>`, {
-    header: phoneHeader({ title: contentMenuTitle(ctx), backTo: parent }),
-    footer: phoneFooter(parent.includes('infos') ? 'infos' : parent.includes('mairie') ? 'mairie' : 'menu'),
+    header: phoneHeader({ title: contentMenuTitle(ctx), chrome: 'panel' }),
+    footer: '',
     overlay: modalShell('Plus d’options', sheetActions(actions)),
   })
 }
 
 function menuConfirmShell({ title, body, confirmSim, confirmLabel = 'Confirmer', backTo }) {
-  const parent = getMenuContext()?.parent || backTo || 'mairie-accueil'
+  void backTo
   return wrap(`${photo('Fond…', 'dim')}`, {
-    header: phoneHeader({ title, backTo: parent }),
-    footer: phoneFooter('menu'),
+    header: phoneHeader({ title, chrome: 'panel' }),
+    footer: '',
     overlay: modalShell(
       title,
       `<p>${body}</p>`,
@@ -1099,8 +1099,8 @@ function menuModeratePub() {
   const id = getMenuContext()?.contentId || 'pub-citoyen-other'
   const p = getPublication(id)
   return wrap(`${photo('Fond feed…', 'dim')}`, {
-    header: phoneHeader({ title: 'Modérer', backTo: getMenuContext()?.parent || 'infos-feed' }),
-    footer: phoneFooter('infos'),
+    header: phoneHeader({ title: 'Modérer', chrome: 'panel' }),
+    footer: '',
     overlay: modalShell(
       'Modérer la publication',
       `
@@ -1117,9 +1117,9 @@ function menuSignalFicheInfo() {
   return wrap(`${photo('Fond fiche…', 'dim')}`, {
     header: phoneHeader({
       title: 'Signaler info',
-      backTo: getMenuContext()?.parent || 'sante-pharmacie-infos',
+      chrome: 'panel',
     }),
-    footer: phoneFooter('menu'),
+    footer: '',
     overlay: modalShell(
       'Signaler info incorrecte',
       `
@@ -1159,8 +1159,9 @@ function mairieGererPage() {
       header: phoneHeader({
         title: 'Gérer la page',
         backTo: 'mairie-accueil',
+        chrome: 'form',
       }),
-      footer: phoneFooter('mairie'),
+      footer: '',
     }
   )
 }
@@ -1196,13 +1197,9 @@ function mairiePublicationForm({ mode = 'create' } = {}) {
     </div>
     `,
     {
-      header: phoneHeader({ title, backTo }),
-      footer: phoneFooter('mairie'),
+      header: phoneHeader({ title, backTo, chrome: 'form' }),
+      footer: '',
     }
-  )
-}
-
-function mairieNouvellePublication() {
   return mairiePublicationForm({ mode: 'create' })
 }
 
@@ -1229,8 +1226,8 @@ function mairiePubPreview() {
     </div>
     `,
     {
-      header: phoneHeader({ title: 'Prévisualisation', backTo: 'mairie-nouvelle-publication' }),
-      footer: phoneFooter('mairie'),
+      header: phoneHeader({ title: 'Prévisualisation', backTo: 'mairie-nouvelle-publication', chrome: 'form' }),
+      footer: '',
     }
   )
 }
@@ -1243,8 +1240,8 @@ function mairieMediasSheet() {
     </div>
     `,
     {
-      header: phoneHeader({ title: 'Nouvelle publication', backTo: 'mairie-nouvelle-publication' }),
-      footer: phoneFooter('mairie'),
+      header: phoneHeader({ title: 'Nouvelle publication', chrome: 'panel' }),
+      footer: '',
       overlay: modalShell(
         'Médias',
         `
@@ -1340,8 +1337,8 @@ function mairieConseilEdit() {
     <button class="hit btn primary block" data-sim="enregistrer">Enregistrer (simulé)</button>
     `,
     {
-      header: phoneHeader({ title: 'Maire & Conseil municipal', backTo: 'mairie-conseil' }),
-      footer: phoneFooter('mairie'),
+      header: phoneHeader({ title: 'Maire & Conseil municipal', backTo: 'mairie-conseil', chrome: 'form' }),
+      footer: '',
     }
   )
 }
@@ -1457,8 +1454,8 @@ function mairieInfosDetail() {
 
 function mairieInfosApropos() {
   return wrap(`${photo('Fond info…', 'dim')}`, {
-    header: phoneHeader({ title: 'Publication', backTo: 'mairie-infos-detail' }),
-    footer: phoneFooter('mairie'),
+    header: phoneHeader({ title: 'Publication', chrome: 'panel' }),
+    footer: '',
     overlay: modalShell(
       'À propos',
       `
@@ -1496,7 +1493,7 @@ function mairiePlan() {
     <p class="meta">Repères municipaux · structure</p>
     `,
     {
-      header: mairieHeader('Ma mairie', 'mairie-accueil'),
+      header: mairieHeader('Ma mairie'),
       footer: phoneFooter('mairie'),
     }
   )
@@ -1504,8 +1501,8 @@ function mairiePlan() {
 
 function mairiePlanMenu() {
   return wrap(`${photo('Fond carte…', 'dim')}`, {
-    header: phoneHeader({ title: 'Plan de la ville', backTo: 'mairie-plan' }),
-    footer: phoneFooter('mairie'),
+    header: phoneHeader({ title: 'Plan de la ville', chrome: 'panel' }),
+    footer: '',
     overlay: modalShell(
       'Menu de la carte',
       `
@@ -1736,16 +1733,16 @@ function infosReactions() {
     </div>
     `,
     {
-      header: phoneHeader({ title: 'Réactions' }),
-      footer: phoneFooter(footerTabForParent(parent)),
+      header: phoneHeader({ title: 'Réactions', chrome: 'panel' }),
+      footer: '',
     }
   )
 }
 
 function infosAjouterAmi() {
   return wrap(`${photo('Fond réactions…', 'dim')}`, {
-    header: phoneHeader({ title: 'Réactions', backTo: 'infos-reactions' }),
-    footer: phoneFooter('infos'),
+    header: phoneHeader({ title: 'Réactions', chrome: 'panel', closeIcon: true }),
+    footer: '',
     overlay: `
       <div class="modal-layer">
         <div class="modal-sheet center-card">
@@ -1841,8 +1838,8 @@ function infosCommentaires() {
     </div>
     `,
     {
-      header: phoneHeader({ title: 'Commentaires' }),
-      footer: phoneFooter(footerTabForParent(parent)),
+      header: phoneHeader({ title: 'Commentaires', chrome: 'panel' }),
+      footer: '',
     }
   )
 }
@@ -1856,8 +1853,8 @@ function infosPartage() {
     { name: 'Syuzanna', selected: false },
   ]
   return wrap(`${photo('Fond feed…', 'dim')}`, {
-    header: phoneHeader({ title: 'Infos Feed', backTo: 'infos-feed' }),
-    footer: phoneFooter('infos'),
+    header: phoneHeader({ title: 'Partager', chrome: 'panel' }),
+    footer: '',
     overlay: modalShell(
       'Partager la publication',
       `
@@ -2233,8 +2230,9 @@ function evenementForm() {
       header: phoneHeader({
         title: isCreate || !title ? 'Créer' : 'Modifier',
         backTo,
+        chrome: 'form',
       }),
-      footer: phoneFooter('menu'),
+      footer: '',
     }
   )
 }
@@ -2275,8 +2273,8 @@ function evenementParticipantMenu() {
 
 function evenementSupprimerConfirm() {
   return wrap(evenementParticipantsBody(), {
-    header: phoneHeader({ title: 'Liste des participants', backTo: 'evenement-participants' }),
-    footer: phoneFooter('menu'),
+    header: phoneHeader({ title: 'Liste des participants', chrome: 'panel' }),
+    footer: '',
     overlay: modalShell(
       'Retirer de l’événement',
       `
@@ -2295,8 +2293,8 @@ function evenementSupprimerConfirm() {
 
 function evenementSignaler() {
   return wrap(evenementParticipantsBody(), {
-    header: phoneHeader({ title: 'Liste des participants', backTo: 'evenement-participant-menu' }),
-    footer: phoneFooter('menu'),
+    header: phoneHeader({ title: 'Liste des participants', chrome: 'panel' }),
+    footer: '',
     overlay: modalShell(
       'Signaler',
       `
@@ -2397,8 +2395,8 @@ function evenementAnnulerRefus() {
     </div>
     `,
     {
-      header: phoneHeader({ title: 'Validation des participants', backTo: 'evenement-validation-refuse' }),
-      footer: phoneFooter('menu'),
+      header: phoneHeader({ title: 'Validation des participants', chrome: 'panel' }),
+      footer: '',
       overlay: modalShell(
         'Annuler le refus !',
         `
@@ -2457,8 +2455,8 @@ function evenementDiscussion() {
 
 function evenementGroupeModal() {
   return wrap(evenementDiscussionBody(), {
-    header: phoneHeader({ title: 'Démarrer une discussion', backTo: 'evenement-discussion' }),
-    footer: phoneFooter('menu'),
+    header: phoneHeader({ title: 'Démarrer une discussion', chrome: 'panel' }),
+    footer: '',
     overlay: modalShell(
       'Groupe de discussion',
       `
@@ -2596,8 +2594,8 @@ function annoncesFiltres() {
   return wrap(
     `${photo('Liste atténuée…', 'dim')}`,
     {
-      header: phoneHeader({ title: 'Petites annonces', backTo: 'annonces-liste' }),
-      footer: phoneFooter('menu'),
+      header: phoneHeader({ title: 'Filtres', chrome: 'panel' }),
+      footer: '',
       overlay: modalShell(
         'Filtres et catégories',
         `
@@ -3153,8 +3151,8 @@ function ficheAnnuaireForm({ title = 'Pharmacie centrale' } = {}) {
     </div>
     `,
     {
-      header: phoneHeader({ title: 'Modifier la fiche', backTo: 'sante-pharmacie-infos' }),
-      footer: phoneFooter('menu'),
+      header: phoneHeader({ title: 'Modifier la fiche', backTo: 'sante-pharmacie-infos', chrome: 'form' }),
+      footer: '',
     }
   )
 }
@@ -3484,8 +3482,8 @@ function signalementNouveau() {
     </div>
     `,
     {
-      header: phoneHeader({ title: 'Nouveau', backTo: 'signalements' }),
-      footer: phoneFooter('menu'),
+      header: phoneHeader({ title: 'Nouveau', backTo: 'signalements', chrome: 'form' }),
+      footer: '',
     }
   )
 }
@@ -3889,7 +3887,8 @@ function adminAnnonceForm() {
     </div>
     `,
     {
-      header: phoneHeader({ title: 'Annonce', backTo: 'admin-annonces' }),
+      header: phoneHeader({ title: 'Annonce', backTo: 'admin-annonces', chrome: 'form' }),
+      footer: '',
     }
   )
 }
@@ -3929,7 +3928,8 @@ function adminOffreForm() {
     </div>
     `,
     {
-      header: phoneHeader({ title: 'Offre', backTo: 'admin-offres' }),
+      header: phoneHeader({ title: 'Offre', backTo: 'admin-offres', chrome: 'form' }),
+      footer: '',
     }
   )
 }
