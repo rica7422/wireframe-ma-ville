@@ -241,11 +241,11 @@ export function eventMenuActions(contentId, role = getRole()) {
   }
 
   if (admin) {
-    actions.push({ id: 'edit', label: 'Modifier', go: 'evenement-gerer', section: 'manage' })
+    actions.push({ id: 'edit', label: 'Modifier', sim: `event-edit:${c.id}`, section: 'manage' })
     actions.push({
       id: 'manage',
       label: 'Gérer l’événement',
-      go: 'evenement-gerer',
+      sim: `event-edit:${c.id}`,
       section: 'manage',
     })
     if (c.state === 'draft') {
@@ -450,11 +450,12 @@ export function canAccessManageRoute(screenId, role = getRole()) {
     'mairie-pub-edit',
     'mairie-pub-preview',
     'mairie-pub-options-admin',
-    'evenement-gerer',
+    // evenement-form is shared (habitant create + admin) — not gated here
     'evenement-validation',
     'evenement-validation-valide',
     'evenement-validation-refuse',
     'evenement-annuler-refus',
+    'evenements-a-valider',
     'fiche-annuaire-form',
     'menu-moderate-pub',
     'menu-confirm-delete-dir',
@@ -465,12 +466,16 @@ export function canAccessManageRoute(screenId, role = getRole()) {
     'admin-mairie-page',
     'admin-mairie-pub-form',
     'admin-evenements',
+    'evenements-gerer-liste',
     'admin-evenement-form',
     'admin-annonces',
+    'admin-annonce-form',
     'admin-offres',
+    'admin-offre-form',
     'admin-annuaires',
     'admin-annuaire-sante',
     'admin-annuaire-pharmacies',
+    'admin-annuaire-rubrique',
     'admin-rdv',
     'admin-moderation',
     'admin-equipe',

@@ -39,6 +39,7 @@ import {
   getDirectory,
   getEvent,
   getParticipant,
+  SIM_VIEWER_ID,
 } from './demo-data.js'
 import { getCommentContext, getReactContext } from './content-context.js'
 import {
@@ -56,6 +57,22 @@ import {
   openAsHabitant,
   hasMairieReply,
 } from './signalements-data.js'
+import {
+  getEvent as getEventFull,
+  listPublicEvents,
+  listMyParticipations,
+  listMyCreations,
+  listPendingValidation,
+  listAdminManaged,
+  placesLabel,
+  isLimited,
+  getEditEventId,
+  getOpenEventId,
+  getListTab,
+  getMesSub,
+  getFormStep,
+  publicationLabel,
+} from './events-data.js'
 
 /** Screen registry: id → { title, group, render(state) } */
 
@@ -692,6 +709,7 @@ function mairieAccueil() {
       body: 'Informations et actualités de votre mairie.',
       contentId: 'pub-mairie-1',
       menuParent: 'mairie-accueil',
+      section: 'mairie',
     })}
     ${postCard({
       author: 'Mairie de Kapan',
@@ -700,6 +718,7 @@ function mairieAccueil() {
       multi: true,
       contentId: 'pub-mairie-2',
       menuParent: 'mairie-accueil',
+      section: 'mairie',
     })}
     `,
     {
@@ -718,7 +737,7 @@ function mairieAccueilEvenements() {
     ${mairieRdvCta()}
     ${mairieAdminGerShortcut()}
     ${mairieTabs('evenements')}
-    ${evenementsListeBody({ detailsGo: 'evenement-details' })}
+    ${evenementsListeBody({ events: listPublicEvents().map(mapEventCard) })}
     `,
     {
       header: mairieHeader(),
@@ -914,6 +933,7 @@ function mairiePresentation() {
       body: 'Texte de présentation de la ville…',
       contentId: 'pub-mairie-1',
       menuParent: 'mairie-presentation',
+      section: 'mairie',
     })}
     ${publicationCard({
       title: 'Kapan, entre ville et nature',
@@ -921,6 +941,7 @@ function mairiePresentation() {
       multi: true,
       contentId: 'pub-mairie-2',
       menuParent: 'mairie-presentation',
+      section: 'mairie',
     })}
     `,
     {
@@ -1424,7 +1445,7 @@ function mairieInfosDetail() {
       </div>
       <p class="meta accent-text">Admin Kapan · <span class="badge">Transports</span></p>
       ${text('Corps complet de l’information mairie…')}
-      ${socialActions({ contentId: 'pub-mairie-1' })}
+      ${socialActions({ contentId: 'pub-mairie-1', section: 'mairie' })}
     </article>
     `,
     {
@@ -1864,10 +1885,54 @@ function infosPartage() {
   })
 }
 
+function mapEventCard(e) {
+  return {
+    id: e.id,
+    title: e.title || 'Sans titre',
+    when: e.dateShort || '',
+    time: e.time || '',
+    countdown: e.countdown || '',
+    lieu: e.lieu || '',
+    tags: e.tags || [],
+    limited: isLimited(e),
+  }
+}
+
 function evenementsListe() {
+  const tab = getListTab()
+  const admin = isAdminRole()
+  const mesSub = getMesSub()
+  let body = ''
+  if (tab === 'mes') {
+    const list =
+      mesSub === 'creations' ? listMyCreations(SIM_VIEWER_ID) : listMyParticipations()
+    body = `
+      <div class="tabs sub-tabs">
+        <button class="hit tab ${mesSub === 'participations' ? 'on' : ''}" data-sim="event-mes-sub:participations" type="button">Mes participations</button>
+        <button class="hit tab ${mesSub === 'creations' ? 'on' : ''}" data-sim="event-mes-sub:creations" type="button">Mes créations</button>
+      </div>
+      ${
+        list.length
+          ? evenementsListeBody({ events: list.map(mapEventCard) })
+          : emptyState(mesSub === 'creations' ? 'Aucune création pour le moment' : 'Aucune participation')
+      }
+    `
+  } else {
+    body = evenementsListeBody({ events: listPublicEvents().map(mapEventCard) })
+  }
   return wrap(
     `
-    ${evenementsListeBody()}
+    <div class="tabs">
+      <button class="hit tab ${tab === 'decouvrir' ? 'on' : ''}" data-sim="event-list-tab:decouvrir" type="button">Découvrir</button>
+      <button class="hit tab ${tab === 'mes' ? 'on' : ''}" data-sim="event-list-tab:mes" type="button">Mes événements</button>
+      <button class="hit tab" data-sim="event-create" type="button">Créer un événement</button>
+    </div>
+    ${
+      admin
+        ? `<button class="hit btn block outline" data-go="admin-evenements" type="button">Gérer les événements</button>`
+        : ''
+    }
+    ${body}
     `,
     {
       header: phoneHeader({ title: 'Événements', backTo: 'accueil-kapan' }),
@@ -1897,7 +1962,7 @@ function renderInscriptionBlock(eventId = 'evt-atelier') {
   const ui = eventInscriptionUi(eventId)
   if (ui.kind === 'admin') {
     return `
-      <button class="hit btn primary block" data-go="evenement-gerer" type="button">Gérer l’événement</button>
+      <button class="hit btn primary block" data-sim="event-edit:${eventId}" type="button">Gérer l’événement</button>
       <button class="hit btn block outline" data-go="evenement-validation" type="button">Gérer les inscriptions</button>
     `
   }
@@ -1960,17 +2025,26 @@ function evenementParticipantsBody() {
 
 function evenementDetails() {
   const admin = isAdminRole()
-  const actions = renderInscriptionBlock('evt-atelier')
+  const id = getOpenEventId() || getEditEventId() || 'evt-atelier'
+  const e = getEventFull(id) || getEventFull('evt-atelier')
+  if (!e) {
+    return wrap(emptyState('Événement introuvable'), {
+      header: phoneHeader({ title: 'Détails', backTo: 'evenements-liste' }),
+      footer: phoneFooter('menu'),
+    })
+  }
+  const places = placesLabel(e)
+  const actions = renderInscriptionBlock(e.id)
   const plusInfos = `
       <h2 class="sec">Plus d’informations</h2>
       <div class="plus-infos">
         <button class="hit row-link" data-go="evenement-participants">
-          <span>Participants · 12</span><span>›</span>
+          <span>Participants · ${e.confirmedCount || 0}</span><span>›</span>
         </button>
         ${
           admin
             ? `<button class="hit row-link" data-go="evenement-validation">
-          <span>Validations des participants · 2</span><span>›</span>
+          <span>Validations des participants · ${e.pendingCount || 0}</span><span>›</span>
         </button>`
             : ''
         }
@@ -1984,73 +2058,73 @@ function evenementDetails() {
 
   return wrap(
     `
-    <div class="event-detail">
+    <div class="event-detail" data-event-id="${e.id}">
       <div class="event-photo-wrap">
         ${photo('Photo événement…', 'hero')}
-        <span class="badge event-places">Places limitées</span>
+        ${isLimited(e) ? '<span class="badge event-places">Places limitées</span>' : ''}
       </div>
       <div class="event-detail-head">
         <div class="event-title-row">
-          <strong class="block-title">Atelier créatif</strong>
-          <button class="hit icon-btn" data-open-menu="event" data-content-id="evt-atelier" data-menu-parent="evenement-details" title="Plus d’options" aria-label="Plus d’options">⋯</button>
+          <strong class="block-title">${e.title || 'Sans titre'}</strong>
+          <button class="hit icon-btn" data-open-menu="event" data-content-id="${e.id}" data-section="evenements" data-menu-parent="evenement-details" title="Plus d’options" aria-label="Plus d’options">⋯</button>
         </div>
-        <p class="meta event-lieu">📍 Camp Nou, Stade de Barcelone</p>
-        <p class="meta">Paris, France</p>
+        <p class="meta event-lieu">📍 ${e.lieuDetail || e.lieu || ''}</p>
+        <p class="meta">${e.cityLabel || ''}</p>
       </div>
       <div class="meta-grid meta-grid-4">
-        <div class="meta-cell"><span class="meta">Date</span><strong>Vendredi 16 Juin 2026</strong></div>
-        <div class="meta-cell"><span class="meta">Heure</span><strong>15:30</strong></div>
-        <div class="meta-cell"><span class="meta">Catégorie</span><strong><span class="badge">Artistique / Créatif</span></strong></div>
-        <div class="meta-cell"><span class="meta">Prix</span><strong>20 €</strong></div>
+        <div class="meta-cell"><span class="meta">Date</span><strong>${e.dateLabel || '—'}</strong></div>
+        <div class="meta-cell"><span class="meta">Heure</span><strong>${e.time || '—'}</strong></div>
+        <div class="meta-cell"><span class="meta">Catégorie</span><strong><span class="badge">${e.category || '—'}</span></strong></div>
+        <div class="meta-cell"><span class="meta">Prix</span><strong>${e.price || '—'}</strong></div>
       </div>
-      ${text(
-        'Parfois, les mots ne suffisent pas à exprimer ce qui nous habite. Cet atelier créatif vous invite à explorer d’autres langages — couleurs, formes, matières — pour laisser parler votre sensibilité.'
-      )}
+      ${text(e.description || '')}
       <div class="stats-row">
-        <span class="stat-cell"><strong>12</strong><span class="meta">Participants</span></span>
-        <span class="stat-cell"><strong>10</strong><span class="meta">Billets restants</span></span>
-        <span class="stat-cell"><strong>5</strong><span class="meta">Jours restants</span></span>
+        <span class="stat-cell"><strong>${e.confirmedCount || 0}</strong><span class="meta">Participants</span></span>
+        ${
+          places
+            ? `<span class="stat-cell"><strong>${placesRestantesNum(e)}</strong><span class="meta">Places restantes</span></span>`
+            : `<span class="stat-cell"><strong>—</strong><span class="meta">Places illimitées</span></span>`
+        }
+        <span class="stat-cell"><strong>${e.countdown ? e.countdown.split(' ')[0] : '—'}</strong><span class="meta">${e.countdown ? 'Jours restants' : '—'}</span></span>
       </div>
-      <p class="places-note"><strong>Nombres de places · 20</strong></p>
+      ${
+        isLimited(e)
+          ? `<p class="places-note"><strong>Nombre de places · ${e.capacity}</strong></p>`
+          : ''
+      }
       ${actions}
       ${socialActions({
         likes: '200',
         comments: '15',
         shares: '200',
-        reactors: 'Rupen Danielian et 10 autres personnes',
-        contentId: 'evt-atelier',
+        reactors: `${e.reactionCount || 0} réactions`,
+        contentId: e.id,
+        section: 'evenements',
       })}
-      <h2 class="sec">Hobbies concernés</h2>
+      ${
+        e.hobbies?.length
+          ? `<h2 class="sec">Hobbies concernés</h2>
       <div class="h-scroll hobbies">
-        ${['Beatboxing', 'Chant', 'Saxophone', 'Violon', 'Piano']
+        ${e.hobbies
           .map(
             (h) => `
           <div class="hobby-chip"><span class="avatar"></span><span class="meta">${h}</span></div>`
           )
           .join('')}
-      </div>
+      </div>`
+          : ''
+      }
       <button class="hit row-link" data-go="evenement-discussion">
         <span>Centre de Messagerie</span><span>›</span>
       </button>
       <h2 class="sec">Organisateurs</h2>
-      ${[
-        ['Lilit Ameni', 'Administrateur'],
-        ['Rouben Sirunyan', 'Créateur'],
-        ['Aris Margaryan', 'Administrateur'],
-      ]
-        .map(
-          ([name, role]) => `
-        <div class="orga-row">
-          <span class="avatar"></span>
-          <button class="hit grow truncate orga-name" data-go="messages-thread" type="button">
-            <strong>${name}</strong><span class="meta"> · ${role}</span>
-          </button>
-          <button class="hit icon-btn" data-go="messages-thread" title="Message" aria-label="Message">💬</button>
-          <button class="hit icon-btn" data-sim="appeler" title="Appeler" aria-label="Appeler">☎</button>
-          <button class="hit icon-btn" data-sim="visio" title="Visio" aria-label="Visio">📹</button>
-        </div>`
-        )
-        .join('')}
+      <div class="orga-row">
+        <span class="avatar"></span>
+        <button class="hit grow truncate orga-name" data-go="messages-thread" type="button">
+          <strong>${e.orgLabel || 'Organisateur'}</strong><span class="meta"> · ${e.origin === 'municipal' ? 'Municipal' : 'Habitant'}</span>
+        </button>
+        <button class="hit icon-btn" data-go="messages-thread" title="Message" aria-label="Message">💬</button>
+      </div>
       ${plusInfos}
     </div>
     `,
@@ -2061,38 +2135,127 @@ function evenementDetails() {
   )
 }
 
-function evenementGerer() {
+function placesRestantesNum(e) {
+  if (e.capacity == null) return null
+  return Math.max(0, e.capacity - (e.confirmedCount || 0))
+}
+
+function evenementForm() {
+  const id = getEditEventId()
+  const e = id ? getEventFull(id) : null
+  const isCreate = !e || !e.title
+  const step = getFormStep() || 1
+  const admin = isAdminRole()
+  const municipal = e?.origin === 'municipal' || (admin && isCreate && e?.origin !== 'citizen')
+  const pending = e?.publication === 'pending'
+  const title = e?.title || ''
+  const backTo = admin && !e?.origin?.includes?.('citizen') ? 'admin-evenements' : 'evenements-liste'
+
+  const stepChip = (n, label) =>
+    `<button class="hit chip ${step === n ? 'on' : ''}" data-sim="event-form-step:${n}" type="button">${n} · ${label}</button>`
+
+  let fields = ''
+  if (step === 1) {
+    fields = `
+      <label class="field"><span>Titre</span><input type="text" value="${escapeAttr(title)}" placeholder="Titre de l’événement" data-field="title" /></label>
+      <label class="field"><span>Description</span><textarea rows="4" placeholder="Décrivez l’événement…" data-field="description">${escapeHtml(e?.description || '')}</textarea></label>
+      <label class="field"><span>Catégorie</span>
+        <select data-field="category">
+          ${['Culture', 'Artistique / Créatif', 'Social / Lifestyle', 'Institutionnel', 'Sport']
+            .map(
+              (c) =>
+                `<option ${e?.category === c ? 'selected' : ''}>${c}</option>`
+            )
+            .join('')}
+        </select>
+      </label>
+      <label class="field"><span>Photo</span>
+        <button class="hit btn block outline" data-sim="upload" type="button">Ajouter une photo (simulé)</button>
+      </label>
+    `
+  } else if (step === 2) {
+    fields = `
+      <label class="field"><span>Date</span><input type="text" value="${escapeAttr(e?.dateLabel || '')}" placeholder="ex. Vendredi 16 juin 2026" data-field="dateLabel" /></label>
+      <label class="field"><span>Heure</span><input type="text" value="${escapeAttr(e?.time || '')}" placeholder="15:30" data-field="time" /></label>
+      <label class="field"><span>Lieu</span><input type="text" value="${escapeAttr(e?.lieu || '')}" placeholder="Lieu" data-field="lieu" /></label>
+      <label class="field"><span>Prix</span><input type="text" value="${escapeAttr(e?.price || 'Gratuit')}" placeholder="Gratuit / 20 €" data-field="price" /></label>
+    `
+  } else {
+    fields = `
+      <label class="field"><span>Mode d’inscription</span>
+        <select data-field="inscriptionMode">
+          <option value="free" ${e?.inscriptionMode === 'free' ? 'selected' : ''}>Libre (sans inscription)</option>
+          <option value="immediate" ${e?.inscriptionMode === 'immediate' ? 'selected' : ''}>Inscription immédiate</option>
+          <option value="validation" ${e?.inscriptionMode === 'validation' ? 'selected' : ''}>À valider par l’orga</option>
+        </select>
+      </label>
+      <label class="field"><span>Capacité (vide = illimité)</span><input type="text" value="${e?.capacity != null ? e.capacity : ''}" placeholder="ex. 20" data-field="capacity" /></label>
+      <p class="meta">Note : une date limite d’inscription pourra être ajoutée plus tard.</p>
+    `
+  }
+
+  const habitantCtas = `
+    <p class="meta">Il sera visible après validation par la mairie.</p>
+    <div class="row-actions">
+      <button class="hit btn" data-sim="event-save-draft" type="button">Enregistrer brouillon</button>
+      <button class="hit btn" data-sim="event-preview" type="button">Prévisualiser</button>
+      <button class="hit btn primary" data-sim="event-submit-validation" type="button">Envoyer pour validation</button>
+    </div>
+    ${
+      pending
+        ? `<button class="hit btn block outline" data-sim="event-withdraw" type="button">Retirer ma demande</button>`
+        : ''
+    }
+  `
+  const adminCtas = `
+    <div class="row-actions">
+      <button class="hit btn" data-sim="event-save-draft" type="button">Brouillon</button>
+      <button class="hit btn" data-sim="event-preview" type="button">Prévisualiser</button>
+      <button class="hit btn primary" data-sim="event-publish" type="button">Publier</button>
+    </div>
+  `
+
   return wrap(
     `
-    <div class="form-card">
-      <h2 class="sec">Gérer l’événement</h2>
-      <p class="meta">Formulaire partagé · app / back-office</p>
-      <label class="field"><span>Titre</span><input type="text" value="Atelier créatif" /></label>
-      <label class="field"><span>Date</span><input type="text" value="16 juin 2026" /></label>
-      <label class="field"><span>Heure</span><input type="text" value="15:30" /></label>
-      <label class="field"><span>Lieu</span><input type="text" value="Camp Nou, Stade de Barcelone" /></label>
-      <label class="field"><span>Catégorie</span>
-        <select><option>Artistique / Créatif</option><option>Sport</option><option>Culture</option></select>
-      </label>
-      <label class="field"><span>Prix</span><input type="text" value="20 €" /></label>
-      <label class="field"><span>Description</span><textarea rows="4">Parfois, les mots ne suffisent pas…</textarea></label>
-      <label class="field"><span>Places</span><input type="text" value="20" /></label>
-      <label class="field"><span>État</span>
-        <select><option>Brouillon</option><option selected>Publié</option><option>Annulé</option></select>
-      </label>
-      ${lifecycleBar('brouillon')}
-      <div class="row-actions">
-        <button class="hit btn" data-sim="brouillon" type="button">Brouillon</button>
-        <button class="hit btn" data-go="evenement-details" type="button">Prévisualiser</button>
-        <button class="hit btn primary" data-sim="publier" type="button">Publier</button>
+    <div class="form-card" data-event-id="${e?.id || ''}">
+      <h2 class="sec">${isCreate || !title ? 'Créer un événement' : 'Modifier l’événement'}</h2>
+      <p class="meta">${e?.id || 'nouvel id'} · ${e?.origin === 'citizen' ? 'Habitant' : municipal ? 'Municipal' : '—'}${e?.publication ? ` · ${publicationLabel(e.publication)}` : ''}</p>
+      <div class="chips form-steps">
+        ${stepChip(1, 'Présentation')}
+        ${stepChip(2, 'Pratique')}
+        ${stepChip(3, 'Participation')}
       </div>
+      ${fields}
+      ${admin && e?.origin !== 'citizen' ? adminCtas : habitantCtas}
     </div>
     `,
     {
-      header: phoneHeader({ title: 'Gérer l’événement', backTo: 'evenement-details' }),
+      header: phoneHeader({
+        title: isCreate || !title ? 'Créer' : 'Modifier',
+        backTo,
+      }),
       footer: phoneFooter('menu'),
     }
   )
+}
+
+function escapeAttr(s) {
+  return String(s || '')
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+}
+
+function escapeHtml(s) {
+  return String(s || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+}
+
+/** @deprecated alias — use evenementForm */
+function evenementGerer() {
+  return evenementForm()
 }
 
 function evenementOptions() {
@@ -3533,11 +3696,24 @@ function communautesStub(title) {
 /* ——— Admin ——— */
 
 function adminHome() {
+  const pendingEvents = listPendingValidation().length
+  const signalUnread = listSignalementsForViewer({ admin: true }).filter(isUnreadForMairie).length
   const dash = [
     { label: 'Brouillons', meta: 'Publications & fiches en cours', count: 3, go: 'admin-mairie' },
-    { label: 'Inscriptions à valider', meta: 'Événements · file d’attente', count: 2, go: 'evenement-validation' },
+    {
+      label: 'Événements à valider',
+      meta: 'Propositions habitantes',
+      count: pendingEvents,
+      go: 'evenements-a-valider',
+    },
+    { label: 'Inscriptions à valider', meta: 'Participants · file d’attente', count: 2, go: 'evenement-validation' },
     { label: 'RDV du jour', meta: 'Accueil mairie', count: 1, go: 'admin-rdv' },
-    { label: 'Signalements', meta: 'Modération contenus', count: 1, go: 'admin-moderation' },
+    {
+      label: 'Signalements',
+      meta: 'Q/R non lus',
+      count: signalUnread,
+      go: 'signalements',
+    },
   ]
   return wrap(
     `
@@ -3574,7 +3750,7 @@ function adminHome() {
       <span><strong>Rendez-vous</strong></span><span>›</span>
     </button>
     <button class="hit row-link" data-go="signalements" type="button">
-      <span><strong>Signalements reçus</strong><br/><span class="meta">Boîte quartier · ≠ modération</span></span><span>›</span>
+      <span><strong>Signalements reçus</strong><br/><span class="meta">Boîte Q/R · ≠ modération</span></span><span>›</span>
     </button>
     <button class="hit row-link" data-go="admin-moderation" type="button">
       <span><strong>Modération</strong></span><span>›</span>
@@ -3620,17 +3796,24 @@ function adminMairie() {
 }
 
 function adminEvenements() {
+  const managed = listAdminManaged()
+  const pending = listPendingValidation().length
   return wrap(
     `
     <h2 class="sec">Événements</h2>
-    <button class="hit btn primary block" data-go="evenement-gerer" type="button">+ Créer un événement</button>
-    ${['Atelier créatif — publié', 'Marché de Noël — brouillon', 'Concert municipal — annulé']
-      .map(
-        (t) => `
-      <button class="hit row-link" data-go="evenement-gerer" type="button">
-        <span><strong>${t}</strong></span><span>›</span>
+    <button class="hit btn primary block" data-sim="event-create-municipal" type="button">+ Créer un événement</button>
+    <button class="hit row-link" data-go="evenements-a-valider" type="button">
+      <span><strong>Événements à valider</strong><br/><span class="meta">${pending} en attente · propositions habitantes</span></span><span>›</span>
+    </button>
+    ${managed
+      .map((e) => {
+        const label = e.title || 'Sans titre'
+        return `
+      <button class="hit row-link" data-sim="event-edit:${e.id}" type="button">
+        <span><strong>${label}</strong><br/><span class="meta">${publicationLabel(e.publication)} · ${e.origin === 'citizen' ? 'Habitant' : 'Municipal'}</span></span>
+        <span class="badge">${publicationLabel(e.publication)}</span>
       </button>`
-      )
+      })
       .join('')}
     `,
     {
@@ -3639,11 +3822,43 @@ function adminEvenements() {
   )
 }
 
+function evenementsAValider() {
+  const list = listPendingValidation()
+  return wrap(
+    `
+    <h2 class="sec">Événements à valider</h2>
+    <p class="meta">Propositions habitantes · distinct des inscriptions participants</p>
+    ${
+      list.length
+        ? list
+            .map(
+              (e) => `
+      <article class="card">
+        <strong>${e.title || 'Sans titre'}</strong>
+        <p class="meta">${e.orgLabel || 'Habitant'} · ${e.dateLabel || 'Date à préciser'} · ${e.lieu || 'Lieu…'}</p>
+        ${text(e.description || '')}
+        <div class="row-actions">
+          <button class="hit btn primary" data-sim="event-approve:${e.id}" type="button">Approuver</button>
+          <button class="hit btn" data-sim="event-correct:${e.id}" type="button">Demander corrections</button>
+          <button class="hit btn outline" data-sim="event-refuse:${e.id}" type="button">Refuser</button>
+        </div>
+      </article>`
+            )
+            .join('')
+        : emptyState('Aucun événement en attente')
+    }
+    `,
+    {
+      header: phoneHeader({ title: 'À valider', backTo: 'admin-evenements' }),
+    }
+  )
+}
+
 function adminAnnonces() {
   return wrap(
     `
     <h2 class="sec">Annonces</h2>
-    <button class="hit btn primary block" data-sim="ajouter" type="button">+ Nouvelle annonce</button>
+    <button class="hit btn primary block" data-go="admin-annonce-form" type="button">+ Nouvelle annonce</button>
     ${['Appartement 3 pièces — publié', 'Vélo électrique — brouillon']
       .map(
         (t) => `
@@ -3659,11 +3874,31 @@ function adminAnnonces() {
   )
 }
 
+function adminAnnonceForm() {
+  return wrap(
+    `
+    <div class="form-card">
+      <h2 class="sec">Nouvelle annonce</h2>
+      <label class="field"><span>Titre</span><input type="text" placeholder="Titre de l’annonce" /></label>
+      <label class="field"><span>Prix</span><input type="text" placeholder="ex. 450 €" /></label>
+      <label class="field"><span>Description</span><textarea rows="3" placeholder="Détails…"></textarea></label>
+      <div class="row-actions">
+        <button class="hit btn" data-sim="event-save-draft" type="button">Brouillon</button>
+        <button class="hit btn primary" data-sim="publier-admin" type="button">Publier</button>
+      </div>
+    </div>
+    `,
+    {
+      header: phoneHeader({ title: 'Annonce', backTo: 'admin-annonces' }),
+    }
+  )
+}
+
 function adminOffres() {
   return wrap(
     `
     <h2 class="sec">Offres d’emploi</h2>
-    <button class="hit btn primary block" data-sim="ajouter" type="button">+ Nouvelle offre</button>
+    <button class="hit btn primary block" data-go="admin-offre-form" type="button">+ Nouvelle offre</button>
     ${['Agent d’accueil — publié', 'Chargé de mission — brouillon']
       .map(
         (t) => `
@@ -3679,19 +3914,78 @@ function adminOffres() {
   )
 }
 
+function adminOffreForm() {
+  return wrap(
+    `
+    <div class="form-card">
+      <h2 class="sec">Nouvelle offre</h2>
+      <label class="field"><span>Titre du poste</span><input type="text" placeholder="Intitulé" /></label>
+      <label class="field"><span>Rémunération</span><input type="text" placeholder="ex. Selon grille" /></label>
+      <label class="field"><span>Description</span><textarea rows="3" placeholder="Missions…"></textarea></label>
+      <div class="row-actions">
+        <button class="hit btn" data-sim="brouillon" type="button">Brouillon</button>
+        <button class="hit btn primary" data-sim="publier-admin" type="button">Publier</button>
+      </div>
+    </div>
+    `,
+    {
+      header: phoneHeader({ title: 'Offre', backTo: 'admin-offres' }),
+    }
+  )
+}
+
 function adminAnnuaires() {
+  const rubriques = [
+    { label: 'Santé', go: 'admin-annuaire-sante', meta: 'Pharmacies, hôpitaux…' },
+    { label: 'Éducation', go: 'admin-annuaire-rubrique', meta: 'Écoles, formations…' },
+    { label: 'Tourisme', go: 'admin-annuaire-rubrique', meta: 'Patrimoine, nature…' },
+    { label: 'Économie', go: 'admin-annuaire-rubrique', meta: 'Entreprises, commerces…' },
+    { label: 'Cinéma & Théâtres', go: 'admin-annuaire-rubrique', meta: 'Salles, spectacles…' },
+    { label: 'Aide sociale', go: 'admin-annuaire-rubrique', meta: 'Services sociaux…' },
+    { label: 'Associations', go: 'admin-annuaire-rubrique', meta: 'Clubs, collectifs…' },
+    { label: 'Banques & Assurances', go: 'admin-annuaire-rubrique', meta: 'Agences…' },
+    { label: 'Restaurants', go: 'admin-annuaire-rubrique', meta: 'Restauration…' },
+    { label: 'Transports', go: 'admin-annuaire-rubrique', meta: 'Gares, lignes…' },
+    { label: 'Bibliothèque', go: 'admin-annuaire-rubrique', meta: 'Médiathèques…' },
+    { label: 'Permanences', go: 'admin-annuaire-rubrique', meta: 'Guichets…' },
+    { label: 'Sécurité', go: 'admin-annuaire-rubrique', meta: 'Commissariats…' },
+    { label: 'Patrimoine', go: 'admin-annuaire-rubrique', meta: 'Sites…' },
+  ]
   return wrap(
     `
     <h2 class="sec">Annuaires · Vie locale</h2>
-    <button class="hit row-link" data-go="admin-annuaire-sante" type="button">
-      <span><strong>Santé</strong><br/><span class="meta">Pharmacies, hôpitaux…</span></span><span>›</span>
-    </button>
-    <button class="hit row-link" data-go="vie-locale-hub" type="button">
-      <span><strong>Autres rubriques</strong><br/><span class="meta">Tourisme, éducation…</span></span><span>›</span>
-    </button>
+    <p class="meta">Gestion admin de toutes les rubriques (≠ hub public)</p>
+    ${rubriques
+      .map(
+        (r) => `
+    <button class="hit row-link" data-go="${r.go}" type="button">
+      <span><strong>${r.label}</strong><br/><span class="meta">${r.meta}</span></span><span>›</span>
+    </button>`
+      )
+      .join('')}
+    <div class="card" style="margin-top:12px">
+      <strong>Autres rubriques</strong>
+      <p class="meta">Note de gestion admin : ajouter / retirer une rubrique Vie locale se fait ici (prototype). Météo et Urgences restent hors annuaire.</p>
+    </div>
     `,
     {
       header: phoneHeader({ title: 'Annuaires', backTo: 'admin-home' }),
+    }
+  )
+}
+
+function adminAnnuaireRubrique() {
+  return wrap(
+    `
+    <h2 class="sec">Rubrique annuaire</h2>
+    <p class="meta">Liste admin (stub) · même formulaire fiche que Santé</p>
+    <button class="hit btn primary block" data-go="admin-fiche-form" type="button">+ Nouvelle fiche</button>
+    <button class="hit row-link" data-go="admin-fiche-form" type="button">
+      <span><strong>Fiche exemple</strong><br/><span class="meta">Brouillon</span></span><span>›</span>
+    </button>
+    `,
+    {
+      header: phoneHeader({ title: 'Rubrique', backTo: 'admin-annuaires' }),
     }
   )
 }
@@ -4091,11 +4385,23 @@ export const SCREENS = {
     group: 'Social / contenus',
     render: evenementDetails,
   },
+  'evenement-form': {
+    title: 'Événement — Formulaire',
+    side: 'user',
+    group: 'Social / contenus',
+    render: evenementForm,
+  },
   'evenement-gerer': {
     title: 'Événement — Gérer',
     side: 'user',
     group: 'Social / contenus',
-    render: evenementGerer,
+    render: evenementForm,
+  },
+  'evenements-a-valider': {
+    title: 'Événements à valider',
+    side: 'admin',
+    group: 'Admin',
+    render: evenementsAValider,
   },
   'evenement-options': {
     title: 'Événement — Options',
@@ -6196,11 +6502,17 @@ export const SCREENS = {
     group: 'Admin',
     render: adminEvenements,
   },
+  'evenements-gerer-liste': {
+    title: 'Admin — Gérer les événements',
+    side: 'admin',
+    group: 'Admin',
+    render: adminEvenements,
+  },
   'admin-evenement-form': {
     title: 'Admin — Formulaire événement',
     side: 'admin',
     group: 'Admin',
-    render: evenementGerer,
+    render: evenementForm,
   },
   'admin-annonces': {
     title: 'Admin — Annonces',
@@ -6208,17 +6520,35 @@ export const SCREENS = {
     group: 'Admin',
     render: adminAnnonces,
   },
+  'admin-annonce-form': {
+    title: 'Admin — Formulaire annonce',
+    side: 'admin',
+    group: 'Admin',
+    render: adminAnnonceForm,
+  },
   'admin-offres': {
     title: 'Admin — Offres',
     side: 'admin',
     group: 'Admin',
     render: adminOffres,
   },
+  'admin-offre-form': {
+    title: 'Admin — Formulaire offre',
+    side: 'admin',
+    group: 'Admin',
+    render: adminOffreForm,
+  },
   'admin-annuaires': {
     title: 'Admin — Annuaires',
     side: 'admin',
     group: 'Admin',
     render: adminAnnuaires,
+  },
+  'admin-annuaire-rubrique': {
+    title: 'Admin — Rubrique annuaire',
+    side: 'admin',
+    group: 'Admin',
+    render: adminAnnuaireRubrique,
   },
   'admin-annuaire-sante': {
     title: 'Admin — Annuaire Santé',
@@ -6375,7 +6705,7 @@ export const NAV_TREE = {
                 id: 'evenement-details',
                 label: 'Détails',
                 children: [
-                  { id: 'evenement-gerer', label: 'Gérer l’événement' },
+                  { id: 'evenement-form', label: 'Créer / modifier' },
                   { id: 'evenement-options', label: 'Options (⋯)' },
                   {
                     id: 'evenement-participants',
@@ -6967,10 +7297,21 @@ export const NAV_TREE = {
           {
             id: 'admin-evenements',
             label: 'Événements',
-            children: [{ id: 'admin-evenement-form', label: 'Créer / modifier' }],
+            children: [
+              { id: 'admin-evenement-form', label: 'Créer / modifier' },
+              { id: 'evenements-a-valider', label: 'À valider' },
+            ],
           },
-          { id: 'admin-annonces', label: 'Annonces' },
-          { id: 'admin-offres', label: 'Offres' },
+          {
+            id: 'admin-annonces',
+            label: 'Annonces',
+            children: [{ id: 'admin-annonce-form', label: 'Formulaire' }],
+          },
+          {
+            id: 'admin-offres',
+            label: 'Offres',
+            children: [{ id: 'admin-offre-form', label: 'Formulaire' }],
+          },
           {
             id: 'admin-annuaires',
             label: 'Annuaires',
@@ -6986,6 +7327,7 @@ export const NAV_TREE = {
                   },
                 ],
               },
+              { id: 'admin-annuaire-rubrique', label: 'Autres rubriques (admin)' },
             ],
           },
           { id: 'admin-rdv', label: 'Rendez-vous' },

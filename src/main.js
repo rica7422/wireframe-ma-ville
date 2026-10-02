@@ -31,6 +31,24 @@ import {
   appendUserReply,
   appendMairieReply,
 } from './signalements-data.js'
+import {
+  createEmptyEvent,
+  setEditEventId,
+  getEditEventId,
+  setOpenEventId,
+  setFormStep,
+  setListTab,
+  setMesSub,
+  submitForValidation,
+  publishEvent,
+  withdrawValidationRequest,
+  approveEvent,
+  refuseEvent,
+  requestCorrections,
+  updateEvent,
+  getEvent as getEventFull,
+} from './events-data.js'
+import { SIM_VIEWER_ID } from './demo-data.js'
 
 const historyStack = []
 let currentId = 'ville-bienvenue'
@@ -218,6 +236,138 @@ function handleSim(kind) {
     render()
     return
   }
+  if (action === 'event-create' || action === 'event-create-citoyen' || action === 'event-create-municipal') {
+    if (action === 'event-create-municipal' || (action === 'event-create' && isAdminRole())) {
+      if (!isAdminRole()) {
+        toast('Accès refusé pour ce rôle (simulé)')
+        return
+      }
+      createEmptyEvent({
+        origin: 'municipal',
+        authorId: 'org-mairie-kapan',
+        orgLabel: 'Mairie de Kapan',
+      })
+    } else {
+      createEmptyEvent({ origin: 'citizen', authorId: SIM_VIEWER_ID, orgLabel: 'Rica' })
+    }
+    go('evenement-form', { push: true })
+    return
+  }
+  if (action === 'event-edit' && arg) {
+    setEditEventId(arg)
+    setFormStep(1)
+    go('evenement-form')
+    return
+  }
+  if (action === 'event-form-step' && arg) {
+    setFormStep(Number(arg) || 1)
+    render()
+    return
+  }
+  if (action === 'event-list-tab' && arg) {
+    setListTab(arg)
+    render()
+    return
+  }
+  if (action === 'event-mes-sub' && arg) {
+    setMesSub(arg)
+    setListTab('mes')
+    render()
+    return
+  }
+  if (action === 'event-save-draft') {
+    const id = getEditEventId()
+    if (id) {
+      updateEvent(id, { publication: 'draft' })
+      toast('Brouillon enregistré')
+    } else toast('Brouillon enregistré (simulé)')
+    render()
+    return
+  }
+  if (action === 'event-preview') {
+    const id = getEditEventId()
+    if (id) {
+      setOpenEventId(id)
+      go('evenement-details')
+    } else toast('Prévisualisation (simulé)')
+    return
+  }
+  if (action === 'event-submit-validation') {
+    const id = getEditEventId()
+    if (!id) {
+      toast('Aucun événement à envoyer')
+      return
+    }
+    const e = getEventFull(id)
+    if (e && !e.title) {
+      updateEvent(id, { title: 'Nouvel événement (brouillon)' })
+    }
+    submitForValidation(id)
+    toast('Envoyé pour validation mairie')
+    go('evenements-liste', { push: false })
+    return
+  }
+  if (action === 'event-publish') {
+    if (!isAdminRole()) {
+      toast('Accès refusé pour ce rôle (simulé)')
+      return
+    }
+    const id = getEditEventId()
+    if (!id) {
+      toast('Aucun événement')
+      return
+    }
+    const e = getEventFull(id)
+    if (e && !e.title) updateEvent(id, { title: 'Événement municipal' })
+    publishEvent(id)
+    toast('Événement publié')
+    setOpenEventId(id)
+    go('evenement-details', { push: false })
+    return
+  }
+  if (action === 'event-withdraw') {
+    const id = getEditEventId()
+    if (id) {
+      withdrawValidationRequest(id)
+      toast('Demande retirée · brouillon')
+    }
+    render()
+    return
+  }
+  if (action === 'event-approve' && arg) {
+    if (!isAdminRole()) {
+      toast('Accès refusé pour ce rôle (simulé)')
+      return
+    }
+    const e = approveEvent(arg)
+    toast(
+      e
+        ? `Approuvé · reste ${e.origin === 'citizen' ? 'habitant' : 'municipal'}`
+        : 'Approuvé'
+    )
+    render()
+    return
+  }
+  if (action === 'event-refuse' && arg) {
+    if (!isAdminRole()) {
+      toast('Accès refusé pour ce rôle (simulé)')
+      return
+    }
+    refuseEvent(arg, 'Motif (simulé)')
+    toast('Événement refusé')
+    render()
+    return
+  }
+  if (action === 'event-correct' && arg) {
+    if (!isAdminRole()) {
+      toast('Accès refusé pour ce rôle (simulé)')
+      return
+    }
+    requestCorrections(arg)
+    toast('Corrections demandées')
+    render()
+    return
+  }
   if (action === 'supprimer' || action === 'delete-confirm') {
     toast('Suppression (simulée)')
     const parent = getMenuContext()?.parent || parentForMenuScreen(currentId) || 'mairie-accueil'
@@ -389,7 +539,7 @@ function render({ focusActive = false, resetNavScroll = false } = {}) {
       <aside class="proto-nav">
         <header class="proto-brand">
           <strong>Ma Ville</strong>
-          <span class="proto-tag">Wireframe · build 1001-h · signalements-qa</span>
+          <span class="proto-tag">Wireframe · build 1001-i · events-bo</span>
         </header>
         <p class="proto-hint">Navigation du prototype (≠ nav dans le téléphone)</p>
         <div class="nav-tabs" role="tablist" aria-label="Côté prototype">
@@ -435,8 +585,16 @@ function render({ focusActive = false, resetNavScroll = false } = {}) {
         contentId: openMenu.dataset.contentId,
         parent: openMenu.dataset.menuParent || currentId,
         participantId: openMenu.dataset.participantId,
+        section: openMenu.dataset.section || undefined,
       })
       go('content-menu')
+      return
+    }
+    const openEvent = e.target.closest('[data-open-event]')
+    if (openEvent) {
+      e.preventDefault()
+      setOpenEventId(openEvent.dataset.openEvent)
+      go('evenement-details')
       return
     }
     const openComments = e.target.closest('[data-open-comments]')
@@ -445,6 +603,7 @@ function render({ focusActive = false, resetNavScroll = false } = {}) {
       setCommentContext({
         contentId: openComments.dataset.openComments,
         parent: currentId,
+        section: openComments.dataset.section || undefined,
       })
       go('infos-commentaires')
       return
@@ -455,6 +614,7 @@ function render({ focusActive = false, resetNavScroll = false } = {}) {
       setReactContext({
         contentId: openReact.dataset.openReactions,
         parent: currentId,
+        section: openReact.dataset.section || undefined,
       })
       go('infos-reactions')
       return
@@ -519,17 +679,42 @@ function render({ focusActive = false, resetNavScroll = false } = {}) {
     if (t.dataset.go) {
       const target = resolveScreenId(t.dataset.go)
       const menu = getMenuContext()
+      const sectionFromEl = t.dataset.section
       if (target === 'infos-commentaires' && !getCommentContext()?.contentId && menu?.contentId) {
         setCommentContext({
           contentId: menu.contentId,
           parent: menu.parent || currentId,
+          section: sectionFromEl || menu.section || undefined,
         })
+      } else if (target === 'infos-commentaires' && sectionFromEl) {
+        const prev = getCommentContext() || {}
+        setCommentContext({ ...prev, section: sectionFromEl, parent: prev.parent || currentId })
       }
       if (target === 'infos-reactions' && menu?.contentId) {
         setReactContext({
           contentId: menu.contentId,
           parent: menu.parent || currentId,
+          section: sectionFromEl || menu.section || undefined,
         })
+      } else if (target === 'infos-reactions' && sectionFromEl) {
+        setReactContext({
+          contentId: t.dataset.openReactions || getCommentContext()?.contentId,
+          parent: currentId,
+          section: sectionFromEl,
+        })
+      }
+      if (target === 'infos-partage' && sectionFromEl) {
+        setCommentContext({
+          ...(getCommentContext() || {}),
+          section: sectionFromEl,
+          parent: currentId,
+        })
+      }
+      if (target === 'evenement-form' || target === 'evenement-gerer') {
+        if (menu?.contentId && menu.type === 'event') {
+          setEditEventId(menu.contentId)
+          setFormStep(1)
+        }
       }
       const isRootJump =
         ROOTS.has(target) && t.closest('.phone-footer, .header-right, .phone-header')
@@ -578,7 +763,10 @@ function resolveScreenId(id) {
   if (id === 'admin-contenus') return 'admin-home'
   if (id === 'admin-fiche-edit') return 'fiche-annuaire-form'
   if (id === 'admin-bo-mairie') return 'admin-mairie'
-  if (id === 'admin-bo-evenements-creer') return 'evenement-gerer'
+  if (id === 'admin-bo-evenements-creer') return 'evenement-form'
+  if (id === 'evenement-gerer') return 'evenement-form'
+  if (id === 'admin-evenement-form') return 'evenement-form'
+  if (id === 'evenements-gerer-liste') return 'admin-evenements'
   if (id === 'admin-bo-annuaire-form') return 'fiche-annuaire-form'
   if (id === 'page-signalement' || (id && id.startsWith('dir-signalement'))) return 'signalements'
   if (id === 'signalement-statut') return 'signalement-conversation'

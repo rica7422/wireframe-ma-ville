@@ -1,5 +1,8 @@
 /** Ma Ville section colors — docs/ma-ville-charte.md */
 
+import { getCommentContext, getReactContext } from './content-context.js'
+import { getMenuContext } from './menu-context.js'
+
 export const SECTION = {
   mairie: '#29676D',
   infos: '#1648DF',
@@ -41,6 +44,24 @@ function isSharedFiche(id) {
   return id === 'dir-fiche' || id === 'dir-fiche-horaires'
 }
 
+function isOverlayScreen(id) {
+  return (
+    id === 'infos-commentaires' ||
+    id === 'infos-reactions' ||
+    id === 'infos-partage' ||
+    id === 'content-menu'
+  )
+}
+
+function contextSection() {
+  return (
+    getCommentContext()?.section ||
+    getReactContext()?.section ||
+    getMenuContext()?.section ||
+    null
+  )
+}
+
 /**
  * Map a screen id → section key used for phone accents + nav dots.
  */
@@ -48,9 +69,10 @@ export function sectionFor(id) {
   if (!id) return 'neutral'
   if (id.startsWith('mairie-')) return 'mairie'
   if (id.startsWith('infos-')) return 'infos'
-  if (id.startsWith('evenement')) return 'evenements'
-  if (id.startsWith('annonce')) return 'annonces'
-  if (id.startsWith('emploi')) return 'emplois'
+  if (id.startsWith('evenement') || id === 'evenements-liste' || id === 'evenements-a-valider')
+    return 'evenements'
+  if (id.startsWith('annonce') || id === 'admin-annonce-form') return 'annonces'
+  if (id.startsWith('emploi') || id === 'admin-offre-form') return 'emplois'
   if (id.startsWith('sante-')) return 'sante'
   if (id === 'urgence-numeros') return 'urgence'
   if (id.startsWith('communautes-groupes') || id === 'communautes-groupes') return 'groupes'
@@ -82,6 +104,11 @@ export function sectionFor(id) {
 }
 
 export function themeFor(id) {
+  if (isOverlayScreen(id)) {
+    const fromCtx = contextSection()
+    if (fromCtx && SECTION[fromCtx]) return fromCtx
+    return stickySection || sectionFor(id)
+  }
   const key = sectionFor(id)
   if (!isSharedFiche(id) && key !== 'neutral') stickySection = key
   return key

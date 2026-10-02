@@ -147,13 +147,15 @@ export function socialActions({
   commentGo = 'infos-commentaires',
   shareGo = 'infos-partage',
   reactors = 'Rupen D. et 32 autres',
+  section = null,
 } = {}) {
+  const sectionAttr = section ? ` data-section="${section}"` : ''
   const commentAttrs = contentId
-    ? `data-open-comments="${contentId}"`
-    : `data-go="${commentGo}"`
+    ? `data-open-comments="${contentId}"${sectionAttr}`
+    : `data-go="${commentGo}"${sectionAttr}`
   const reactAttrs = contentId
-    ? `data-open-reactions="${contentId}"`
-    : `data-go="${reactGo}"`
+    ? `data-open-reactions="${contentId}"${sectionAttr}`
+    : `data-go="${reactGo}"${sectionAttr}`
   return `
     <div class="post-social">
       <button class="hit linkish social-reactors" ${reactAttrs} type="button">
@@ -164,7 +166,7 @@ export function socialActions({
     <div class="post-actions">
       <button class="hit btn" ${reactAttrs}>♡ ${likes}</button>
       <button class="hit btn" ${commentAttrs}>💬 ${comments}</button>
-      <button class="hit btn" data-go="${shareGo}">↗ ${shares}</button>
+      <button class="hit btn" data-go="${shareGo}"${sectionAttr}>↗ ${shares}</button>
     </div>
   `
 }
@@ -255,6 +257,7 @@ function optionsButtonAttrs({
   menuParent = null,
   participantId = null,
   optionsGo = null,
+  section = null,
 } = {}) {
   if (contentId || participantId) {
     const parts = [
@@ -262,6 +265,7 @@ function optionsButtonAttrs({
       contentId ? `data-content-id="${contentId}"` : '',
       participantId ? `data-participant-id="${participantId}"` : '',
       menuParent ? `data-menu-parent="${menuParent}"` : '',
+      section ? `data-section="${section}"` : '',
     ].filter(Boolean)
     return parts.join(' ')
   }
@@ -284,6 +288,7 @@ export function postCard({
   likes,
   comments,
   shares,
+  section = null,
 } = {}) {
   const kind = media || (multi ? 'multi' : 'photo')
   let mediaBlock = ''
@@ -296,7 +301,7 @@ export function postCard({
   } else {
     mediaBlock = photo('Photo…', 'wide')
   }
-  const opts = optionsButtonAttrs({ contentId, menuType, menuParent, optionsGo })
+  const opts = optionsButtonAttrs({ contentId, menuType, menuParent, optionsGo, section })
   return `
     <article class="card post-card" ${contentId ? `data-content-id="${contentId}"` : ''}>
       <header class="post-head">
@@ -318,7 +323,7 @@ export function postCard({
           : ''
       }
       ${mediaBlock}
-      ${socialActions({ likes, comments, shares, contentId })}
+      ${socialActions({ likes, comments, shares, contentId, section })}
     </article>
   `
 }
@@ -340,12 +345,14 @@ export function publicationCard({
   contentId = null,
   menuType = 'publication',
   menuParent = 'mairie-presentation',
+  section = null,
 } = {}) {
   const opts = optionsButtonAttrs({
     contentId,
     menuType,
     menuParent,
     optionsGo: optionsGo || (contentId ? null : 'mairie-presentation-options'),
+    section,
   })
   return `
     <article class="card post-card publication-card" ${contentId ? `data-content-id="${contentId}"` : ''}>
@@ -360,7 +367,7 @@ export function publicationCard({
       </div>
       ${text(body)}
       <button class="hit linkish" type="button">Plus</button>
-      ${socialActions({ contentId })}
+      ${socialActions({ contentId, section })}
     </article>
   `
 }
@@ -400,85 +407,82 @@ export function errorState(msg = 'Une erreur est survenue') {
 
 /** Shared event list — dedicated Événements + Ma mairie Événements tab */
 export function evenementsListeBody({
-  events = [
-    {
-      title: 'Atelier Créatif',
-      when: 'JUIN 26',
-      time: '15:30',
-      countdown: '12 jours restants',
-      lieu: 'Centre culturel · Kapan',
-      tags: ['Artistique / Créatif', 'Gratuit'],
-    },
-    {
-      title: 'Soirée dansante',
-      when: 'JUIN 28',
-      time: '20:00',
-      countdown: '14 jours restants',
-      lieu: 'Salle municipale · Kapan',
-      tags: ['Social / Lifestyle', 'Gratuit'],
-    },
-    {
-      title: 'Conseil municipal (public)',
-      when: 'JUIL 02',
-      time: '18:30',
-      countdown: '18 jours restants',
-      lieu: 'Hôtel de ville · Kapan',
-      tags: ['Institutionnel', 'Gratuit'],
-    },
-  ],
+  events = [],
   detailsGo = 'evenement-details',
 } = {}) {
+  const list = events.length
+    ? events
+    : [
+        {
+          id: 'evt-atelier',
+          title: 'Atelier créatif',
+          when: 'JUIN 16',
+          time: '15:30',
+          countdown: '5 jours restants',
+          lieu: 'Centre culturel · Kapan',
+          tags: ['Artistique / Créatif', 'Payant'],
+          limited: true,
+        },
+      ]
   return `
     <div class="events-toolbar">
       <div class="chips filter-chips">
         <button class="hit chip on" type="button">Populaires</button>
         <button class="hit chip" type="button">Près de moi ▾</button>
         <button class="hit chip" type="button">Bientôt</button>
-        <button class="hit chip" type="button">Prix du ticket</button>
+        <button class="hit chip" type="button">Prix</button>
       </div>
       <div class="events-month">
-        <strong class="period-label">Avril 2026 ▾</strong>
+        <strong class="period-label">Juin 2026 ▾</strong>
       </div>
       <div class="events-week-filter">
         <button class="hit chip on" type="button">Cette semaine ▾</button>
       </div>
       <div class="h-scroll dates" role="listbox" aria-label="Jours">
-        ${[21, 22, 23, 24, 25, 26, 27]
+        ${[14, 15, 16, 17, 18, 19, 20]
           .map(
             (d) =>
-              `<button class="hit cal-day ${d === 26 ? 'on' : ''}" type="button">${d}</button>`
+              `<button class="hit cal-day ${d === 16 ? 'on' : ''}" type="button">${d}</button>`
           )
           .join('')}
       </div>
     </div>
     <div class="events-list">
-      ${events
-        .map(
-          (ev) => `
-        <article class="card event-card">
-          <button class="hit event-card-hit" data-go="${detailsGo}" type="button" aria-label="Voir ${ev.title}">
+      ${list
+        .map((ev) => {
+          const openAttr = ev.id
+            ? `data-open-event="${ev.id}"`
+            : `data-go="${detailsGo}"`
+          const placesBadge = ev.limited
+            ? `<span class="badge event-places">Places limitées</span>`
+            : ''
+          const when = (ev.when || '').trim()
+          const whenParts = when.split(/\s+/)
+          return `
+        <article class="card event-card" data-event-id="${ev.id || ''}">
+          <button class="hit event-card-hit" ${openAttr} type="button" aria-label="Voir ${ev.title}">
             <div class="event-photo-wrap">
               ${photo('Photo événement…', 'wide')}
-              <span class="badge event-places">Places limitées</span>
+              ${placesBadge}
             </div>
             <div class="event-card-body">
               <div class="event-date-block">
-                <span class="meta">${ev.when.split(' ')[0]}</span>
-                <strong>${ev.when.split(' ')[1] || ''}</strong>
+                <span class="meta">${whenParts[0] || ''}</span>
+                <strong>${whenParts[1] || ''}</strong>
               </div>
               <div class="event-card-main">
                 <strong class="event-title">${ev.title}</strong>
-                <p class="meta event-when">${ev.time} · ${ev.countdown}</p>
-                <p class="meta event-lieu">📍 ${ev.lieu}</p>
+                <p class="meta event-when">${ev.time || ''}${ev.countdown ? ` · ${ev.countdown}` : ''}</p>
+                <p class="meta event-lieu">📍 ${ev.lieu || ''}</p>
                 <div class="chips event-tags">
                   ${(ev.tags || []).map((t) => `<span class="badge">${t}</span>`).join('')}
                 </div>
               </div>
             </div>
           </button>
-          <button class="hit btn primary block" data-go="${detailsGo}">Voir les détails</button>
+          <button class="hit btn primary block" ${openAttr}>Voir les détails</button>
         </article>`
-        )
+        })
         .join('')}
     </div>
   `
