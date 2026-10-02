@@ -1,0 +1,97 @@
+{
+  "passed": 18,
+  "failed": 0,
+  "results": [
+    {
+      "name": "Stamp 1001-i events-bo",
+      "ok": true,
+      "detail": "Wireframe · build 1001-i · events-bo"
+    },
+    {
+      "name": "Créer opens form with new id",
+      "ok": true,
+      "detail": "evt-1790921614930 · Habitant · Brouillon"
+    },
+    {
+      "name": "Create title empty",
+      "ok": true,
+      "detail": "value=\"\""
+    },
+    {
+      "name": "No Atelier prefilled",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Edit atelier prefilled",
+      "ok": true,
+      "detail": "title=\"Atelier créatif\" meta=\n      <h2 class=\"sec\">Modifier l’événement</h2>\n      <p class=\"meta\">evt-atelier · Municipal · Publié</p>\n      <div c"
+    },
+    {
+      "name": "List/detail lieu aligned",
+      "ok": true,
+      "detail": "list=📍 Centre culturel · Kapan detail=📍 Centre culturel, salle A"
+    },
+    {
+      "name": "Detail date from store",
+      "ok": true,
+      "detail": "Vendredi 16 juin 2026"
+    },
+    {
+      "name": "Detail prix 20 €",
+      "ok": true,
+      "detail": "20 €"
+    },
+    {
+      "name": "Places restantes not Billets",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "List when has JUIN 16",
+      "ok": true,
+      "detail": "\n                JUIN\n                16\n              "
+    },
+    {
+      "name": "Submit validation toast",
+      "ok": true,
+      "detail": "Envoyé pour validation mairie"
+    },
+    {
+      "name": "Pending in validation queue",
+      "ok": true,
+      "detail": "evt-1790921616694"
+    },
+    {
+      "name": "Approved still citizen origin",
+      "ok": true,
+      "detail": "admin list"
+    },
+    {
+      "name": "Approved published badge",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Mairie comments theme mairie",
+      "ok": true,
+      "detail": "theme=mairie"
+    },
+    {
+      "name": "Signalements Q/A preserved",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "No Archiver in event menu",
+      "ok": true,
+      "detail": "Détail événement…← evenement-details \n      \n        \n        \n          Plus d’options\n          ✕\n        \n        \n    \n      \n      Partager\n      ›\n    \n  \n    \n      \n      Enregistrer\n      ›\n "
+    },
+    {
+      "name": "Screenshot shell saved",
+      "ok": true,
+      "detail": ""
+    }
+  ],
+  "base": "http://127.0.0.1:4317"
+}
