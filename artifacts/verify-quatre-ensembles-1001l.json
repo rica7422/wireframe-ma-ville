@@ -1,0 +1,111 @@
+{
+  "passed": 21,
+  "failed": 0,
+  "results": [
+    {
+      "name": "Stamp 1001-l quatre-ensembles-final",
+      "ok": true,
+      "detail": "Wireframe · build 1001-l · quatre-ensembles-final"
+    },
+    {
+      "name": "Create ≠ atelier",
+      "ok": true,
+      "detail": "evt-1790924788685 · Habitant · Brouillon"
+    },
+    {
+      "name": "Step2 Précédent",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Submit validation toast",
+      "ok": true,
+      "detail": "Envoyé pour validation mairie"
+    },
+    {
+      "name": "Revision toast",
+      "ok": true,
+      "detail": "Révision envoyée · agenda public inchangé"
+    },
+    {
+      "name": "Public title unchanged",
+      "ok": true,
+      "detail": "{\"title\":\"Atelier créatif PUBLIC\",\"revTitle\":\"Atelier RÉVISION\",\"revStatus\":\"pending\",\"pub\":\"published\"}"
+    },
+    {
+      "name": "Revision pending + still published",
+      "ok": true,
+      "detail": "{\"title\":\"Atelier créatif PUBLIC\",\"revTitle\":\"Atelier RÉVISION\",\"revStatus\":\"pending\",\"pub\":\"published\"}"
+    },
+    {
+      "name": "Queue shows revision",
+      "ok": true,
+      "detail": "\n    <h2 class=\"sec\">Événements à valider</h2>\n    <p class=\"meta\">Propositions habitantes · révisions publiées · distinct des inscriptions</p>\n    \n      <arti"
+    },
+    {
+      "name": "Case row present",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Case dossier",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "No Signalement toast",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Autres rubriques form",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Éducation fiches",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Hôpital no Coordonnées…",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Pubs BO list",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Confirm displace label",
+      "ok": true,
+      "detail": "Confirmer le déplacement"
+    },
+    {
+      "name": "Displace same id new slot",
+      "ok": true,
+      "detail": "{\"b\":{\"id\":\"rdv-test-move\",\"motifId\":\"motif-cni\",\"slot\":\"2026-05-27T10:00\",\"slotLabel\":\"27 mai 2026 · 10:00\",\"user\":\"Rica\",\"userId\":\"user-rica\",\"status\":\"confirmed\",\"cancelMotif\":\"\"},\"count\":1}"
+    },
+    {
+      "name": "Cancel frees booking",
+      "ok": true,
+      "detail": "cancelled"
+    },
+    {
+      "name": "Cancelled slot available again",
+      "ok": true,
+      "detail": "10:00 chip after cancel"
+    },
+    {
+      "name": "Dispo textarea",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Screenshot media",
+      "ok": true,
+      "detail": ""
+    }
+  ]
+}

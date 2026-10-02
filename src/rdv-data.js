@@ -92,10 +92,15 @@ function hydrate() {
     const raw = sessionStorage.getItem(STORE_KEY) || localStorage.getItem(STORE_KEY)
     if (raw) {
       const saved = JSON.parse(raw)
-      if (saved?.motifs) {
+      if (saved?.motifs?.length) {
         RDV_STORE.motifs = saved.motifs
-        RDV_STORE.dispos = saved.dispos || { ...DEFAULT.dispos }
-        RDV_STORE.indispos = saved.indispos || [...DEFAULT.indispos]
+        const disposOk = saved.dispos && Object.keys(saved.dispos).length > 0
+        RDV_STORE.dispos = disposOk
+          ? saved.dispos
+          : JSON.parse(JSON.stringify(DEFAULT.dispos))
+        RDV_STORE.indispos = Array.isArray(saved.indispos)
+          ? saved.indispos
+          : DEFAULT.indispos.map((i) => ({ ...i }))
         RDV_STORE.bookings = saved.bookings || []
         return
       }
