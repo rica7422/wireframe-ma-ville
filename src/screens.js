@@ -475,7 +475,7 @@ function pharmacieDetails(tab = 'infos', contentId = 'dir-pharmacie-centrale') {
     ${text(fiche?.address || 'Adresse non renseignée')}
     ${photo('Carte (emplacement)…', 'map')}
     <h2 class="sec">À propos</h2>
-    ${text(fiche?.description || 'Description…')}
+    ${text(fiche?.description || 'Description non renseignée')}
   `
   const horaires = `
     <h2 class="sec">Horaires</h2>
