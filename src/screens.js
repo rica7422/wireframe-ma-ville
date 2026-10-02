@@ -1200,6 +1200,10 @@ function mairiePublicationForm({ mode = 'create' } = {}) {
       header: phoneHeader({ title, backTo, chrome: 'form' }),
       footer: '',
     }
+  )
+}
+
+function mairieNouvellePublication() {
   return mairiePublicationForm({ mode: 'create' })
 }
 
