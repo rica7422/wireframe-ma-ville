@@ -1,0 +1,194 @@
+{
+  "stamp": "1001-s",
+  "base": "http://127.0.0.1:4317",
+  "passed": 37,
+  "failed": 0,
+  "total": 37,
+  "results": [
+    {
+      "name": "App opens",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Stamp contains 1001-s",
+      "ok": true,
+      "detail": "Wireframe · build 1001-s · offres-emploi"
+    },
+    {
+      "name": "On #emplois-liste",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Accent emplois #1D4ED8 on hub",
+      "ok": true,
+      "detail": "theme=emplois accent=#1d4ed8"
+    },
+    {
+      "name": "Banner copy",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "4 category access",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Habitant: no create shortcut on hub",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Public list shows Voir l’offre",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Category Stages hash",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Category has no banner re-show",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Filtres panel",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Apply filters → liste",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Detail offre-1 title",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Apply CTA courriel",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "No « candidature envoyée » copy",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Apply email toast (not sent)",
+      "ok": true,
+      "detail": "Ouverture de votre messagerie — rien n’est envoyé automatiquement"
+    },
+    {
+      "name": "⋯ on job title row",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "No ⋯ in full page header",
+      "ok": true,
+      "detail": "n=0"
+    },
+    {
+      "name": "Similaires rail visible",
+      "ok": true,
+      "detail": "h=247"
+    },
+    {
+      "name": "Apply CTA site",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Closed notice",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Closed: no apply primary",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Past deadline → closed UI",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Quick proximité does not invent km",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Admin shortcut Créer on public hub",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "BO list",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "BO tabs",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "BO draft visible",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Form screen",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Form step 1",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Form step 2",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Form step 4 candidature",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Publish → details",
+      "ok": true,
+      "detail": "#emploi-details"
+    },
+    {
+      "name": "Published title shown",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Habitant blocked on draft",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Non-régression padding 1001-r",
+      "ok": true,
+      "detail": "pl=20"
+    },
+    {
+      "name": "No critical page errors",
+      "ok": true,
+      "detail": ""
+    }
+  ]
+}
