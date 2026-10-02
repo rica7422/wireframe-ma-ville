@@ -1,0 +1,74 @@
+{
+  "base": "http://127.0.0.1:4317",
+  "stampExpected": "1001-n",
+  "pass": true,
+  "results": [
+    {
+      "name": "Stamp contains 1001-n",
+      "ok": true,
+      "detail": "Wireframe · build 1001-n · groupes-clubs-maquette"
+    },
+    {
+      "name": "Shell screenshot written",
+      "ok": true,
+      "detail": "/cursor/stores/bc-62a66aae-7ddf-4f7d-bfef-8741542e3a40/media/ma-ville-wireframe-shell.png"
+    },
+    {
+      "name": "#communautes-groupes tabs: Actualités / Mes groupes / Invitations / Suggestions",
+      "ok": true,
+      "detail": " <div class=\"comm-list-head\"> <h2 class=\"sec\">Groupes</h2> <button class=\"hit icon-btn roundish\" data-sim=\"comm-create-start:groupes\" type=\"button\" title=\"Créer\">+</button> </div> <label class=\"field\"> <input type=\"searc"
+    },
+    {
+      "name": "Community open control present",
+      "ok": true,
+      "detail": "count=1"
+    },
+    {
+      "name": "Open community lands on community page",
+      "ok": true,
+      "detail": "hash=#communaute-page"
+    },
+    {
+      "name": "Community menu has no Archiver",
+      "ok": true,
+      "detail": " <div class=\"phone-notch\"></div> <div class=\"phone-inner\" id=\"phone-inner\"> <div class=\"phone-screen\"> <div class=\"status-bar\"><span>9:41</span><span>●●● Wi‑Fi</span></div> <div class=\"phone-header\"> "
+    },
+    {
+      "name": "Community menu has no Épingler",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Clubs data-theme=clubs",
+      "ok": true,
+      "detail": "theme=clubs"
+    },
+    {
+      "name": "Clubs accent is blue (#1D4ED8 family)",
+      "ok": true,
+      "detail": "accent=#1d4ed8"
+    },
+    {
+      "name": "#communautes-clubs tabs: Actualités / Mes clubs / Invitations / Suggestions",
+      "ok": true,
+      "detail": " <div class=\"comm-list-head\"> <h2 class=\"sec\">Clubs</h2> <button class=\"hit icon-btn roundish\" data-sim=\"comm-create-start:clubs\" type=\"button\" title=\"Créer\">+</button> </div> <label class=\"field\"> <input type=\"search\" p"
+    },
+    {
+      "name": "Create (+) control on groupes",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Create flow screen present",
+      "ok": true,
+      "detail": "hash=#communaute-create"
+    },
+    {
+      "name": "No page errors",
+      "ok": true,
+      "detail": ""
+    }
+  ],
+  "pageErrors": [],
+  "at": "2026-10-02T08:17:32.876Z"
+}
