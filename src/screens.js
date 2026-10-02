@@ -110,6 +110,36 @@ import {
   getPubEditId,
   pubStateLabel,
 } from './annuaire-data.js'
+import {
+  listConversations,
+  getConversation,
+  getOpenConversationId,
+  getMsgTab,
+  setMsgTab,
+  getMsgSearch,
+  unreadCount,
+  lastVisibleMessage,
+  formatMsgTime,
+  getReplyTo,
+  getEditMsgId,
+  getPendingAttach,
+  getMessage,
+  MSG_CONTACTS,
+  getMsgViewerId,
+} from './messages-data.js'
+import {
+  listCommunautes,
+  getCommunaute,
+  getOpenCommunauteId,
+  getCommunauteKindTab,
+  getCommunauteSearch,
+  accessLabel,
+  myStateLabel,
+  kindLabel,
+  mesTabLabel,
+  canPublish,
+  isCommunauteAdmin,
+} from './communautes-data.js'
 
 /** Screen registry: id → { title, group, render(state) } */
 
@@ -2879,29 +2909,56 @@ function urgenceNumeros() {
 }
 
 function messages(tab = 'miasin') {
-  const isMiasin = tab === 'miasin'
-  const list = isMiasin
-    ? ['Conversation MIASIN', 'Support plateforme', 'Contact global']
-    : ['Conversation mairie', 'Groupe événement', 'Annonce — message']
+  const context = tab === 'maville' ? 'maville' : 'miasin'
+  setMsgTab(context)
+  const q = getMsgSearch()
+  const list = listConversations(context, { query: q })
   return wrap(
     `
     <div class="tabs">
-      <button class="hit tab ${isMiasin ? 'on' : ''}" data-go="messages">MIASIN</button>
-      <button class="hit tab ${!isMiasin ? 'on' : ''}" data-go="messages-maville">Ma Ville</button>
+      <button class="hit tab ${context === 'miasin' ? 'on' : ''}" data-sim="msg-tab:miasin" type="button">Messages MIASIN</button>
+      <button class="hit tab ${context === 'maville' ? 'on' : ''}" data-sim="msg-tab:maville" type="button">Messages Ma Ville</button>
     </div>
-    ${search('Rechercher une conversation…')}
-    ${list
-      .map(
-        (t) => `
-      <button class="hit row-link" data-go="messages-thread">
+    ${
+      context === 'maville'
+        ? `<p class="meta msg-city-label">Ville active · Kapan</p>`
+        : `<p class="meta msg-city-label">Réseau MIASIN · hors ville</p>`
+    }
+    <label class="field msg-search">
+      <span class="visually-hidden">Rechercher</span>
+      <input type="search" placeholder="Rechercher une conversation…" value="${escapeAttr(q)}" data-field="msg-search" data-sim-change="msg-search" />
+    </label>
+    <button class="hit btn primary block" data-sim="msg-new" type="button">Nouvelle conversation</button>
+    ${
+      list.length
+        ? list
+            .map((c) => {
+              const last = lastVisibleMessage(c)
+              const unread = unreadCount(c)
+              const preview = last?.deletedForEveryone
+                ? 'Message supprimé'
+                : last?.attachment && !last?.text
+                  ? `Pièce jointe · ${last.attachment.name || last.attachment.kind}`
+                  : last?.text || 'Aucun message'
+              return `
+      <button class="hit row-link msg-row ${unread ? 'unread' : ''}" data-sim="msg-open:${c.id}" type="button">
         <span class="avatar"></span>
-        <span><strong>${t}</strong><br/><span class="meta">Dernier message…</span></span>
-        <span class="meta">12:04</span>
+        <span class="grow">
+          <strong>${c.peerName}</strong>
+          ${context === 'maville' && c.city ? `<span class="meta"> · ${c.city}</span>` : ''}
+          <br/><span class="meta">${escapeHtml(preview)}</span>
+        </span>
+        <span class="msg-meta-right">
+          <span class="meta">${formatMsgTime(c.updatedAt)}</span>
+          ${unread ? `<span class="badge unread-badge">${unread}</span>` : ''}
+        </span>
       </button>`
-      )
-      .join('')}
-    ${emptyState('État vide possible si aucune conversation')}
-    ${tbd('Emplacement définitif Messages — À préciser (footer provisoire)')}
+            })
+            .join('')
+        : q
+          ? emptyState('Aucun résultat pour cette recherche')
+          : emptyState('Aucune conversation')
+    }
     `,
     {
       header: phoneHeader({ title: 'Messages', backTo: 'accueil-kapan' }),
@@ -2910,24 +2967,451 @@ function messages(tab = 'miasin') {
   )
 }
 
-function messagesThread() {
+function messagesNouvelle() {
+  const tab = getMsgTab()
+  const context = tab === 'maville' ? 'maville' : 'miasin'
+  const back = context === 'maville' ? 'messages-maville' : 'messages'
   return wrap(
     `
-    <div class="chat">
-      <div class="bubble in">${text('Message reçu…')}</div>
-      <div class="bubble out">${text('Message envoyé…')}</div>
-      <div class="bubble in">${text('…')}</div>
+    <h2 class="sec">Nouvelle conversation</h2>
+    <p class="meta">Contexte · ${context === 'maville' ? 'Ma Ville · Kapan' : 'MIASIN'}</p>
+    <p class="meta">Choisissez un contact démo. Une conversation existante dans ce contexte sera réutilisée.</p>
+    ${MSG_CONTACTS.map(
+      (c) => `
+    <button class="hit row-link" data-sim="msg-start:${c.id}" type="button">
+      <span class="avatar"></span>
+      <span><strong>${c.name}</strong><br/><span class="meta">${c.id}</span></span>
+      <span>›</span>
+    </button>`
+    ).join('')}
+    `,
+    {
+      header: phoneHeader({ title: 'Nouvelle conversation', chrome: 'panel', closeIcon: true }),
+      footer: '',
+    }
+  )
+}
+
+function messagesThread() {
+  const id = getOpenConversationId()
+  const c = id ? getConversation(id) : null
+  if (!c) {
+    return wrap(emptyState('Conversation indisponible'), {
+      header: phoneHeader({ title: 'Conversation', chrome: 'panel', closeIcon: true }),
+      footer: '',
+    })
+  }
+  const viewer = getMsgViewerId()
+  const replyId = getReplyTo()
+  const editId = getEditMsgId()
+  const attach = getPendingAttach()
+  const replyMsg = replyId ? getMessage(c.id, replyId) : null
+  const backList = c.context === 'maville' ? 'messages-maville' : 'messages'
+  const msgs = (c.messages || []).filter((m) => !(m.deletedForMe || []).includes(viewer))
+
+  const bubbles = msgs.length
+    ? msgs
+        .map((m) => {
+          const mine = m.from === viewer
+          if (m.deletedForEveryone) {
+            return `<div class="bubble ${mine ? 'out' : 'in'} deleted"><em>Message supprimé</em></div>`
+          }
+          const quoted = m.replyTo ? getMessage(c.id, m.replyTo) : null
+          const quoteHtml = quoted
+            ? `<div class="msg-quote">${
+                quoted.deletedForEveryone
+                  ? 'Message supprimé'
+                  : escapeHtml(quoted.text || quoted.attachment?.name || '…')
+              }</div>`
+            : ''
+          const att = m.attachment
+            ? `<div class="msg-attach"><span class="meta">${
+                m.attachment.kind === 'photo'
+                  ? 'Photo'
+                  : m.attachment.kind === 'video'
+                    ? 'Vidéo'
+                    : 'Fichier'
+              } · ${escapeHtml(m.attachment.name)}</span>
+              ${
+                m.attachment.previewUrl
+                  ? `<img class="msg-thumb" src="${escapeAttr(m.attachment.previewUrl)}" alt="" />`
+                  : ''
+              }</div>`
+            : ''
+          const reactions = m.reactions
+            ? Object.entries(m.reactions)
+                .map(([e, users]) => `<span class="msg-react">${e} ${users.length}</span>`)
+                .join('')
+            : ''
+          return `
+      <div class="bubble ${mine ? 'out' : 'in'}" data-msg-id="${m.id}">
+        ${quoteHtml}
+        <p>${escapeHtml(m.text || '')}</p>
+        ${att}
+        <p class="meta">${formatMsgTime(m.at)}${m.edited ? ' · Modifié' : ''}</p>
+        ${reactions ? `<div class="msg-reacts">${reactions}</div>` : ''}
+        <div class="msg-actions">
+          <button class="hit linkish" data-sim="msg-reply:${m.id}" type="button">Répondre</button>
+          <button class="hit linkish" data-sim="msg-react:${m.id}" type="button">Réagir</button>
+          ${m.text ? `<button class="hit linkish" data-sim="msg-copy:${m.id}" type="button">Copier</button>` : ''}
+          ${
+            mine
+              ? `<button class="hit linkish" data-sim="msg-edit:${m.id}" type="button">Modifier</button>
+                 <button class="hit linkish" data-sim="msg-del-all:${m.id}" type="button">Supprimer pour tous</button>`
+              : `<button class="hit linkish" data-sim="msg-report:${m.id}" type="button">Signaler</button>`
+          }
+          <button class="hit linkish" data-sim="msg-del-me:${m.id}" type="button">Supprimer pour moi</button>
+        </div>
+      </div>`
+        })
+        .join('')
+    : emptyState('Aucun message pour l’instant')
+
+  const editBlock =
+    editId
+      ? `
+    <div class="notice">
+      <strong>Modifier le message</strong>
+      <label class="field"><textarea rows="2" data-field="msg-edit-text">${escapeHtml(
+        getMessage(c.id, editId)?.text || ''
+      )}</textarea></label>
+      <div class="row-actions">
+        <button class="hit btn" data-sim="msg-edit-cancel" type="button">Annuler</button>
+        <button class="hit btn primary" data-sim="msg-edit-save:${editId}" type="button">Enregistrer les modifications</button>
+      </div>
+    </div>`
+      : ''
+
+  return wrap(
+    `
+    <div class="chat-head-meta">
+      <p class="meta">${c.context === 'maville' ? `Ma Ville · ${c.city || 'Kapan'}` : 'MIASIN'}</p>
     </div>
-    <div class="composer-bar">
-      <input type="text" placeholder="Écrire un message…" />
-      <button class="hit btn primary" data-sim="message">Envoyer</button>
+    <div class="chat">${bubbles}</div>
+    ${editBlock}
+    ${
+      replyMsg
+        ? `<div class="msg-reply-bar">
+        <span class="meta">Réponse à · ${
+          replyMsg.deletedForEveryone ? 'Message supprimé' : escapeHtml(replyMsg.text || '…')
+        }</span>
+        <button class="hit linkish" data-sim="msg-reply-cancel" type="button">Annuler</button>
+      </div>`
+        : ''
+    }
+    ${
+      attach
+        ? `<div class="msg-attach-pending">
+        <span class="meta">${attach.kind} · ${escapeHtml(attach.name)}</span>
+        ${attach.previewUrl ? `<img class="msg-thumb" src="${escapeAttr(attach.previewUrl)}" alt="" />` : ''}
+        <button class="hit linkish" data-sim="msg-attach-clear" type="button">Retirer la pièce</button>
+      </div>`
+        : ''
+    }
+    <div class="composer-bar chat-composer">
+      <button class="hit icon-btn" data-sim="msg-attach-menu" type="button" title="Ajouter">＋</button>
+      <input type="text" placeholder="Écrire un message…" data-field="msg-text" />
+      <button class="hit btn primary" data-sim="msg-send" type="button">Envoyer</button>
     </div>
     `,
     {
-      header: phoneHeader({ title: 'Conversation', backTo: 'messages' }),
-      footer: phoneFooter('messages'),
+      header: phoneHeader({
+        title: c.peerName,
+        chrome: 'panel',
+        backTo: backList,
+        extraRight: `<button class="hit icon-btn" data-sim="msg-thread-info" type="button" title="Infos">⋯</button>`,
+      }),
+      footer: '',
     }
   )
+}
+
+function messagesAttachSheet() {
+  return wrap(`${photo('Fond…', 'dim')}`, {
+    header: phoneHeader({ title: 'Ajouter', chrome: 'panel', closeIcon: true }),
+    footer: '',
+    overlay: modalShell(
+      'Ajouter une pièce',
+      `
+      ${sheetOption('Photo', { sim: 'msg-attach:photo' })}
+      ${sheetOption('Vidéo', { sim: 'msg-attach:video' })}
+      ${sheetOption('Fichier', { sim: 'msg-attach:file' })}
+      `,
+      `<button class="hit btn block" data-back type="button">Fermer</button>`
+    ),
+  })
+}
+
+function messagesReactSheet() {
+  const emojis = ['👍', '❤️', '😂', '😮', '😢']
+  return wrap(`${photo('Fond…', 'dim')}`, {
+    header: phoneHeader({ title: 'Réagir', chrome: 'panel', closeIcon: true }),
+    footer: '',
+    overlay: modalShell(
+      'Réaction',
+      `
+      <div class="chips">
+        ${emojis.map((e) => `<button class="hit chip" data-sim="msg-react-pick:${e}" type="button">${e}</button>`).join('')}
+      </div>
+      <button class="hit btn block outline" data-sim="msg-react-pick:" type="button">Retirer ma réaction</button>
+      `,
+      `<button class="hit btn block" data-back type="button">Fermer</button>`
+    ),
+  })
+}
+
+function communautesList(kind = 'groupes') {
+  const tab = getCommunauteKindTab(kind)
+  const q = getCommunauteSearch(kind)
+  const list = listCommunautes(kind, { tab, query: q })
+  const title = kindLabel(kind)
+  const mes = mesTabLabel(kind)
+  return wrap(
+    `
+    <h2 class="sec">${title}</h2>
+    <label class="field">
+      <input type="search" placeholder="Rechercher…" value="${escapeAttr(q)}" data-field="comm-search" data-sim-change="comm-search:${kind}" />
+    </label>
+    <div class="tabs">
+      <button class="hit tab ${tab === 'decouvrir' ? 'on' : ''}" data-sim="comm-tab:${kind}:decouvrir" type="button">Découvrir</button>
+      <button class="hit tab ${tab === 'mes' ? 'on' : ''}" data-sim="comm-tab:${kind}:mes" type="button">${mes}</button>
+    </div>
+    ${
+      list.length
+        ? list
+            .map((c) => {
+              const state = myStateLabel(c.myState)
+              return `
+      <button class="hit row-link comm-card" data-sim="comm-open:${c.id}" type="button">
+        <span class="slot-photo tiny" aria-hidden="true"></span>
+        <span class="grow">
+          <strong>${c.name}</strong>
+          <br/><span class="meta">${escapeHtml(c.description)}</span>
+          <br/><span class="meta">${c.membersCount} membres · ${accessLabel(c.access)}${
+                state ? ` · ${state}` : ''
+              }</span>
+        </span>
+        <span>›</span>
+      </button>`
+            })
+            .join('')
+        : tab === 'mes'
+          ? emptyState(kind === 'clubs' ? 'Aucune adhésion à un club' : 'Aucune adhésion à un groupe')
+          : q
+            ? emptyState('Aucun résultat')
+            : emptyState(kind === 'clubs' ? 'Aucun club' : 'Aucun groupe')
+    }
+    `,
+    {
+      header: phoneHeader({ title, backTo: 'accueil-kapan' }),
+      footer: phoneFooter('menu'),
+    }
+  )
+}
+
+function communautePage(view = 'fil') {
+  const id = getOpenCommunauteId()
+  const c = id ? getCommunaute(id) : null
+  if (!c) {
+    return wrap(emptyState('Communauté indisponible'), {
+      header: phoneHeader({ title: 'Communauté', backTo: 'accueil-kapan' }),
+      footer: phoneFooter('menu'),
+    })
+  }
+  const listBack = c.kind === 'clubs' ? 'communautes-clubs' : 'communautes-groupes'
+  const admin = isCommunauteAdmin(c)
+  const publishOk = canPublish(c)
+  const joinBtn =
+    c.myState === 'member'
+      ? `<button class="hit btn outline block" data-sim="comm-leave-ask:${c.id}" type="button">${
+          c.kind === 'clubs' ? 'Quitter le club' : 'Quitter le groupe'
+        }</button>`
+      : c.myState === 'pending'
+        ? `<div class="notice"><strong>Demande en attente</strong></div>
+           <button class="hit btn outline block" data-sim="comm-cancel-join:${c.id}" type="button">Annuler ma demande</button>`
+        : c.access === 'open'
+          ? `<button class="hit btn primary block" data-sim="comm-join:${c.id}" type="button">Rejoindre</button>`
+          : `<button class="hit btn primary block" data-sim="comm-join:${c.id}" type="button">Demander à rejoindre</button>`
+
+  const tabs = `
+    <div class="tabs">
+      <button class="hit tab ${view === 'fil' ? 'on' : ''}" data-sim="comm-view:fil" type="button">Publications</button>
+      <button class="hit tab ${view === 'apropos' ? 'on' : ''}" data-sim="comm-view:apropos" type="button">À propos</button>
+      <button class="hit tab ${view === 'membres' ? 'on' : ''}" data-sim="comm-view:membres" type="button">Membres</button>
+    </div>`
+
+  let body = ''
+  if (view === 'apropos') {
+    body = `
+      <h2 class="sec">Description</h2>
+      <p>${escapeHtml(c.description)}</p>
+      <h2 class="sec">Règles</h2>
+      <p>${escapeHtml(c.rules || 'Aucune règle renseignée')}</p>
+      <p class="meta">Accès · ${accessLabel(c.access)}</p>
+      <p class="meta">Publications · ${
+        c.publishRule === 'admins' ? 'Administrateurs uniquement' : 'Membres autorisés'
+      }</p>
+      <h2 class="sec">Administrateurs</h2>
+      ${(c.admins || []).map((a) => `<div class="row-link static"><span>${a}</span></div>`).join('')}
+    `
+  } else if (view === 'membres') {
+    body = `
+      <p class="meta">${c.membersCount} membres</p>
+      ${(c.memberIds || [])
+        .map(
+          (m) => `
+        <div class="row-link static">
+          <span class="avatar"></span>
+          <span class="grow"><strong>${m === 'user-rica' ? 'Rica (vous)' : m}</strong>
+          ${(c.admins || []).includes(m) ? '<span class="meta"> · Admin</span>' : ''}</span>
+          ${
+            admin && m !== 'user-rica' && !(c.admins || []).includes(m)
+              ? `<button class="hit btn outline" data-sim="comm-remove:${c.id}:${m}" type="button">Retirer</button>`
+              : ''
+          }
+        </div>`
+        )
+        .join('')}
+      ${
+        admin && (c.pendingIds || []).length
+          ? `<h2 class="sec">Demandes</h2>
+        ${c.pendingIds
+          .map(
+            (p) => `
+          <div class="row-actions">
+            <span class="grow"><strong>${p}</strong></span>
+            <button class="hit btn primary" data-sim="comm-accept:${c.id}:${p}" type="button">Accepter</button>
+            <button class="hit btn outline" data-sim="comm-refuse:${c.id}:${p}" type="button">Refuser</button>
+          </div>`
+          )
+          .join('')}`
+          : ''
+      }
+    `
+  } else {
+    body = `
+      ${
+        publishOk
+          ? `<div class="compose">
+        <span class="avatar"></span>
+        <button class="hit compose-input" data-go="communaute-composer" type="button">Commencer une publication</button>
+      </div>`
+          : c.myState === 'member' && c.publishRule === 'admins'
+            ? `<p class="meta">Seuls les administrateurs peuvent publier dans ce ${
+                c.kind === 'clubs' ? 'club' : 'groupe'
+              }.</p>`
+            : ''
+      }
+      ${(c.posts || [])
+        .map(
+          (p) => `
+        <article class="card post-card" data-post-id="${p.id}">
+          <div class="post-head">
+            <span class="avatar"></span>
+            <div class="grow">
+              <strong>${escapeHtml(p.author)}</strong>
+              <p class="meta">${formatMsgTime(p.at)} · ${c.name}</p>
+            </div>
+            <button class="hit icon-btn" data-open-menu="publication" data-content-id="${p.id}" data-section="${
+              c.kind
+            }" data-menu-parent="communaute-page" title="Options">⋯</button>
+          </div>
+          <p>${escapeHtml(p.body)}</p>
+          ${socialActions({
+            likes: String(p.reactions || 0),
+            comments: String(p.comments || 0),
+            shares: '0',
+            contentId: p.id,
+            section: c.kind,
+          })}
+          <div class="row-actions">
+            <button class="hit btn" data-sim="comm-react:${c.id}:${p.id}" type="button">Réagir</button>
+            ${
+              p.authorId === 'user-rica' || admin
+                ? `<button class="hit btn outline" data-sim="comm-del-post:${c.id}:${p.id}" type="button">Supprimer</button>`
+                : ''
+            }
+          </div>
+        </article>`
+        )
+        .join('') || emptyState('Aucune publication')}
+    `
+  }
+
+  return wrap(
+    `
+    ${photo(`Couverture ${c.name}…`, 'hero')}
+    <div class="detail-head">
+      <strong class="block-title">${c.name}</strong>
+      <p class="meta">${c.membersCount} membres · ${accessLabel(c.access)}</p>
+      <p>${escapeHtml(c.description)}</p>
+    </div>
+    ${joinBtn}
+    ${tabs}
+    ${body}
+    `,
+    {
+      header: phoneHeader({
+        title: c.name,
+        backTo: listBack,
+        extraRight: admin
+          ? `<button class="hit icon-btn" data-sim="comm-view:membres" type="button" title="Gérer">⋯</button>`
+          : '',
+      }),
+      footer: phoneFooter('menu'),
+    }
+  )
+}
+
+function communauteComposer() {
+  const c = getCommunaute(getOpenCommunauteId())
+  if (!c || !canPublish(c)) {
+    return wrap(emptyState('Publication non autorisée'), {
+      header: phoneHeader({ title: 'Publication', chrome: 'form' }),
+      footer: '',
+    })
+  }
+  return wrap(
+    `
+    <div class="form-card">
+      <h2 class="sec">Nouvelle publication</h2>
+      <p class="meta">${c.name} · ${kindLabel(c.kind)}</p>
+      <label class="field"><span>Texte</span>
+        <textarea rows="5" placeholder="Écrire une publication…" data-field="comm-post-body"></textarea>
+      </label>
+      <div class="row-actions">
+        <button class="hit btn" data-go="communaute-page" type="button">Annuler</button>
+        <button class="hit btn primary" data-sim="comm-publish" type="button">Publier</button>
+      </div>
+    </div>
+    `,
+    {
+      header: phoneHeader({ title: 'Publier', chrome: 'form', backTo: 'communaute-page' }),
+      footer: '',
+    }
+  )
+}
+
+function communautesRencontres() {
+  return wrap(
+    `
+    <h2 class="sec">Mes rencontres</h2>
+    <p class="meta">Rubrique conservée · pas de moteur de rencontre dans ce prototype.</p>
+    ${emptyState('Aucune rencontre à afficher pour le moment')}
+    <p class="meta">Correctifs de navigation uniquement — ébauche signalée.</p>
+    `,
+    {
+      header: phoneHeader({ title: 'Mes rencontres', backTo: 'accueil-kapan' }),
+      footer: phoneFooter('menu'),
+    }
+  )
+}
+
+function communautesStub(title) {
+  // legacy alias — Groupes/Clubs use communautesList
+  if (title === 'Groupes') return communautesList('groupes')
+  if (title === 'Clubs') return communautesList('clubs')
+  return communautesRencontres()
 }
 
 function enregistrements() {
@@ -3851,33 +4335,12 @@ function etatHorairesManquants() {
   return wrap(
     `
     <h2 class="sec">Horaires</h2>
-    ${tbd('Horaires non renseignés — À préciser')}
+    <div class="notice"><strong>Aucun horaire renseigné</strong><p class="meta">Les plages exactes ne sont pas encore publiées.</p></div>
     ${emptyState('Aucun horaire disponible pour cet établissement')}
     <button class="hit btn block" data-back>Retour</button>
     `,
     {
       header: phoneHeader({ title: 'Horaires manquants', backTo: 'etats-hub' }),
-      footer: phoneFooter('menu'),
-    }
-  )
-}
-
-function communautesStub(title) {
-  return wrap(
-    `
-    <h2 class="sec">${title}</h2>
-    ${tbd('Fil de publications / détail — structure minimale')}
-    <div class="compose">
-      <span class="avatar"></span>
-      <button class="hit compose-input" data-sim="publier">Commencer une publication</button>
-    </div>
-    ${postCard({ author: 'Membre…', role: title, body: 'Publication…' })}
-    ${postCard({ author: 'Autre membre…', role: title, body: 'Publication…', multi: true })}
-    <button class="hit btn primary block" data-sim="publier">Créer une publication (simulé)</button>
-    <button class="hit row-link" data-go="etat-vide"><span>État vide du fil</span><span>›</span></button>
-    `,
-    {
-      header: phoneHeader({ title, backTo: 'accueil-kapan' }),
       footer: phoneFooter('menu'),
     }
   )
@@ -4985,6 +5448,24 @@ export const SCREENS = {
     side: 'user',
     group: 'Social / contenus',
     render: messagesThread,
+  },
+  'messages-nouvelle': {
+    title: 'Nouvelle conversation',
+    side: 'user',
+    group: 'Social / contenus',
+    render: messagesNouvelle,
+  },
+  'messages-attach': {
+    title: 'Ajouter une pièce',
+    side: 'user',
+    group: 'Social / contenus',
+    render: messagesAttachSheet,
+  },
+  'messages-react': {
+    title: 'Réagir',
+    side: 'user',
+    group: 'Social / contenus',
+    render: messagesReactSheet,
   },
   enregistrements: { title: 'Enregistrements', side: 'user', group: 'Social / contenus', render: enregistrements },
   'menu-plus': { title: 'Menu (+)', side: 'user', group: 'Social / contenus', render: menuPlus },
@@ -6910,21 +7391,44 @@ export const SCREENS = {
     title: 'Groupes',
     side: 'user',
     group: 'Vie locale',
-    render: () => communautesStub('Groupes'),
+    render: () => communautesList('groupes'),
   },
   'communautes-clubs': {
     title: 'Clubs',
     side: 'user',
     group: 'Vie locale',
-    render: () => communautesStub('Clubs'),
+    render: () => communautesList('clubs'),
   },
   'communautes-rencontres': {
     title: 'Mes rencontres',
     side: 'user',
     group: 'Vie locale',
-    render: () => communautesStub('Mes rencontres'),
+    render: communautesRencontres,
   },
-
+  'communaute-page': {
+    title: 'Communauté',
+    side: 'user',
+    group: 'Vie locale',
+    render: () => communautePage('fil'),
+  },
+  'communaute-apropos': {
+    title: 'Communauté — À propos',
+    side: 'user',
+    group: 'Vie locale',
+    render: () => communautePage('apropos'),
+  },
+  'communaute-membres': {
+    title: 'Communauté — Membres',
+    side: 'user',
+    group: 'Vie locale',
+    render: () => communautePage('membres'),
+  },
+  'communaute-composer': {
+    title: 'Publier',
+    side: 'user',
+    group: 'Vie locale',
+    render: communauteComposer,
+  },
 
   'admin-home': { title: 'Admin — Tableau de bord', side: 'admin', group: 'Admin', render: adminHome },
   'admin-contenus': {
@@ -7226,9 +7730,14 @@ export const NAV_TREE = {
               { id: 'emploi-details', label: 'Détail offre' },
             ],
           },
-          { id: 'communautes-groupes', label: 'Groupes' },
+          { id: 'communautes-groupes', label: 'Groupes', children: [
+            { id: 'communaute-page', label: 'Page communauté' },
+            { id: 'communaute-apropos', label: 'À propos' },
+            { id: 'communaute-membres', label: 'Membres' },
+            { id: 'communaute-composer', label: 'Composer' },
+          ] },
           { id: 'communautes-clubs', label: 'Clubs' },
-          { id: 'communautes-rencontres', label: 'Mes rencontres' },
+          { id: 'communautes-rencontres', label: 'Mes rencontres (ébauche)' },
           {
             id: 'dir-education',
             label: 'Éducation',
@@ -7726,7 +8235,10 @@ export const NAV_TREE = {
             label: 'Messages',
             children: [
               { id: 'messages-maville', label: 'Ma Ville' },
+              { id: 'messages-nouvelle', label: 'Nouvelle conversation' },
               { id: 'messages-thread', label: 'Conversation' },
+              { id: 'messages-attach', label: 'Ajouter pièce' },
+              { id: 'messages-react', label: 'Réagir' },
             ],
           },
           { id: 'enregistrements', label: 'Enregistrements' },

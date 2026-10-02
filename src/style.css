@@ -1616,13 +1616,16 @@ button.tree-node:hover .tree-label {
 .chat {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  min-height: 280px;
+  gap: 10px;
+  min-height: 240px;
+  padding-bottom: 8px;
 }
 
 .bubble {
-  max-width: 85%;
-  padding: 4px;
+  max-width: 88%;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: #f1f5f9;
 }
 
 .bubble.in {
@@ -1631,6 +1634,115 @@ button.tree-node:hover .tree-label {
 
 .bubble.out {
   align-self: flex-end;
+  background: color-mix(in srgb, var(--accent, #29676D) 16%, #ffffff);
+}
+
+.bubble.deleted {
+  opacity: 0.7;
+  font-style: italic;
+}
+
+.bubble p {
+  margin: 0;
+}
+
+.msg-quote {
+  border-left: 3px solid #94a3b8;
+  padding-left: 8px;
+  margin-bottom: 6px;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.msg-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.msg-reacts {
+  display: flex;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.msg-react {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  padding: 1px 6px;
+  font-size: 11px;
+}
+
+.msg-attach,
+.msg-attach-pending {
+  margin-top: 6px;
+  padding: 6px;
+  background: #fff;
+  border-radius: 8px;
+  border: 1px dashed #cbd5e1;
+}
+
+.msg-thumb {
+  display: block;
+  max-width: 120px;
+  margin-top: 4px;
+  border-radius: 6px;
+}
+
+.msg-reply-bar {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px;
+  background: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+}
+
+.chat-composer {
+  position: sticky;
+  bottom: 0;
+  background: #fff;
+  border-top: 1px solid #e2e8f0;
+}
+
+.msg-row.unread strong {
+  font-weight: 700;
+}
+
+.unread-badge {
+  background: var(--accent, #29676D);
+  color: #fff;
+}
+
+.msg-meta-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.msg-city-label {
+  margin: 4px 0 8px;
+}
+
+.comm-card .slot-photo.tiny {
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  min-height: 44px;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
 }
 
 .modal-layer {

@@ -78,6 +78,17 @@ export function sectionFor(id) {
   if (id.startsWith('communautes-groupes') || id === 'communautes-groupes') return 'groupes'
   if (id.startsWith('communautes-clubs')) return 'clubs'
   if (id.startsWith('communautes-rencontres')) return 'rencontres'
+  if (id.startsWith('communaute-')) {
+    // page / apropos / membres / composer — color from open community kind if known
+    try {
+      const open = sessionStorage.getItem('ma-ville-communaute-open')
+      if (open?.startsWith('club')) return 'clubs'
+      if (open?.startsWith('grp')) return 'groupes'
+    } catch {
+      /* ignore */
+    }
+    return stickySection === 'clubs' ? 'clubs' : 'groupes'
+  }
   if (id.startsWith('dir-education')) return 'education'
   if (id.startsWith('dir-economie')) return 'economie'
   if (id.startsWith('dir-cinemas')) return 'cinemas'

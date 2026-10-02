@@ -118,6 +118,35 @@ export function getModCase(id) {
   return MOD_CASES[id] || null
 }
 
+/** Create a moderation dossier from a reported message (content only, not whole mailbox). */
+export function createModerationCase({
+  type = 'message',
+  title,
+  author,
+  motif = 'Signalement utilisateur',
+  contentLabel = 'Message privé',
+  contentGo = 'admin-moderation',
+} = {}) {
+  const id = `mod-${Date.now()}`
+  MOD_CASES[id] = {
+    id,
+    type,
+    title: title || 'Contenu signalé',
+    author: author || 'Inconnu',
+    motif,
+    date: new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }),
+    state: 'open',
+    decision: null,
+    decisionMotif: '',
+    contentLabel,
+    contentGo,
+    masked: false,
+    authorDeleted: false,
+  }
+  persist()
+  return MOD_CASES[id]
+}
+
 export function setOpenModCaseId(id) {
   try {
     if (id) sessionStorage.setItem(OPEN_KEY, id)

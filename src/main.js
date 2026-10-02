@@ -57,6 +57,7 @@ import {
   setModFilter,
   decideModCase,
   getModCase,
+  createModerationCase,
 } from './moderation-data.js'
 import {
   setRdvPick,
@@ -91,6 +92,44 @@ import {
   updateAdminPub,
   getAdminPub,
 } from './annuaire-data.js'
+import {
+  setMsgTab,
+  getMsgTab,
+  setOpenConversationId,
+  getOpenConversationId,
+  setMsgSearch,
+  openOrCreateDm,
+  markConversationRead,
+  sendMessage,
+  editMessage,
+  deleteMessageForMe,
+  deleteMessageForEveryone,
+  reactToMessage,
+  setReplyTo,
+  getReplyTo,
+  setEditMsgId,
+  getEditMsgId,
+  setPendingAttach,
+  getPendingAttach,
+  getMessage,
+  getConversation,
+} from './messages-data.js'
+import {
+  setCommunauteKindTab,
+  setCommunauteSearch,
+  setOpenCommunauteId,
+  getOpenCommunauteId,
+  joinCommunaute,
+  cancelJoinRequest,
+  leaveCommunaute,
+  acceptJoin,
+  refuseJoin,
+  removeMember,
+  createCommunautePost,
+  deleteCommunautePost,
+  reactCommunautePost,
+  getCommunaute,
+} from './communautes-data.js'
 
 const historyStack = []
 let currentId = 'ville-bienvenue'
@@ -279,7 +318,9 @@ function back() {
 }
 
 function handleSim(kind) {
-  const [action, arg] = String(kind).split(':')
+  const parts = String(kind).split(':')
+  const action = parts[0]
+  const arg = parts.slice(1).join(':')
 
   if (action === 'save' && arg) {
     const on = toggleSaved(arg)
@@ -946,6 +987,262 @@ function handleSim(kind) {
     return
   }
 
+  // ——— Messagerie ———
+  if (action === 'msg-tab' && arg) {
+    setMsgTab(arg)
+    go(arg === 'maville' ? 'messages-maville' : 'messages', { push: false })
+    return
+  }
+  if (action === 'msg-search') {
+    setMsgSearch(readField('msg-search'))
+    render()
+    return
+  }
+  if (action === 'msg-new') {
+    go('messages-nouvelle')
+    return
+  }
+  if (action === 'msg-start' && arg) {
+    const tab = getMsgTab()
+    openOrCreateDm(arg, tab === 'maville' ? 'maville' : 'miasin')
+    go('messages-thread')
+    return
+  }
+  if (action === 'msg-open' && arg) {
+    setOpenConversationId(arg)
+    markConversationRead(arg)
+    go('messages-thread')
+    return
+  }
+  if (action === 'msg-send' || action === 'message') {
+    const id = getOpenConversationId()
+    if (!id) {
+      toast('Aucune conversation ouverte')
+      return
+    }
+    const text = readField('msg-text')
+    const attach = getPendingAttach()
+    const replyTo = getReplyTo()
+    const res = sendMessage(id, { text, attachment: attach, replyTo })
+    if (res?.error === 'empty') {
+      toast('Écrivez un message ou ajoutez une pièce')
+      return
+    }
+    render()
+    return
+  }
+  if (action === 'msg-reply' && arg) {
+    setReplyTo(arg)
+    render()
+    return
+  }
+  if (action === 'msg-reply-cancel') {
+    setReplyTo(null)
+    render()
+    return
+  }
+  if (action === 'msg-edit' && arg) {
+    setEditMsgId(arg)
+    render()
+    return
+  }
+  if (action === 'msg-edit-cancel') {
+    setEditMsgId(null)
+    render()
+    return
+  }
+  if (action === 'msg-edit-save' && arg) {
+    const id = getOpenConversationId()
+    const res = editMessage(id, arg, readField('msg-edit-text'))
+    if (res?.error) toast('Modification non autorisée')
+    else toast('Message modifié')
+    render()
+    return
+  }
+  if (action === 'msg-del-me' && arg) {
+    deleteMessageForMe(getOpenConversationId(), arg)
+    render()
+    return
+  }
+  if (action === 'msg-del-all' && arg) {
+    if (!confirm('Supprimer ce message pour tout le monde ?')) return
+    const res = deleteMessageForEveryone(getOpenConversationId(), arg)
+    if (res?.error) toast('Seul l’auteur peut supprimer pour tous')
+    render()
+    return
+  }
+  if (action === 'msg-copy' && arg) {
+    const m = getMessage(getOpenConversationId(), arg)
+    if (m?.text && navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(m.text).catch(() => {})
+    }
+    toast(m?.text ? 'Texte copié' : 'Rien à copier')
+    return
+  }
+  if (action === 'msg-react' && arg) {
+    sessionStorage.setItem('ma-ville-msg-react-target', arg)
+    go('messages-react')
+    return
+  }
+  if (action === 'msg-react-pick') {
+    const target = sessionStorage.getItem('ma-ville-msg-react-target')
+    const emoji = arg || ''
+    if (target) reactToMessage(getOpenConversationId(), target, emoji)
+    go('messages-thread', { push: false })
+    return
+  }
+  if (action === 'msg-report' && arg) {
+    const conv = getConversation(getOpenConversationId())
+    const m = getMessage(getOpenConversationId(), arg)
+    createModerationCase({
+      type: 'message',
+      title: `Message signalé · ${conv?.peerName || 'conversation'}`,
+      author: m?.from || 'Inconnu',
+      motif: 'Signalement depuis messagerie',
+      contentLabel: m?.deletedForEveryone ? 'Message supprimé' : (m?.text || 'Pièce jointe').slice(0, 120),
+      contentGo: 'admin-moderation',
+    })
+    toast('Signalement transmis à la modération (dossier créé)')
+    return
+  }
+  if (action === 'msg-attach-menu') {
+    go('messages-attach')
+    return
+  }
+  if (action === 'msg-attach' && arg) {
+    const kind = arg
+    const name =
+      kind === 'photo' ? 'photo-demo.jpg' : kind === 'video' ? 'video-demo.mp4' : 'document-demo.pdf'
+    // Local preview only — no upload. Photos get a placeholder data URL strip.
+    const previewUrl =
+      kind === 'photo'
+        ? 'data:image/svg+xml,' +
+          encodeURIComponent(
+            `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="80"><rect fill="#cbd5e1" width="120" height="80"/><text x="12" y="44" fill="#334155" font-size="12">Aperçu local</text></svg>`
+          )
+        : null
+    setPendingAttach({ kind, name, local: true, previewUrl })
+    toast(
+      kind === 'photo'
+        ? 'Photo prête (aperçu local — non envoyée à un serveur)'
+        : kind === 'video'
+          ? 'Vidéo prête (aperçu local — lecture limitée)'
+          : 'Fichier prêt (nom local uniquement)'
+    )
+    go('messages-thread', { push: false })
+    return
+  }
+  if (action === 'msg-attach-clear') {
+    setPendingAttach(null)
+    render()
+    return
+  }
+  if (action === 'msg-thread-info') {
+    const c = getConversation(getOpenConversationId())
+    toast(c ? `${c.peerName} · ${c.context === 'maville' ? 'Ma Ville · ' + (c.city || 'Kapan') : 'MIASIN'}` : 'Conversation')
+    return
+  }
+
+  // ——— Groupes / Clubs ———
+  if (action === 'comm-tab' && arg) {
+    const [kind, tab] = String(arg).split(':')
+    setCommunauteKindTab(kind, tab)
+    go(kind === 'clubs' ? 'communautes-clubs' : 'communautes-groupes', { push: false })
+    return
+  }
+  if (action === 'comm-search' && arg) {
+    setCommunauteSearch(arg, readField('comm-search'))
+    render()
+    return
+  }
+  if (action === 'comm-open' && arg) {
+    setOpenCommunauteId(arg)
+    go('communaute-page')
+    return
+  }
+  if (action === 'comm-view' && arg) {
+    go(arg === 'apropos' ? 'communaute-apropos' : arg === 'membres' ? 'communaute-membres' : 'communaute-page', {
+      push: false,
+    })
+    return
+  }
+  if (action === 'comm-join' && arg) {
+    const c = joinCommunaute(arg)
+    toast(
+      c?.myState === 'pending'
+        ? 'Demande envoyée'
+        : c?.myState === 'member'
+          ? 'Vous avez rejoint'
+          : 'Adhésion mise à jour'
+    )
+    render()
+    return
+  }
+  if (action === 'comm-cancel-join' && arg) {
+    cancelJoinRequest(arg)
+    toast('Demande annulée')
+    render()
+    return
+  }
+  if (action === 'comm-leave-ask' && arg) {
+    if (!confirm('Quitter cette communauté ?')) return
+    leaveCommunaute(arg)
+    toast('Vous avez quitté')
+    render()
+    return
+  }
+  if (action === 'comm-accept' && arg) {
+    const [cid, uid] = String(arg).split(':')
+    const res = acceptJoin(cid, uid)
+    toast(res?.error ? 'Action réservée aux admins communauté' : 'Demande acceptée')
+    render()
+    return
+  }
+  if (action === 'comm-refuse' && arg) {
+    const [cid, uid] = String(arg).split(':')
+    const res = refuseJoin(cid, uid)
+    toast(res?.error ? 'Action réservée aux admins communauté' : 'Demande refusée')
+    render()
+    return
+  }
+  if (action === 'comm-remove' && arg) {
+    const [cid, uid] = String(arg).split(':')
+    if (!confirm('Retirer ce membre ?')) return
+    const res = removeMember(cid, uid)
+    toast(res?.error ? 'Retrait non autorisé' : 'Membre retiré')
+    render()
+    return
+  }
+  if (action === 'comm-publish') {
+    const id = getOpenCommunauteId()
+    const res = createCommunautePost(id, readField('comm-post-body'))
+    if (res?.error === 'forbidden') {
+      toast('Publication non autorisée')
+      return
+    }
+    if (res?.error === 'empty') {
+      toast('Écrivez un texte')
+      return
+    }
+    toast('Publication ajoutée')
+    go('communaute-page', { push: false })
+    return
+  }
+  if (action === 'comm-del-post' && arg) {
+    const [cid, pid] = String(arg).split(':')
+    if (!confirm('Supprimer cette publication ?')) return
+    const res = deleteCommunautePost(cid, pid)
+    toast(res?.error ? 'Suppression non autorisée' : 'Publication supprimée')
+    render()
+    return
+  }
+  if (action === 'comm-react' && arg) {
+    const [cid, pid] = String(arg).split(':')
+    reactCommunautePost(cid, pid)
+    render()
+    return
+  }
+
   const map = {
     miasin: 'Retour MIASIN (simulé) — MIASIN hors scope',
     appeler: arg ? `Appel simulé → ${arg}` : 'Appel simulé',
@@ -1099,7 +1396,7 @@ function render({ focusActive = false, resetNavScroll = false } = {}) {
       <aside class="proto-nav">
         <header class="proto-brand">
           <strong>Ma Ville</strong>
-          <span class="proto-tag">Wireframe · build 1001-l · quatre-ensembles-final</span>
+          <span class="proto-tag">Wireframe · build 1001-m · messagerie-groupes-nav</span>
         </header>
         <p class="proto-hint">Navigation du prototype (≠ nav dans le téléphone)</p>
         <div class="nav-tabs" role="tablist" aria-label="Côté prototype">
@@ -1311,6 +1608,19 @@ function render({ focusActive = false, resetNavScroll = false } = {}) {
         if (card) card.remove()
       }
     }
+  })
+
+  phone.addEventListener('change', (e) => {
+    const el = e.target.closest('[data-sim-change]')
+    if (!el) return
+    handleSim(el.dataset.simChange)
+  })
+  phone.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter') return
+    const el = e.target.closest('[data-sim-change]')
+    if (!el) return
+    e.preventDefault()
+    handleSim(el.dataset.simChange)
   })
 }
 
