@@ -1,0 +1,105 @@
+{
+  "stamp": "1001-m",
+  "base": "http://127.0.0.1:4317",
+  "tunnel": "https://implications-chelsea-wiley-easier.trycloudflare.com",
+  "passed": 19,
+  "failed": 0,
+  "pageErrors": [],
+  "results": [
+    {
+      "name": "Stamp contains 1001-m",
+      "ok": true,
+      "detail": "Wireframe · build 1001-m · messagerie-groupes-nav"
+    },
+    {
+      "name": "Messages list shows Anahit/Armen (not « Conversation MIASIN »)",
+      "ok": true,
+      "detail": " <div class=\"tabs\"> <button class=\"hit tab on\" data-sim=\"msg-tab:miasin\" type=\"button\">Messages MIASIN</button> <button class=\"hit tab \" data-sim=\"msg-tab:maville\" type=\"button\">Messages Ma Ville</but"
+    },
+    {
+      "name": "Anahit row present",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Anahit thread: no phone footer nav",
+      "ok": true,
+      "detail": "footerVisible=false len=0"
+    },
+    {
+      "name": "Sent message appears in chat",
+      "ok": true,
+      "detail": "Smoke 1001-m 1790927055616"
+    },
+    {
+      "name": "Ma Ville tab: Lilit / Mairie (distinct)",
+      "ok": true,
+      "detail": " <div class=\"tabs\"> <button class=\"hit tab \" data-sim=\"msg-tab:miasin\" type=\"button\">Messages MIASIN</button> <button class=\"hit tab on\" data-sim=\"msg-tab:maville\" type=\"button\">Messages Ma Ville</but"
+    },
+    {
+      "name": "#communautes-groupes: Découvrir / Mes groupes",
+      "ok": true,
+      "detail": " <h2 class=\"sec\">Groupes</h2> <label class=\"field\"> <input type=\"search\" placeholder=\"Rechercher…\" value=\"\" data-field=\"comm-search\" data-sim-change=\"comm-searc"
+    },
+    {
+      "name": "Randonneurs listed",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Open Randonneurs control",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Randonneurs page open",
+      "ok": true,
+      "detail": " <div class=\"slot-photo hero\" aria-hidden=\"true\"><span>Couverture Randonneurs de Kapan…</span></div> <div class=\"detail-"
+    },
+    {
+      "name": "Already member (Rejoindre not needed)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "#communautes-clubs works",
+      "ok": true,
+      "detail": " <h2 class=\"sec\">Clubs</h2> <label class=\"field\"> <input type=\"search\" placeholder=\"Rechercher…\" value=\"\" data-field=\"comm-search\" data-sim-change=\"comm-search:"
+    },
+    {
+      "name": "Clubs blue section theme",
+      "ok": true,
+      "detail": "theme=clubs accent=#1d4ed8"
+    },
+    {
+      "name": "Non-regression #evenements-a-valider renders",
+      "ok": true,
+      "detail": " <h2 class=\"sec\">Événements à valider</h2> <p class=\"meta\">Propositions habitantes · révisions publi"
+    },
+    {
+      "name": "Non-regression #admin-moderation renders",
+      "ok": true,
+      "detail": " <h2 class=\"sec\">Modération</h2> <p class=\"meta\">Contenus signalés — distinct de la boîte quartier ("
+    },
+    {
+      "name": "Non-regression #admin-rdv renders",
+      "ok": true,
+      "detail": " <h2 class=\"sec\">Rendez-vous</h2> <div class=\"tabs\"> <button class=\"hit tab on\" data-sim=\"rdv-admin-"
+    },
+    {
+      "name": "Non-regression #admin-annuaires renders",
+      "ok": true,
+      "detail": " <h2 class=\"sec\">Annuaires · Vie locale</h2> <p class=\"meta\">Gestion admin de toutes les rubriques ("
+    },
+    {
+      "name": "Screenshot media",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "No serious page JS errors",
+      "ok": true,
+      "detail": "0 console noise"
+    }
+  ]
+}
