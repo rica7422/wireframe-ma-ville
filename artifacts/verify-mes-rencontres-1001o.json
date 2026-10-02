@@ -1,0 +1,196 @@
+{
+  "base": "http://127.0.0.1:4318",
+  "stampExpected": "1001-o",
+  "pass": true,
+  "passCount": 37,
+  "total": 37,
+  "results": [
+    {
+      "name": "Stamp contains 1001-o · mes-rencontres",
+      "ok": true,
+      "detail": "Wireframe · build 1001-o · mes-rencontres"
+    },
+    {
+      "name": "Shell screenshot written",
+      "ok": true,
+      "detail": "/cursor/stores/bc-62a66aae-7ddf-4f7d-bfef-8741542e3a40/media/ma-ville-wireframe-shell.png"
+    },
+    {
+      "name": "List theme = rencontres",
+      "ok": true,
+      "detail": "theme=rencontres"
+    },
+    {
+      "name": "List has Créer une rencontre + Reçues/Envoyées",
+      "ok": true,
+      "detail": " <div class=\"phone-screen\"> <div class=\"status-bar\"><span>9:41</span><span>●●● Wi‑Fi</span></div> <div class=\"app-chrome\" role=\"navigation\" aria-label=\"Accueils\"> <button type=\"button\" class=\"hit app-"
+    },
+    {
+      "name": "Response filters Toutes / En attente / Acceptées / Refusées",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Temp filters À venir / Passées / Annulées + Brouillons",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Footer Ma Ville present on list",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Uses Organisateur wording (not admin for creator)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Pending received shows Accepter/Refuser",
+      "ok": true,
+      "detail": "renc-1 Café"
+    },
+    {
+      "name": "Accept from list updates chip (Vous avez accepté)",
+      "ok": true,
+      "detail": " <div class=\"phone-screen\"> <div class=\"status-bar\"><span>9:41</span><span>●●● Wi‑Fi</span></div> <div class=\"app-chrome\" role=\"navigation\" aria-label=\"Accueils\"> <button type=\"but"
+    },
+    {
+      "name": "Envoyées tab shows org cards",
+      "ok": true,
+      "detail": " <div class=\"phone-screen\"> <div class=\"status-bar\"><span>9:41</span><span>●●● Wi‑Fi</span></div> <div class=\"app-chrome\" role=\"navigation\" aria-label=\"Accueils\"> <button type=\"but"
+    },
+    {
+      "name": "Collectif summary on card",
+      "ok": true,
+      "detail": " <div class=\"phone-screen\"> <div class=\"status-bar\"><span>9:41</span><span>●●● Wi‑Fi</span></div> <div class=\"app-chrome\" role=\"navigation\" aria-label=\"Accueils\"> <button type=\"button\" class=\"hit app-"
+    },
+    {
+      "name": "Online meeting label present",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Org detail opens",
+      "ok": true,
+      "detail": "#rencontre-details"
+    },
+    {
+      "name": "Org detail has Modifier + Organisateur + guest responses",
+      "ok": true,
+      "detail": " <div class=\"phone-screen\"> <div class=\"status-bar\"><span>9:41</span><span>●●● Wi‑Fi</span></div> <div class=\"app-chrome\" role=\"navigation\" aria-label=\"Accueils\"> <button type=\"button\" class=\"hit app-chrome-btn\" data-sim"
+    },
+    {
+      "name": "Org detail footer Ma Ville",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "No Accepter/Refuser for organizer on own meeting",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Create step 1 Amis",
+      "ok": true,
+      "detail": "#rencontre-create"
+    },
+    {
+      "name": "Create form without global footer chrome",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Create step 2 Infos",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Create step 3 Vérif",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Save draft returns to list (brouillons)",
+      "ok": true,
+      "detail": "#communautes-rencontres"
+    },
+    {
+      "name": "Send invitations lands on org details",
+      "ok": true,
+      "detail": "#rencontre-details"
+    },
+    {
+      "name": "Online mode hides address / shows connexion hint",
+      "ok": true,
+      "detail": " <div class=\"phone-screen\"> <div class=\"status-bar\"><span>9:41</span><span>●●● Wi‑Fi</span></div> <div class=\"phone-header\"> <div class=\"phone-header-row\"> <button class=\"hit icon-"
+    },
+    {
+      "name": "Community menu has Rencontres link",
+      "ok": true,
+      "detail": " <div class=\"phone-screen\"> <div class=\"status-bar\"><span>9:41</span><span>●●● Wi‑Fi</span></div> <div class=\"phone-header\"> <div class=\"phone-header-row\"> <but"
+    },
+    {
+      "name": "Menu Rencontres opens mes rencontres list",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Non-regression screen communautes-groupes",
+      "ok": true,
+      "detail": "#communautes-groupes"
+    },
+    {
+      "name": "Non-regression screen communautes-clubs",
+      "ok": true,
+      "detail": "#communautes-clubs"
+    },
+    {
+      "name": "Non-regression screen messages",
+      "ok": true,
+      "detail": "#messages"
+    },
+    {
+      "name": "Non-regression screen evenements-liste",
+      "ok": true,
+      "detail": "#evenements-liste"
+    },
+    {
+      "name": "Non-regression screen signalements",
+      "ok": true,
+      "detail": "#signalements"
+    },
+    {
+      "name": "Non-regression screen dir-education",
+      "ok": true,
+      "detail": "#dir-education"
+    },
+    {
+      "name": "Non-regression screen mairie-rdv",
+      "ok": true,
+      "detail": "#mairie-rdv"
+    },
+    {
+      "name": "Admin municipal sees Mes rencontres (personal), not BO all-private",
+      "ok": true,
+      "detail": "no private BO list"
+    },
+    {
+      "name": "Admin nav has no dedicated BO rencontres privées",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Guest pending detail: Accepter / Refuser / Proposer",
+      "ok": true,
+      "detail": " <div class=\"phone-screen\"> <div class=\"status-bar\"><span>9:41</span><span>●●● Wi‑Fi</span></div> <div class=\"app-chrome\" role=\"navigation\" aria-label=\"Accueils\"> <button type=\"button\" class=\"hit app-"
+    },
+    {
+      "name": "No page errors",
+      "ok": true,
+      "detail": ""
+    }
+  ],
+  "pageErrors": [],
+  "at": "2026-10-02T08:33:22.146Z"
+}

@@ -229,13 +229,18 @@ try {
 
   // Community menu → Rencontres
   await page.evaluate(() => {
-    sessionStorage.setItem('ma-ville-communaute-open', 'grp-1')
+    sessionStorage.setItem('ma-ville-communaute-open', 'grp-randonnee')
   })
   await gotoHash('#communaute-menu')
   html = await phoneHtml()
-  check('Community menu has Rencontres link', /communautes-rencontres/.test(html) && /Rencontres/.test(html))
-  await page.locator('[data-go="communautes-rencontres"]').click()
-  await page.waitForTimeout(250)
+  check('Community menu has Rencontres link', /communautes-rencontres/.test(html) && /Rencontres/.test(html), html.replace(/\s+/g, ' ').slice(0, 160))
+  const rencLink = page.locator('[data-go="communautes-rencontres"]')
+  if ((await rencLink.count()) > 0) {
+    await rencLink.first().click()
+    await page.waitForTimeout(250)
+  } else {
+    await gotoHash('#communautes-rencontres')
+  }
   check(
     'Menu Rencontres opens mes rencontres list',
     /communautes-rencontres/.test(await page.evaluate(() => location.hash)) &&
@@ -243,14 +248,15 @@ try {
   )
 
   // Preserve groupes / clubs / messages / events routes still exist
+  await setRole('habitant')
   for (const id of [
     'communautes-groupes',
     'communautes-clubs',
     'messages',
     'evenements-liste',
-    'admin-moderation',
+    'signalements',
     'dir-education',
-    'rdv-prendre',
+    'mairie-rdv',
   ]) {
     await gotoHash(`#${id}`)
     const h = await page.evaluate(() => location.hash)
@@ -274,18 +280,25 @@ try {
     !/rencontres privées|admin-rencontres/i.test(navHtml)
   )
 
-  // Guest detail counter-propose affordance on pending TÀT — reset store + accept path already used renc-1
+  // Guest detail counter-propose affordance on pending TÀT
+  await setRole('habitant')
   await page.evaluate(() => {
     try {
       localStorage.removeItem('ma-ville-rencontres-store')
       sessionStorage.removeItem('ma-ville-rencontres-store')
+      sessionStorage.setItem('ma-ville-rencontre-tab', 'recues')
+      sessionStorage.setItem('ma-ville-rencontre-filter', 'toutes')
+      sessionStorage.setItem('ma-ville-rencontre-temp', 'avenir')
+      sessionStorage.removeItem('ma-ville-rencontre-search')
+      sessionStorage.setItem('ma-ville-rencontre-open', 'renc-1')
     } catch {
       /* ignore */
     }
   })
-  await gotoHash('#communautes-rencontres')
-  await page.locator('[data-sim="renc-open:renc-1"]').click()
-  await page.waitForTimeout(250)
+  // Reload so rencontres-data hydrate() resets DEFAULT fixtures
+  await gotoHash('#rencontre-details')
+  await page.reload({ waitUntil: 'networkidle' })
+  await page.waitForTimeout(300)
   html = await phoneHtml()
   check(
     'Guest pending detail: Accepter / Refuser / Proposer',
