@@ -2815,7 +2815,7 @@ function annonceDetails() {
   return wrap(
     `
     ${photo('Photo principale…', 'hero')}
-    <div class="h-scroll thumbs">${photo('1')}${photo('2')}${photo('3')}${photo('4')}</div>
+    <div class="h-scroll thumbs">${photo('1', 'thumb')}${photo('2', 'thumb')}${photo('3', 'thumb')}${photo('4', 'thumb')}</div>
     <div class="event-title-row">
       <strong class="block-title">Appartement lumineux — 3 pièces</strong>
       <button class="hit icon-btn" data-open-menu="annonce" data-content-id="annonce-1" data-menu-parent="annonce-details" title="Plus d’options" aria-label="Plus d’options">⋯</button>
@@ -2839,8 +2839,26 @@ function annonceDetails() {
         <button class="hit btn primary" data-sim="appeler">Appeler</button>
       </div>
     </div>
-    <h2 class="sec">Annonces similaires</h2>
-    <div class="h-scroll">${photo('Photo…')}${photo('Photo…')}${photo('Photo…')}</div>
+    <div class="sec-row">
+      <h2 class="sec">Annonces similaires</h2>
+      <button class="hit linkish" data-go="annonces-liste" type="button">Tout voir</button>
+    </div>
+    <div class="h-scroll similaires-rail">
+      ${[
+        ['Studio centre', '280 €'],
+        ['T2 rénové', '350 €'],
+        ['Maison jardin', '650 €'],
+      ]
+        .map(
+          ([t, p]) => `
+      <article class="card similaire-card">
+        ${photo('Photo…', 'wide')}
+        <strong>${t}</strong>
+        <p class="meta">${p} · Kapan</p>
+      </article>`
+        )
+        .join('')}
+    </div>
     `,
     {
       header: phoneHeader({ title: 'Détails', backTo: 'annonces-liste' }),
