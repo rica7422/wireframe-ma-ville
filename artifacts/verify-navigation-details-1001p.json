@@ -1,0 +1,91 @@
+{
+  "base": "http://127.0.0.1:4317",
+  "stampExpected": "1001-p",
+  "pass": true,
+  "passCount": 16,
+  "total": 16,
+  "results": [
+    {
+      "name": "App opens",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Stamp contains 1001-p (early)",
+      "ok": true,
+      "detail": "Wireframe · build 1001-p · navigation-details"
+    },
+    {
+      "name": "On commerces list (#dir-economie-commerces)",
+      "ok": true,
+      "detail": "#dir-economie-commerces"
+    },
+    {
+      "name": "Commerces list has Détails (data-open-fiche)",
+      "ok": true,
+      "detail": "count=2"
+    },
+    {
+      "name": "First détail = Marché (or fiche-commerce-1) and not école",
+      "ok": true,
+      "detail": "title=\"Marché central\" openId=fiche-commerce-1 firstAttr=fiche-commerce-1 hash=#dir-economie-commerces-fiche-infos"
+    },
+    {
+      "name": "Open fiche id is fiche-commerce-1",
+      "ok": true,
+      "detail": "fiche-commerce-1"
+    },
+    {
+      "name": "Back button present",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Back on commerces list",
+      "ok": true,
+      "detail": "#dir-economie-commerces"
+    },
+    {
+      "name": "Commerces list visible after back",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Second détail different title (épicerie)",
+      "ok": true,
+      "detail": "title1=\"Marché central\" title2=\"Épicerie du centre\" id2=dir-economie-commerces-b"
+    },
+    {
+      "name": "Document contains stamp 1001-p",
+      "ok": true,
+      "detail": "Wireframe · build 1001-p · navigation-details"
+    },
+    {
+      "name": "On pharmacies list",
+      "ok": true,
+      "detail": "#sante-pharmacies"
+    },
+    {
+      "name": "Pharmacie du Parc Détails present",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Pharmacie du Parc title",
+      "ok": true,
+      "detail": "title=\"Pharmacie du Parc\" openId=dir-pharmacie-parc"
+    },
+    {
+      "name": "Open fiche id dir-pharmacie-parc",
+      "ok": true,
+      "detail": "dir-pharmacie-parc"
+    },
+    {
+      "name": "No page errors",
+      "ok": true,
+      "detail": ""
+    }
+  ],
+  "pageErrors": [],
+  "at": "2026-10-02T09:07:03.927Z"
+}
