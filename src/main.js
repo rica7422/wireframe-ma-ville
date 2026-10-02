@@ -83,6 +83,49 @@ function toast(msg) {
   }, 2200)
 }
 
+function readEventFormFields() {
+  const root = document.querySelector('.form-card')
+  if (!root) return {}
+  const val = (name) => {
+    const el = root.querySelector(`[data-field="${name}"]`)
+    return el ? el.value : undefined
+  }
+  const patch = {}
+  const title = val('title')
+  if (title !== undefined) patch.title = title
+  const description = val('description')
+  if (description !== undefined) patch.description = description
+  const category = val('category')
+  if (category !== undefined) patch.category = category
+  const dateLabel = val('dateLabel')
+  if (dateLabel !== undefined) patch.dateLabel = dateLabel
+  const time = val('time')
+  if (time !== undefined) patch.time = time
+  const lieu = val('lieu')
+  if (lieu !== undefined) {
+    patch.lieu = lieu
+    patch.lieuDetail = lieu
+  }
+  const price = val('price')
+  if (price !== undefined) patch.price = price
+  const inscriptionMode = val('inscriptionMode')
+  if (inscriptionMode !== undefined) patch.inscriptionMode = inscriptionMode
+  const capacityRaw = val('capacity')
+  if (capacityRaw !== undefined) {
+    const t = String(capacityRaw).trim()
+    patch.capacity = t === '' ? null : Number(t) || null
+  }
+  if (patch.title || patch.category || patch.price) {
+    const tags = []
+    if (patch.category || getEventFull(getEditEventId())?.category)
+      tags.push(patch.category || getEventFull(getEditEventId())?.category)
+    const p = patch.price || getEventFull(getEditEventId())?.price
+    if (p) tags.push(p === 'Gratuit' ? 'Gratuit' : 'Payant')
+    patch.tags = tags.filter(Boolean)
+  }
+  return patch
+}
+
 function refuseManage(id) {
   toast('Accès refusé pour ce rôle (simulé)')
   const publicFallback = id?.startsWith('evenement-')
@@ -111,6 +154,17 @@ function go(id, { push = true, resetStack = false } = {}) {
   if (!SCREENS[id]) {
     toast(`Écran inconnu : ${id}`)
     return
+  }
+  if (id === 'evenement-form' && !getEditEventId()) {
+    if (isAdminRole()) {
+      createEmptyEvent({
+        origin: 'municipal',
+        authorId: 'org-mairie-kapan',
+        orgLabel: 'Mairie de Kapan',
+      })
+    } else {
+      createEmptyEvent({ origin: 'citizen', authorId: SIM_VIEWER_ID, orgLabel: 'Rica' })
+    }
   }
   if (!canAccessManageRoute(id)) {
     refuseManage(id)
@@ -278,7 +332,7 @@ function handleSim(kind) {
   if (action === 'event-save-draft') {
     const id = getEditEventId()
     if (id) {
-      updateEvent(id, { publication: 'draft' })
+      updateEvent(id, { publication: 'draft', ...readEventFormFields() })
       toast('Brouillon enregistré')
     } else toast('Brouillon enregistré (simulé)')
     render()
@@ -287,6 +341,7 @@ function handleSim(kind) {
   if (action === 'event-preview') {
     const id = getEditEventId()
     if (id) {
+      updateEvent(id, readEventFormFields())
       setOpenEventId(id)
       go('evenement-details')
     } else toast('Prévisualisation (simulé)')
@@ -298,6 +353,7 @@ function handleSim(kind) {
       toast('Aucun événement à envoyer')
       return
     }
+    updateEvent(id, readEventFormFields())
     const e = getEventFull(id)
     if (e && !e.title) {
       updateEvent(id, { title: 'Nouvel événement (brouillon)' })
@@ -317,6 +373,7 @@ function handleSim(kind) {
       toast('Aucun événement')
       return
     }
+    updateEvent(id, readEventFormFields())
     const e = getEventFull(id)
     if (e && !e.title) updateEvent(id, { title: 'Événement municipal' })
     publishEvent(id)

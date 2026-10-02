@@ -157,6 +157,33 @@ const OPEN_KEY = 'ma-ville-event-open'
 const TAB_KEY = 'ma-ville-event-list-tab'
 const MES_SUB_KEY = 'ma-ville-event-mes-sub'
 const FORM_STEP_KEY = 'ma-ville-event-form-step'
+const STORE_KEY = 'ma-ville-event-store'
+
+function persistStore() {
+  try {
+    sessionStorage.setItem(STORE_KEY, JSON.stringify(EVENT_STORE))
+  } catch {
+    /* ignore */
+  }
+}
+
+function hydrateStore() {
+  try {
+    const raw = sessionStorage.getItem(STORE_KEY)
+    if (!raw) return
+    const saved = JSON.parse(raw)
+    if (saved && typeof saved === 'object') {
+      // merge saved over defaults (keeps new ids + mutations)
+      Object.keys(saved).forEach((id) => {
+        EVENT_STORE[id] = saved[id]
+      })
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
+hydrateStore()
 
 export function getEvent(id) {
   return EVENT_STORE[id] || null
@@ -227,9 +254,7 @@ export function listPendingValidation() {
 }
 
 export function listAdminManaged() {
-  return Object.values(EVENT_STORE).filter(
-    (e) => e.city === ADMIN_CITY && (e.origin === 'municipal' || e.publication === 'pending')
-  )
+  return Object.values(EVENT_STORE).filter((e) => e.city === ADMIN_CITY)
 }
 
 export function placesRestantes(e) {
@@ -330,6 +355,7 @@ export function createEmptyEvent({ origin = 'citizen', authorId = SIM_VIEWER_ID,
   setEditEventId(id)
   setFormStep(1)
   syncDemoEvent(id)
+  persistStore()
   return EVENT_STORE[id]
 }
 
@@ -338,6 +364,7 @@ export function updateEvent(id, patch) {
   if (!e) return null
   Object.assign(e, patch)
   syncDemoEvent(id)
+  persistStore()
   return e
 }
 
@@ -346,6 +373,7 @@ export function submitForValidation(id) {
   if (!e) return null
   e.publication = 'pending'
   syncDemoEvent(id)
+  persistStore()
   return e
 }
 
@@ -356,6 +384,7 @@ export function approveEvent(id) {
   e.inscriptionsOpen = true
   // keep citizen origin — do not make municipal
   syncDemoEvent(id)
+  persistStore()
   return e
 }
 
@@ -365,6 +394,7 @@ export function refuseEvent(id, motif = '') {
   e.publication = 'refused'
   e.refuseMotif = motif
   syncDemoEvent(id)
+  persistStore()
   return e
 }
 
@@ -373,6 +403,7 @@ export function requestCorrections(id) {
   if (!e) return null
   e.publication = 'to_correct'
   syncDemoEvent(id)
+  persistStore()
   return e
 }
 
@@ -382,6 +413,7 @@ export function publishEvent(id) {
   e.publication = 'published'
   e.inscriptionsOpen = true
   syncDemoEvent(id)
+  persistStore()
   return e
 }
 
@@ -391,6 +423,7 @@ export function cancelEvent(id, motif = '') {
   e.runState = 'cancelled'
   e.cancelMotif = motif
   syncDemoEvent(id)
+  persistStore()
   return e
 }
 
@@ -399,6 +432,7 @@ export function withdrawValidationRequest(id) {
   if (!e) return null
   e.publication = 'draft'
   syncDemoEvent(id)
+  persistStore()
   return e
 }
 
