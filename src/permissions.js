@@ -16,9 +16,42 @@ import {
 } from './demo-data.js'
 import { getOffre } from './emplois-data.js'
 
-/** Personal saved / hidden state (simulated, per viewer) */
+/** Personal saved / hidden state (simulated, per viewer) — ids stables, pas de doublon */
+const SAVED_KEY = 'ma-ville-saved-ids'
+const ENREG_TAB_KEY = 'ma-ville-enreg-tab'
+const ENREG_SUB_KEY = 'ma-ville-enreg-sub'
+const DEMO_SAVED = [
+  'pub-mairie-1',
+  'pub-citoyen-other',
+  'evt-atelier',
+  'annonce-1',
+  'offre-1',
+  'fiche-commerce-1',
+]
+
+function loadSaved() {
+  try {
+    const raw = localStorage.getItem(SAVED_KEY)
+    if (raw) {
+      const arr = JSON.parse(raw)
+      if (Array.isArray(arr)) return new Set(arr)
+    }
+  } catch {
+    /* ignore */
+  }
+  return new Set(DEMO_SAVED)
+}
+
+function persistSaved(set) {
+  try {
+    localStorage.setItem(SAVED_KEY, JSON.stringify([...set]))
+  } catch {
+    /* ignore */
+  }
+}
+
 const personal = {
-  saved: new Set(),
+  saved: loadSaved(),
   hidden: new Set(),
 }
 
@@ -26,10 +59,49 @@ export function isSaved(id) {
   return personal.saved.has(id)
 }
 
+export function listSavedIds() {
+  return [...personal.saved]
+}
+
 export function toggleSaved(id) {
+  if (!id) return false
   if (personal.saved.has(id)) personal.saved.delete(id)
   else personal.saved.add(id)
+  persistSaved(personal.saved)
   return isSaved(id)
+}
+
+export function getEnregTab() {
+  try {
+    return sessionStorage.getItem(ENREG_TAB_KEY) || 'tous'
+  } catch {
+    return 'tous'
+  }
+}
+
+export function setEnregTab(tab) {
+  try {
+    sessionStorage.setItem(ENREG_TAB_KEY, tab || 'tous')
+    sessionStorage.setItem(ENREG_SUB_KEY, 'tous')
+  } catch {
+    /* ignore */
+  }
+}
+
+export function getEnregSub() {
+  try {
+    return sessionStorage.getItem(ENREG_SUB_KEY) || 'tous'
+  } catch {
+    return 'tous'
+  }
+}
+
+export function setEnregSub(sub) {
+  try {
+    sessionStorage.setItem(ENREG_SUB_KEY, sub || 'tous')
+  } catch {
+    /* ignore */
+  }
 }
 
 export function isHidden(id) {
@@ -384,11 +456,16 @@ export function participantMenuActions(participantId, role = getRole()) {
   return actions
 }
 
-export function annonceMenuActions({ official = true } = {}, role = getRole()) {
+export function annonceMenuActions(contentId, { official = true } = {}, role = getRole()) {
   const admin = isAdminRole(role)
+  const id = contentId || 'annonce-1'
   const actions = [
     { id: 'share', label: 'Partager', sim: 'partage' },
-    { id: 'save', label: 'Enregistrer', go: 'enregistrements' },
+    {
+      id: 'save',
+      label: isSaved(id) ? 'Retirer des enregistrements' : 'Enregistrer',
+      sim: `save:${id}`,
+    },
   ]
   if (admin && official) {
     actions.push({ id: 'edit', label: 'Modifier', go: 'annonce-details', section: 'manage' })
@@ -420,6 +497,11 @@ export function offreMenuActions(contentId, role = getRole()) {
   const actions = []
   if (!admin) {
     actions.push({ id: 'share', label: 'Partager', sim: 'partage' })
+    actions.push({
+      id: 'save',
+      label: isSaved(contentId) ? 'Retirer des enregistrements' : 'Enregistrer',
+      sim: `save:${contentId || ''}`,
+    })
     actions.push({ id: 'copy', label: 'Copier le lien', sim: `offre-copy:${contentId || ''}` })
     actions.push({
       id: 'report',
@@ -443,6 +525,11 @@ export function offreMenuActions(contentId, role = getRole()) {
     })
   } else if (state === 'published') {
     actions.push({ id: 'share', label: 'Partager', sim: 'partage' })
+    actions.push({
+      id: 'save',
+      label: isSaved(contentId) ? 'Retirer des enregistrements' : 'Enregistrer',
+      sim: `save:${contentId || ''}`,
+    })
     actions.push({ id: 'copy', label: 'Copier le lien', sim: `offre-copy:${contentId || ''}` })
     actions.push({ id: 'edit', label: 'Modifier', sim: `offre-edit:${contentId}`, section: 'manage' })
     actions.push({ id: 'preview', label: 'Prévisualiser', sim: `offre-preview:${contentId}`, section: 'manage' })

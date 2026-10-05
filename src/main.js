@@ -16,6 +16,8 @@ import {
   toggleSaved,
   toggleHidden,
   setInscription,
+  setEnregTab,
+  setEnregSub,
 } from './permissions.js'
 import { setMenuContext, getMenuContext, clearMenuContext } from './menu-context.js'
 import {
@@ -485,7 +487,17 @@ function handleSim(kind) {
   if (action === 'save' && arg) {
     const on = toggleSaved(arg)
     toast(on ? 'Ajouté aux enregistrements (simulé)' : 'Retiré des enregistrements (simulé)')
-    if (isMenuScreen(currentId)) render()
+    if (isMenuScreen(currentId) || currentId === 'enregistrements') render()
+    return
+  }
+  if (action === 'enreg-tab' && arg) {
+    setEnregTab(arg)
+    render()
+    return
+  }
+  if (action === 'enreg-sub' && arg) {
+    setEnregSub(arg)
+    render()
     return
   }
   if (action === 'hide' && arg) {
@@ -2392,7 +2404,7 @@ function render({ focusActive = false, resetNavScroll = false } = {}) {
       <aside class="proto-nav">
         <header class="proto-brand">
           <strong>Ma Ville</strong>
-          <span class="proto-tag">Wireframe · build 1001-t · signalements-mairie</span>
+          <span class="proto-tag">Wireframe · build 1001-y · menu-structure</span>
         </header>
         <p class="proto-hint">Navigation du prototype (≠ nav dans le téléphone)</p>
         <div class="nav-tabs" role="tablist" aria-label="Côté prototype">

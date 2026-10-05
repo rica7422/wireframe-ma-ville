@@ -22,7 +22,7 @@ import {
   errorState,
 } from './components.js'
 import { colorFor } from './theme.js'
-import { isAdminRole } from './role.js'
+import { isAdminRole, roleLabel } from './role.js'
 import { getMenuContext, setMenuContext } from './menu-context.js'
 import {
   publicationMenuActions,
@@ -33,6 +33,9 @@ import {
   offreMenuActions,
   eventInscriptionUi,
   isHidden,
+  listSavedIds,
+  getEnregTab,
+  getEnregSub,
 } from './permissions.js'
 import {
   getPublication,
@@ -341,12 +344,10 @@ function accueilKapan() {
   const vieLocale = [
     { label: 'Éducation', go: 'dir-education', section: 'education' },
     { label: 'Économie', go: 'dir-economie', section: 'economie' },
-    { label: 'Cinéma & Théâtres', go: 'dir-cinemas', section: 'cinemas' },
-    { label: 'Patrimoine', go: 'dir-patrimoine', section: 'patrimoine' },
+    { label: 'Cinémas & Théâtres', go: 'dir-cinemas', section: 'cinemas' },
     { label: 'Aide sociale', go: 'dir-aide-sociale', section: 'aide' },
     { label: 'Associations', go: 'dir-associations', section: 'associations' },
     { label: 'Banques & Assurances', go: 'dir-banques', section: 'banques' },
-    { label: 'Restaurants', go: 'dir-restaurants', section: 'restaurants' },
     { label: 'Transports', go: 'dir-transports', section: 'transports' },
     { label: 'Bibliothèque', go: 'dir-bibliotheques', section: 'bibliotheques' },
     { label: 'Permanences', go: 'dir-permanences', section: 'permanences' },
@@ -417,7 +418,7 @@ function accueilKapan() {
     <section class="urgence-box">
       <h2 class="sec">Contacts d’urgence</h2>
       <button class="hit row-link" data-go="urgence-numeros">
-        <span>N° Urgence</span><span>›</span>
+        <span>Contact d’urgence</span><span>›</span>
       </button>
       <button class="hit btn block" data-sim="appeler:103">Hôpital · 103 — Appeler</button>
       <button class="hit btn block" data-sim="appeler:102">Police · 102 — Appeler</button>
@@ -1208,7 +1209,7 @@ function contentMenuActions(ctx) {
     case 'participant':
       return participantMenuActions(ctx.participantId)
     case 'annonce':
-      return annonceMenuActions({ official: true })
+      return annonceMenuActions(ctx.contentId, { official: true })
     case 'offre':
       return offreMenuActions(ctx.contentId)
     default:
@@ -2553,8 +2554,8 @@ function evenementOptions() {
 
 function evenementParticipants() {
   return wrap(evenementParticipantsBody(), {
-    header: phoneHeader({ title: 'Liste des participants', backTo: 'evenement-details' }),
-    footer: phoneFooter('menu'),
+    header: phoneHeader({ title: 'Liste des participants', chrome: 'form', backTo: 'evenement-details' }),
+    footer: '',
   })
 }
 
@@ -2739,8 +2740,8 @@ function evenementDiscussionBody() {
 
 function evenementDiscussion() {
   return wrap(evenementDiscussionBody(), {
-    header: phoneHeader({ title: 'Démarrer une discussion', backTo: 'evenement-participants' }),
-    footer: phoneFooter('menu'),
+    header: phoneHeader({ title: 'Démarrer une discussion', chrome: 'form', backTo: 'evenement-participants' }),
+    footer: '',
   })
 }
 
@@ -2783,8 +2784,8 @@ function evenementCriteres() {
     </div>
     `,
     {
-      header: phoneHeader({ title: 'Critères de participation', backTo: 'evenement-details' }),
-      footer: phoneFooter('menu'),
+      header: phoneHeader({ title: 'Critères de participation', chrome: 'form', backTo: 'evenement-details' }),
+      footer: '',
     }
   )
 }
@@ -2804,8 +2805,8 @@ function evenementConditions() {
     </article>
     `,
     {
-      header: phoneHeader({ title: 'Conditions de participation', backTo: 'evenement-details' }),
-      footer: phoneFooter('menu'),
+      header: phoneHeader({ title: 'Conditions de participation', chrome: 'form', backTo: 'evenement-details' }),
+      footer: '',
     }
   )
 }
@@ -3479,7 +3480,7 @@ function urgenceNumeros() {
     </div>
     `,
     {
-      header: phoneHeader({ title: 'N° Urgence', backTo: 'accueil-kapan' }),
+      header: phoneHeader({ title: 'Contact d’urgence', backTo: 'accueil-kapan' }),
       footer: phoneFooter('menu'),
     }
   )
@@ -5226,41 +5227,197 @@ function communautesStub(title) {
   return mesRencontres()
 }
 
+const DEMO_ANNONCES = {
+  'annonce-1': {
+    id: 'annonce-1',
+    title: 'Appartement lumineux — 3 pièces',
+    meta: 'Immobilier · 420 € / mois · Centre-ville Kapan',
+  },
+}
+
+function describeSaved(id) {
+  const pub = getPublication(id)
+  if (pub) {
+    const official = pub.kind === 'official'
+    return {
+      id,
+      kind: 'publication',
+      kindLabel: 'Publication',
+      title: (pub.body || 'Publication').slice(0, 90),
+      meta: `${pub.authorLabel || ''} · ${official ? 'Ma mairie' : 'Infos citoyen'}`,
+      section: official ? 'mairie' : 'infos',
+      go: official ? 'mairie-accueil' : 'infos-feed',
+    }
+  }
+  const ev = getEventFull(id) || getEvent(id)
+  if (ev) {
+    return {
+      id,
+      kind: 'evenement',
+      kindLabel: 'Événement',
+      title: ev.title || 'Événement',
+      meta: [ev.dateLabel || ev.dateShort, ev.lieu || ev.orgLabel].filter(Boolean).join(' · ') || 'Événements',
+      section: 'evenements',
+      go: 'evenement-details',
+      openEvent: id,
+    }
+  }
+  const offre = getOffre(id)
+  if (offre) {
+    return {
+      id,
+      kind: 'emploi',
+      kindLabel: 'Offre d’emploi',
+      title: offre.title || 'Offre',
+      meta: [offre.employer, offre.city, offre.contract].filter(Boolean).join(' · '),
+      section: 'emplois',
+      go: 'emploi-details',
+      openOffre: id,
+    }
+  }
+  const fiche = getFiche(id)
+  if (fiche) {
+    const section = fiche.rubriqueId === 'sante' ? 'sante' : fiche.rubriqueId || 'neutral'
+    const go =
+      fiche.rubriqueId === 'sante'
+        ? 'sante-pharmacie-infos'
+        : fiche.sousCat === 'Commerces'
+          ? 'dir-economie-commerces-fiche-infos'
+          : `dir-${fiche.rubriqueId || 'fiche'}`
+    return {
+      id,
+      kind: 'annuaire',
+      kindLabel: 'Annuaire',
+      title: fiche.title || 'Fiche',
+      meta: [fiche.rubriqueLabel, fiche.sousCat, fiche.address].filter(Boolean).join(' · '),
+      section,
+      go,
+      openFiche: id,
+    }
+  }
+  const ann = DEMO_ANNONCES[id]
+  if (ann) {
+    return {
+      id,
+      kind: 'annonce',
+      kindLabel: 'Annonce',
+      title: ann.title,
+      meta: ann.meta,
+      section: 'annonces',
+      go: 'annonce-details',
+    }
+  }
+  return null
+}
+
+function savedMatches(item, tab, sub) {
+  if (!item) return false
+  if (tab === 'tous') return true
+  if (tab === 'citoyen') {
+    if (item.kind !== 'publication' && item.kind !== 'evenement') return false
+    if (sub === 'publications') return item.kind === 'publication'
+    if (sub === 'evenements') return item.kind === 'evenement'
+    return true
+  }
+  if (tab === 'pratique') {
+    if (!['annonce', 'emploi', 'annuaire'].includes(item.kind)) return false
+    if (sub === 'annonces') return item.kind === 'annonce'
+    if (sub === 'emplois') return item.kind === 'emploi'
+    if (sub === 'annuaire') return item.kind === 'annuaire'
+    return true
+  }
+  return true
+}
+
 function enregistrements() {
+  const tab = getEnregTab()
+  const sub = getEnregSub()
+  const all = listSavedIds().map(describeSaved).filter(Boolean)
+  const list = all.filter((it) => savedMatches(it, tab, sub))
+  const mainTabs = [
+    { id: 'tous', label: 'Tous' },
+    { id: 'citoyen', label: 'Citoyen' },
+    { id: 'pratique', label: 'Pratique' },
+  ]
+  const subCitoyen = [
+    { id: 'tous', label: 'Tous' },
+    { id: 'publications', label: 'Publications' },
+    { id: 'evenements', label: 'Événements' },
+  ]
+  const subPratique = [
+    { id: 'tous', label: 'Tous' },
+    { id: 'annonces', label: 'Annonces' },
+    { id: 'emplois', label: 'Offres d’emploi' },
+    { id: 'annuaire', label: 'Annuaire' },
+  ]
+  const emptyMsg =
+    all.length === 0
+      ? 'Aucun enregistrement pour le moment'
+      : 'Aucun enregistrement dans ce filtre'
+
+  const cards = list
+    .map((it) => {
+      const hex = colorFor(it.section)
+      let openBtn
+      if (it.openEvent) {
+        openBtn = `<button class="hit btn primary" data-open-event="${it.openEvent}" type="button">Ouvrir</button>`
+      } else if (it.openOffre) {
+        openBtn = `<button class="hit btn primary" data-open-offre="${it.openOffre}" type="button">Ouvrir</button>`
+      } else if (it.openFiche) {
+        openBtn = `<button class="hit btn primary" data-open-fiche="${it.openFiche}" data-go="${it.go}" type="button">Ouvrir</button>`
+      } else {
+        openBtn = `<button class="hit btn primary" data-go="${it.go}" type="button">Ouvrir</button>`
+      }
+      return `
+    <article class="card list-card enreg-card" data-saved-id="${it.id}" style="--section:${hex}">
+      ${photo('Photo…', 'thumb')}
+      <div class="card-body">
+        <div class="card-top">
+          <strong style="color:${hex}">${it.title}</strong>
+          <span class="badge" style="--accent:${hex};border-color:${hex};color:${hex};background:color-mix(in srgb,${hex} 12%,#fff)">${it.kindLabel}</span>
+        </div>
+        <p class="meta">${it.meta}</p>
+        <div class="row-actions">
+          ${openBtn}
+          <button class="hit btn" data-sim="save:${it.id}" type="button">Retirer</button>
+        </div>
+      </div>
+    </article>`
+    })
+    .join('')
+
   return wrap(
     `
-    <div class="tabs">
-      <button class="hit tab on" type="button">Tout</button>
-      <button class="hit tab" type="button">Annonces</button>
-      <button class="hit tab" type="button">Lieux</button>
-      <button class="hit tab" type="button">À préciser</button>
+    <div class="tabs" role="tablist" aria-label="Enregistrements">
+      ${mainTabs
+        .map(
+          (t) =>
+            `<button class="hit tab ${tab === t.id ? 'on' : ''}" data-sim="enreg-tab:${t.id}" type="button">${t.label}</button>`
+        )
+        .join('')}
     </div>
-    ${tbd('Emplacement Enregistrements à fixer avant de figer le footer')}
-    <h2 class="sec">Enregistrés (structure)</h2>
-    ${listCard({
-      title: 'Annonce enregistrée…',
-      meta: 'Petites annonces · …',
-      badge: 'Sauvé',
-      actions: [{ label: 'Ouvrir', go: 'annonce-details', primary: true }],
-    })}
-    ${listCard({
-      title: 'Marché central',
-      meta: 'Économie · Commerces',
-      badge: 'Sauvé',
-      actions: [
-        {
-          label: 'Ouvrir',
-          go: 'dir-economie-commerces-fiche-infos',
-          openFiche: 'fiche-commerce-1',
-          primary: true,
-        },
-      ],
-    })}
-    <h2 class="sec">État vide</h2>
-    ${emptyState('Aucun enregistrement pour le moment')}
-    <button class="hit row-link" data-go="etat-vide"><span>Démo état vide</span><span>›</span></button>
-    <button class="hit row-link" data-go="etat-chargement"><span>Démo chargement</span><span>›</span></button>
-    <button class="hit row-link" data-go="etat-erreur"><span>Démo erreur</span><span>›</span></button>
+    ${
+      tab === 'citoyen'
+        ? `<div class="chips">${subCitoyen
+            .map(
+              (t) =>
+                `<button class="hit chip ${sub === t.id ? 'on' : ''}" data-sim="enreg-sub:${t.id}" type="button">${t.label}</button>`
+            )
+            .join('')}</div>`
+        : ''
+    }
+    ${
+      tab === 'pratique'
+        ? `<div class="chips">${subPratique
+            .map(
+              (t) =>
+                `<button class="hit chip ${sub === t.id ? 'on' : ''}" data-sim="enreg-sub:${t.id}" type="button">${t.label}</button>`
+            )
+            .join('')}</div>`
+        : ''
+    }
+    <h2 class="sec">${list.length} enregistrement${list.length === 1 ? '' : 's'}</h2>
+    ${list.length ? cards : emptyState(emptyMsg)}
     `,
     {
       header: phoneHeader({ title: 'Enregistrements', backTo: 'accueil-kapan' }),
@@ -5269,32 +5426,119 @@ function enregistrements() {
   )
 }
 
-function menuPlus() {
+function monProfil() {
+  const admin = isAdminRole()
   return wrap(
     `
-    <h2 class="sec">Menu (provisoire)</h2>
-    ${[
-      ['Vie locale (hub)', 'vie-locale-hub'],
-      ['Vie locale — Santé', 'sante-accueil'],
-      ['Tourisme', 'dir-tourisme'],
-      ['Cinémas & Théâtres', 'dir-cinemas'],
-      ['Économie', 'dir-economie'],
-      ['Banques & Assurances', 'dir-banques'],
-      ['Permanences', 'dir-permanences'],
-      ['Événements', 'evenements-liste'],
-      ['Petites annonces', 'annonces-liste'],
-      ['Offres d’emploi', 'emplois-liste'],
-      ['N° Urgence', 'urgence-numeros'],
-      ['Messages', 'messages'],
-      ['Enregistrements', 'enregistrements'],
-      ['États UI (démo)', 'etats-hub'],
-    ]
+    <div class="detail-head profil-card" data-user-id="${SIM_VIEWER_ID}">
+      <div class="identity-row">
+        <span class="avatar lg"></span>
+        <div class="identity-main grow">
+          <strong class="block-title">Arman Petrosyan</strong>
+          <p class="meta">${roleLabel()} · Kapan</p>
+          <p class="meta">Compte · ${SIM_VIEWER_ID}</p>
+        </div>
+      </div>
+      ${text(
+        admin
+          ? 'Profil du compte de session (Administrateur de Kapan). Même identité MIASIN que l’habitant simulé.'
+          : 'Profil du compte de session (Habitant de Kapan).'
+      )}
+    </div>
+    <h2 class="sec">Raccourcis</h2>
+    <button class="hit row-link" data-go="enregistrements" type="button">
+      <span>Mes enregistrements</span><span>›</span>
+    </button>
+    <button class="hit row-link" data-go="messages" type="button">
+      <span>Messages</span><span>›</span>
+    </button>
+    ${
+      admin
+        ? `<button class="hit row-link" data-go="signalements" type="button">
+      <span>Signalements reçus</span><span>›</span>
+    </button>`
+        : `<button class="hit row-link" data-go="signalements" type="button">
+      <span>Mes signalements</span><span>›</span>
+    </button>`
+    }
+    `,
+    {
+      header: phoneHeader({ title: 'Mon profil', backTo: 'menu-plus' }),
+      footer: phoneFooter('menu'),
+    }
+  )
+}
+
+function menuPlus() {
+  const hex = (s) => colorFor(s)
+  const rowSection = (title, items) => `
+    <h2 class="sec menu-group">${title}</h2>
+    ${items
       .map(
-        ([l, g]) =>
-          `<button class="hit row-link" data-go="${g}"><span>${l}</span><span>›</span></button>`
+        ([l, g, sec]) => `
+      <button class="hit row-link" data-go="${g}" type="button">
+        <span class="ico-box"${sec ? ` style="--section:${hex(sec)}"` : ''}></span>
+        <span><strong${sec ? ` style="color:${hex(sec)}"` : ''}>${l}</strong></span>
+        <span>›</span>
+      </button>`
       )
-      .join('')}
-    ${tbd('Footer définitif — étude progressive')}
+      .join('')}`
+
+  const accesRapides = [
+    { label: 'Ma mairie', go: 'mairie-accueil', section: 'mairie' },
+    { label: 'Infos citoyen', go: 'infos-feed', section: 'infos' },
+    { label: 'Événements', go: 'evenements-liste', section: 'evenements' },
+    { label: 'Petites annonces', go: 'annonces-liste', section: 'annonces' },
+    { label: 'Offres d’emploi', go: 'emplois-liste', section: 'emplois' },
+  ]
+
+  return wrap(
+    `
+    <button class="hit row-link menu-profil" data-go="mon-profil" type="button">
+      <span class="avatar"></span>
+      <span>
+        <strong>Arman Petrosyan</strong><br/>
+        <span class="meta">Mon profil · ${roleLabel()}</span>
+      </span>
+      <span>›</span>
+    </button>
+    <h2 class="sec menu-group">Accès rapides</h2>
+    <div class="grid-2">
+      ${accesRapides
+        .map(
+          (it) => `
+        <button class="hit tile" data-go="${it.go}" type="button" style="--section:${hex(it.section)}">
+          ${photo('Photo…')}
+          <span style="color:${hex(it.section)}">${it.label}</span>
+        </button>`
+        )
+        .join('')}
+    </div>
+    ${rowSection('Communautés', [
+      ['Groupes', 'communautes-groupes', 'groupes'],
+      ['Clubs', 'communautes-clubs', 'clubs'],
+      ['Mes rencontres', 'communautes-rencontres', 'rencontres'],
+    ])}
+    ${rowSection('Vie locale', [
+      ['Éducation', 'dir-education', 'education'],
+      ['Économie', 'dir-economie', 'economie'],
+      ['Cinémas & Théâtres', 'dir-cinemas', 'cinemas'],
+      ['Aide sociale', 'dir-aide-sociale', 'aide'],
+      ['Associations', 'dir-associations', 'associations'],
+      ['Banques & Assurances', 'dir-banques', 'banques'],
+      ['Transports', 'dir-transports', 'transports'],
+      ['Bibliothèque', 'dir-bibliotheques', 'bibliotheques'],
+      ['Permanences', 'dir-permanences', 'permanences'],
+      ['Santé', 'sante-accueil', 'sante'],
+      ['Sécurité', 'dir-securite', 'securite'],
+      ['Tourisme', 'dir-tourisme', 'tourisme'],
+      ['Météo', 'page-meteo', 'meteo'],
+    ])}
+    ${rowSection('Autres', [
+      ['Signalements', 'signalements', 'mairie'],
+      ['Enregistrements', 'enregistrements', 'neutral'],
+    ])}
+    ${rowSection('Urgence', [['Contact d’urgence', 'urgence-numeros', 'urgence']])}
     `,
     {
       header: phoneHeader({ title: 'Menu', backTo: 'accueil-kapan' }),
@@ -5321,7 +5565,6 @@ function sousCatGrid(cats, { proposition = false } = {}) {
             c.section ? ` style="--section:${colorFor(c.section)}"` : ''
           }></span>
           <span>${c.label}</span>
-          ${proposition ? '<span class="meta">À valider</span>' : ''}
         </button>`
         )
         .join('')}
@@ -5339,7 +5582,7 @@ function rubriqueAccueil({
   cats,
   around = null,
   useful = [],
-  back = 'vie-locale-hub',
+  back = 'accueil-kapan',
   proposition = false,
   aroundActions = null,
 } = {}) {
@@ -5376,7 +5619,6 @@ function rubriqueAccueil({
 
   return wrap(
     `
-    ${proposition ? tbd('Proposition — À valider') : ''}
     <div class="banner-box">
       ${photo('Bannière…')}
       <strong>${bannerTitle || title}</strong>
@@ -5433,7 +5675,6 @@ function rubriqueListe(title, parentId, { ficheGo = 'dir-fiche', filters = null,
         ]
   return wrap(
     `
-    ${proposition ? tbd('Sous-page proposition — À valider') : ''}
     ${search(`Rechercher dans ${title}…`)}
     ${chips(filters || ['Tous', 'Ouverts', 'À proximité', 'Enregistrés'])}
     ${rows
@@ -5461,12 +5702,12 @@ function rubriqueNonValidee(title) {
     <div class="banner-box">
       ${photo('Bannière…')}
       <strong>${title}</strong>
-      ${text('Structure annuaire — sous-catégories non validées')}
+      ${text('Structure annuaire — sous-catégories à préciser')}
     </div>
     ${tbd('Sous-catégories / maquette — À préciser (ne pas inventer)')}
     `,
     {
-      header: phoneHeader({ title, backTo: 'vie-locale-hub' }),
+      header: phoneHeader({ title, backTo: 'accueil-kapan' }),
       footer: phoneFooter('menu'),
     }
   )
@@ -5478,50 +5719,26 @@ function vieLocaleHub() {
           <span class="ico-box" style="--section:${colorFor(g)}"></span>
           <span>${l}</span>
         </button>`
-  const validated = [
-    ['Santé', 'sante-accueil'],
-    ['Tourisme', 'dir-tourisme'],
+  const vieLocale = [
     ['Éducation', 'dir-education'],
-    ['Cinémas & Théâtres', 'dir-cinemas'],
-  ]
-  const propositions = [
     ['Économie', 'dir-economie'],
+    ['Cinémas & Théâtres', 'dir-cinemas'],
     ['Aide sociale', 'dir-aide-sociale'],
     ['Associations', 'dir-associations'],
     ['Banques & Assurances', 'dir-banques'],
     ['Transports', 'dir-transports'],
     ['Bibliothèque', 'dir-bibliotheques'],
     ['Permanences', 'dir-permanences'],
+    ['Santé', 'sante-accueil'],
     ['Sécurité', 'dir-securite'],
+    ['Tourisme', 'dir-tourisme'],
     ['Météo', 'page-meteo'],
-  ]
-  const other = [
-    ['N° Urgence', 'urgence-numeros'],
-    ['Restaurants', 'dir-restaurants'],
-    ['Patrimoine (rubrique)', 'dir-patrimoine'],
   ]
   return wrap(
     `
-    <h2 class="sec">Vie locale — validées</h2>
+    <h2 class="sec">Vie locale</h2>
     <div class="grid-3">
-      ${validated.map(([l, g]) => tile(l, g)).join('')}
-    </div>
-    <h2 class="sec">Propositions — À valider</h2>
-    <div class="grid-3">
-      ${propositions
-        .map(
-          ([l, g]) => `
-        <button class="hit icon-tile" data-go="${g}" style="--section:${colorFor(g)}">
-          <span class="ico-box" style="--section:${colorFor(g)}"></span>
-          <span>${l}</span>
-          <span class="meta">À valider</span>
-        </button>`
-        )
-        .join('')}
-    </div>
-    <h2 class="sec">Autres</h2>
-    <div class="grid-3">
-      ${other.map(([l, g]) => tile(l, g)).join('')}
+      ${vieLocale.map(([l, g]) => tile(l, g)).join('')}
     </div>
     `,
     {
@@ -5535,7 +5752,7 @@ function vieLocaleHub() {
  * Fiche détail — Infos / Horaires
  * noHours: Nature / Activités → « Pas d’horaire d’ouverture » (ne pas inventer)
  */
-function dirFiche(tab = 'infos', { title = 'Fiche détail…', category = 'Catégorie', noHours = false, backTo = 'vie-locale-hub', idInfos = 'dir-fiche', idHoraires = 'dir-fiche-horaires', ficheId = null } = {}) {
+function dirFiche(tab = 'infos', { title = 'Fiche détail…', category = 'Catégorie', noHours = false, backTo = 'accueil-kapan', idInfos = 'dir-fiche', idHoraires = 'dir-fiche-horaires', ficheId = null } = {}) {
   const openId = ficheId || getOpenDirFicheId()
   const fiche = openId ? getFiche(openId) : null
   const displayTitle = fiche?.title || title
@@ -5631,7 +5848,7 @@ function ficheAnnuaireForm() {
       <label class="field"><span>Nom</span><input type="text" value="${escapeAttr(name)}" placeholder="Nom de la fiche" data-field="fiche-name" /></label>
       <label class="field"><span>Catégorie</span>
         <select data-field="fiche-category">
-          ${['Santé / Pharmacies', 'Éducation', 'Tourisme', 'Économie', 'Associations', 'Restaurants', 'Transports', 'Autre']
+          ${['Santé / Pharmacies', 'Éducation', 'Tourisme', 'Économie', 'Associations', 'Transports', 'Autre']
             .map((c) => `<option ${c === cat || c.includes(cat) ? 'selected' : ''}>${c}</option>`)
             .join('')}
         </select>
@@ -5759,7 +5976,7 @@ function pageMeteo() {
     </section>
     `,
     {
-      header: phoneHeader({ title: 'Météo', backTo: 'vie-locale-hub' }),
+      header: phoneHeader({ title: 'Météo', backTo: 'accueil-kapan' }),
       footer: phoneFooter('menu'),
     }
   )
@@ -6085,7 +6302,6 @@ function signalementConversation() {
 function ficheDistributeur(tab = 'infos') {
   return wrap(
     `
-    ${tbd('Proposition Banques — À valider')}
     ${photo('Photo distributeur…', 'hero')}
     <div class="detail-head">
       <strong>Distributeur…</strong>
@@ -6146,21 +6362,21 @@ function etatsHub() {
 
 function etatVide() {
   return wrap(`${emptyState('Aucun contenu pour le moment')}<button class="hit btn block" data-back>Retour</button>`, {
-    header: phoneHeader({ title: 'État vide', backTo: 'etats-hub' }),
+    header: phoneHeader({ title: 'État vide', backTo: 'menu-plus' }),
     footer: phoneFooter('menu'),
   })
 }
 
 function etatChargement() {
   return wrap(`${loadingState('Chargement des fiches…')}<button class="hit btn block" data-back>Retour</button>`, {
-    header: phoneHeader({ title: 'Chargement', backTo: 'etats-hub' }),
+    header: phoneHeader({ title: 'Chargement', backTo: 'menu-plus' }),
     footer: phoneFooter('menu'),
   })
 }
 
 function etatErreur() {
   return wrap(`${errorState('Impossible de charger — structure')}`, {
-    header: phoneHeader({ title: 'Erreur', backTo: 'etats-hub' }),
+    header: phoneHeader({ title: 'Erreur', backTo: 'menu-plus' }),
     footer: phoneFooter('menu'),
   })
 }
@@ -6174,7 +6390,7 @@ function etatHorairesManquants() {
     <button class="hit btn block" data-back>Retour</button>
     `,
     {
-      header: phoneHeader({ title: 'Horaires manquants', backTo: 'etats-hub' }),
+      header: phoneHeader({ title: 'Horaires manquants', backTo: 'menu-plus' }),
       footer: phoneFooter('menu'),
     }
   )
@@ -7277,7 +7493,7 @@ export const SCREENS = {
     group: 'Social / contenus',
     render: emploiConfirmDelete,
   },
-  'urgence-numeros': { title: 'N° Urgence', side: 'user', group: 'Social / contenus', render: urgenceNumeros },
+  'urgence-numeros': { title: 'Contact d’urgence', side: 'user', group: 'Social / contenus', render: urgenceNumeros },
   messages: {
     title: 'Messages — MIASIN',
     side: 'user',
@@ -7316,6 +7532,7 @@ export const SCREENS = {
   },
   enregistrements: { title: 'Enregistrements', side: 'user', group: 'Social / contenus', render: enregistrements },
   'menu-plus': { title: 'Menu (+)', side: 'user', group: 'Social / contenus', render: menuPlus },
+  'mon-profil': { title: 'Mon profil', side: 'user', group: 'Social / contenus', render: monProfil },
   'etats-hub': { title: 'États UI (démo)', side: 'user', group: 'Social / contenus', render: etatsHub },
   'etat-vide': { title: 'État vide', side: 'user', group: 'Social / contenus', render: etatVide },
   'etat-chargement': { title: 'État chargement', side: 'user', group: 'Social / contenus', render: etatChargement },
@@ -7667,7 +7884,7 @@ export const SCREENS = {
 
   /* —— Économie (proposition : + Artisans) —— */
   'dir-economie': {
-    title: 'Économie — À valider',
+    title: 'Économie',
     side: 'user',
     group: 'Vie locale',
     render: () =>
@@ -7691,7 +7908,7 @@ export const SCREENS = {
       }),
   },
   'dir-economie-commerces': {
-    title: 'Commerces — À valider',
+    title: 'Commerces',
     side: 'user',
     group: 'Vie locale',
     render: () =>
@@ -7724,7 +7941,7 @@ export const SCREENS = {
       }),
   },
   'dir-economie-entreprises': {
-    title: 'Entreprises — À valider',
+    title: 'Entreprises',
     side: 'user',
     group: 'Vie locale',
     render: () =>
@@ -7735,7 +7952,7 @@ export const SCREENS = {
       }),
   },
   'dir-economie-artisans': {
-    title: 'Artisans — À valider',
+    title: 'Artisans',
     side: 'user',
     group: 'Vie locale',
     render: () =>
@@ -7746,7 +7963,7 @@ export const SCREENS = {
       }),
   },
   'dir-economie-services': {
-    title: 'Services — À valider',
+    title: 'Services',
     side: 'user',
     group: 'Vie locale',
     render: () =>
@@ -7771,7 +7988,7 @@ export const SCREENS = {
 
   /* —— Aide sociale —— */
   'dir-aide-sociale': {
-    title: 'Aide sociale — À valider',
+    title: 'Aide sociale',
     side: 'user',
     group: 'Vie locale',
     render: () =>
@@ -7791,7 +8008,7 @@ export const SCREENS = {
       }),
   },
   'dir-aide-familles': {
-    title: 'Familles — À valider',
+    title: 'Familles',
     side: 'user',
     group: 'Vie locale',
     render: () =>
@@ -7802,7 +8019,7 @@ export const SCREENS = {
       }),
   },
   'dir-aide-seniors': {
-    title: 'Seniors — À valider',
+    title: 'Seniors',
     side: 'user',
     group: 'Vie locale',
     render: () =>
@@ -7813,7 +8030,7 @@ export const SCREENS = {
       }),
   },
   'dir-aide-handicap': {
-    title: 'Handicap — À valider',
+    title: 'Handicap',
     side: 'user',
     group: 'Vie locale',
     render: () =>
@@ -7824,7 +8041,7 @@ export const SCREENS = {
       }),
   },
   'dir-aide-accompagnement': {
-    title: 'Accompagnement — À valider',
+    title: 'Accompagnement',
     side: 'user',
     group: 'Vie locale',
     render: () =>
@@ -7837,7 +8054,7 @@ export const SCREENS = {
 
   /* —— Associations —— */
   'dir-associations': {
-    title: 'Associations — À valider',
+    title: 'Associations',
     side: 'user',
     group: 'Vie locale',
     render: () =>
@@ -7857,7 +8074,7 @@ export const SCREENS = {
       }),
   },
   'dir-associations-solidarite': {
-    title: 'Solidarité — À valider',
+    title: 'Solidarité',
     side: 'user',
     group: 'Vie locale',
     render: () =>
@@ -7868,7 +8085,7 @@ export const SCREENS = {
       }),
   },
   'dir-associations-culture': {
-    title: 'Culture — À valider',
+    title: 'Culture',
     side: 'user',
     group: 'Vie locale',
     render: () =>
@@ -7879,7 +8096,7 @@ export const SCREENS = {
       }),
   },
   'dir-associations-sport': {
-    title: 'Sport — À valider',
+    title: 'Sport',
     side: 'user',
     group: 'Vie locale',
     render: () =>
@@ -7890,7 +8107,7 @@ export const SCREENS = {
       }),
   },
   'dir-associations-environnement': {
-    title: 'Environnement — À valider',
+    title: 'Environnement',
     side: 'user',
     group: 'Vie locale',
     render: () =>
@@ -7903,7 +8120,7 @@ export const SCREENS = {
 
   /* —— Banques & Assurances —— */
   'dir-banques': {
-    title: 'Banques & Assurances — À valider',
+    title: 'Banques & Assurances',
     side: 'user',
     group: 'Vie locale',
     render: () =>
@@ -7923,7 +8140,7 @@ export const SCREENS = {
       }),
   },
   'dir-banques-banques': {
-    title: 'Banques — À valider',
+    title: 'Banques',
     side: 'user',
     group: 'Vie locale',
     render: () =>
@@ -7934,7 +8151,7 @@ export const SCREENS = {
       }),
   },
   'dir-banques-assurances': {
-    title: 'Assurances — À valider',
+    title: 'Assurances',
     side: 'user',
     group: 'Vie locale',
     render: () =>
@@ -7945,7 +8162,7 @@ export const SCREENS = {
       }),
   },
   'dir-banques-distributeurs': {
-    title: 'Distributeurs — À valider',
+    title: 'Distributeurs',
     side: 'user',
     group: 'Vie locale',
     render: () =>
@@ -7956,7 +8173,7 @@ export const SCREENS = {
       }),
   },
   'dir-banques-change': {
-    title: 'Change — À valider',
+    title: 'Change',
     side: 'user',
     group: 'Vie locale',
     render: () =>
@@ -7981,7 +8198,7 @@ export const SCREENS = {
 
   /* —— Transports —— */
   'dir-transports': {
-    title: 'Transports — À valider',
+    title: 'Transports',
     side: 'user',
     group: 'Vie locale',
     render: () =>
@@ -8001,7 +8218,7 @@ export const SCREENS = {
       }),
   },
   'dir-transports-bus': {
-    title: 'Bus — À valider',
+    title: 'Bus',
     side: 'user',
     group: 'Vie locale',
     render: () =>
@@ -8012,7 +8229,7 @@ export const SCREENS = {
       }),
   },
   'dir-transports-taxis': {
-    title: 'Taxis — À valider',
+    title: 'Taxis',
     side: 'user',
     group: 'Vie locale',
     render: () =>
@@ -8023,7 +8240,7 @@ export const SCREENS = {
       }),
   },
   'dir-transports-gares': {
-    title: 'Gares — À valider',
+    title: 'Gares',
     side: 'user',
     group: 'Vie locale',
     render: () =>
@@ -8034,7 +8251,7 @@ export const SCREENS = {
       }),
   },
   'dir-transports-location': {
-    title: 'Location — À valider',
+    title: 'Location',
     side: 'user',
     group: 'Vie locale',
     render: () =>
@@ -8047,7 +8264,7 @@ export const SCREENS = {
 
   /* —— Bibliothèque —— */
   'dir-bibliotheques': {
-    title: 'Bibliothèque — À valider',
+    title: 'Bibliothèque',
     side: 'user',
     group: 'Vie locale',
     render: () =>
@@ -8067,7 +8284,7 @@ export const SCREENS = {
       }),
   },
   'dir-bibliotheques-bibliotheques': {
-    title: 'Bibliothèques — À valider',
+    title: 'Bibliothèques',
     side: 'user',
     group: 'Vie locale',
     render: () =>
@@ -8078,7 +8295,7 @@ export const SCREENS = {
       }),
   },
   'dir-bibliotheques-mediatheques': {
-    title: 'Médiathèques — À valider',
+    title: 'Médiathèques',
     side: 'user',
     group: 'Vie locale',
     render: () =>
@@ -8089,7 +8306,7 @@ export const SCREENS = {
       }),
   },
   'dir-bibliotheques-universitaires': {
-    title: 'Universitaires — À valider',
+    title: 'Universitaires',
     side: 'user',
     group: 'Vie locale',
     render: () =>
@@ -8100,7 +8317,7 @@ export const SCREENS = {
       }),
   },
   'dir-bibliotheques-salles-de-lecture': {
-    title: 'Salles de lecture — À valider',
+    title: 'Salles de lecture',
     side: 'user',
     group: 'Vie locale',
     render: () =>
@@ -8113,7 +8330,7 @@ export const SCREENS = {
 
   /* —— Permanences —— */
   'dir-permanences': {
-    title: 'Permanences — À valider',
+    title: 'Permanences',
     side: 'user',
     group: 'Vie locale',
     render: () =>
@@ -8133,7 +8350,7 @@ export const SCREENS = {
       }),
   },
   'dir-permanences-administratives': {
-    title: 'Administratives — À valider',
+    title: 'Administratives',
     side: 'user',
     group: 'Vie locale',
     render: () =>
@@ -8144,7 +8361,7 @@ export const SCREENS = {
       }),
   },
   'dir-permanences-sociales': {
-    title: 'Sociales — À valider',
+    title: 'Sociales',
     side: 'user',
     group: 'Vie locale',
     render: () =>
@@ -8155,7 +8372,7 @@ export const SCREENS = {
       }),
   },
   'dir-permanences-juridiques': {
-    title: 'Juridiques — À valider',
+    title: 'Juridiques',
     side: 'user',
     group: 'Vie locale',
     render: () =>
@@ -8166,7 +8383,7 @@ export const SCREENS = {
       }),
   },
   'dir-permanences-medicales': {
-    title: 'Médicales — À valider',
+    title: 'Médicales',
     side: 'user',
     group: 'Vie locale',
     render: () =>
@@ -8179,7 +8396,7 @@ export const SCREENS = {
 
   /* —— Sécurité —— */
   'dir-securite': {
-    title: 'Sécurité — À valider',
+    title: 'Sécurité',
     side: 'user',
     group: 'Vie locale',
     render: () =>
@@ -8199,7 +8416,7 @@ export const SCREENS = {
       }),
   },
   'dir-securite-police': {
-    title: 'Police — À valider',
+    title: 'Police',
     side: 'user',
     group: 'Vie locale',
     render: () =>
@@ -8210,7 +8427,7 @@ export const SCREENS = {
       }),
   },
   'dir-securite-secours': {
-    title: 'Secours — À valider',
+    title: 'Secours',
     side: 'user',
     group: 'Vie locale',
     render: () =>
@@ -8221,7 +8438,7 @@ export const SCREENS = {
       }),
   },
   'dir-securite-prevention': {
-    title: 'Prévention — À valider',
+    title: 'Prévention',
     side: 'user',
     group: 'Vie locale',
     render: () =>
@@ -8232,7 +8449,7 @@ export const SCREENS = {
       }),
   },
   'dir-securite-assistance': {
-    title: 'Assistance — À valider',
+    title: 'Assistance',
     side: 'user',
     group: 'Vie locale',
     render: () =>
@@ -8303,19 +8520,6 @@ export const SCREENS = {
         backTo: 'meteo-7jours',
         dateLabel: '2 octobre',
       }),
-  },
-
-  'dir-restaurants': {
-    title: 'Restaurants',
-    side: 'user',
-    group: 'Vie locale',
-    render: () => rubriqueNonValidee('Restaurants'),
-  },
-  'dir-patrimoine': {
-    title: 'Patrimoine (rubrique)',
-    side: 'user',
-    group: 'Vie locale',
-    render: () => rubriqueNonValidee('Patrimoine'),
   },
 
   'dir-aide-accompagnement-fiche-infos': {
@@ -9337,13 +9541,13 @@ export const SCREENS = {
     title: 'Fiche — Informations',
     side: 'user',
     group: 'Vie locale',
-    render: () => dirFiche('infos', { backTo: 'vie-locale-hub' }),
+    render: () => dirFiche('infos', { backTo: 'accueil-kapan' }),
   },
   'dir-fiche-horaires': {
     title: 'Fiche — Horaires',
     side: 'user',
     group: 'Vie locale',
-    render: () => dirFiche('horaires', { backTo: 'vie-locale-hub' }),
+    render: () => dirFiche('horaires', { backTo: 'accueil-kapan' }),
   },
   'communautes-groupes': {
     title: 'Groupes',
@@ -9881,7 +10085,7 @@ export const NAV_TREE = {
           },
           {
             id: 'dir-cinemas',
-            label: 'Cinéma & Théâtres',
+            label: 'Cinémas & Théâtres',
             children: [
               {
                 id: 'dir-cinemas-cinemas',
@@ -9916,7 +10120,6 @@ export const NAV_TREE = {
               },
             ],
           },
-          { id: 'dir-patrimoine', label: 'Patrimoine' },
           {
             id: 'dir-aide-sociale',
             label: 'Aide sociale',
@@ -10031,7 +10234,6 @@ export const NAV_TREE = {
               },
             ],
           },
-          { id: 'dir-restaurants', label: 'Restaurants' },
           {
             id: 'dir-transports',
             label: 'Transports',
@@ -10282,7 +10484,7 @@ export const NAV_TREE = {
               },
             ],
           },
-          { id: 'urgence-numeros', label: 'N° Urgence' },
+          { id: 'urgence-numeros', label: 'Contact d’urgence' },
           {
             id: 'messages',
             label: 'Messages',
@@ -10299,20 +10501,38 @@ export const NAV_TREE = {
             id: 'menu-plus',
             label: 'Menu',
             children: [
-              {
-                id: 'etats-hub',
-                label: 'États UI',
-                children: [
-                  { id: 'etat-vide', label: 'Vide' },
-                  { id: 'etat-chargement', label: 'Chargement' },
-                  { id: 'etat-erreur', label: 'Erreur' },
-                  { id: 'etat-horaires-manquants', label: 'Horaires manquants' },
-                ],
-              },
-              { id: 'a-preciser', label: 'À préciser' },
+              { id: 'mon-profil', label: 'Mon profil' },
+              { label: 'Accès rapides' },
+              { id: 'mairie-accueil', label: 'Ma mairie' },
+              { id: 'infos-feed', label: 'Infos citoyen' },
+              { id: 'evenements-liste', label: 'Événements' },
+              { id: 'annonces-liste', label: 'Petites annonces' },
+              { id: 'emplois-liste', label: 'Offres d’emploi' },
+              { label: 'Communautés' },
+              { id: 'communautes-groupes', label: 'Groupes' },
+              { id: 'communautes-clubs', label: 'Clubs' },
+              { id: 'communautes-rencontres', label: 'Mes rencontres' },
+              { label: 'Vie locale' },
+              { id: 'dir-education', label: 'Éducation' },
+              { id: 'dir-economie', label: 'Économie' },
+              { id: 'dir-cinemas', label: 'Cinémas & Théâtres' },
+              { id: 'dir-aide-sociale', label: 'Aide sociale' },
+              { id: 'dir-associations', label: 'Associations' },
+              { id: 'dir-banques', label: 'Banques & Assurances' },
+              { id: 'dir-transports', label: 'Transports' },
+              { id: 'dir-bibliotheques', label: 'Bibliothèque' },
+              { id: 'dir-permanences', label: 'Permanences' },
+              { id: 'sante-accueil', label: 'Santé' },
+              { id: 'dir-securite', label: 'Sécurité' },
+              { id: 'dir-tourisme', label: 'Tourisme' },
+              { id: 'page-meteo', label: 'Météo' },
+              { label: 'Autres' },
+              { id: 'signalements', label: 'Signalements' },
+              { id: 'enregistrements', label: 'Enregistrements' },
+              { label: 'Urgence' },
+              { id: 'urgence-numeros', label: 'Contact d’urgence' },
             ],
           },
-          { id: 'vie-locale-hub', label: 'Vie locale (hub)' },
         ],
       },
     ],

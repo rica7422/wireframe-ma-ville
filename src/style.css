@@ -26,8 +26,6 @@
   --c-meteo: #ca8a04;
   --c-urgence: #dc2626;
   --c-signalement: #29676d;
-  --c-patrimoine: #cc8040;
-  --c-restaurants: #af734a;
 
   --bg: #e8e8e8;
   --panel: #f4f4f4;
@@ -2203,14 +2201,6 @@ button.hit.toggle {
   --accent: var(--c-signalement);
   --accent-soft: color-mix(in srgb, var(--c-signalement) 12%, #fff);
 }
-.phone[data-theme='patrimoine'] {
-  --accent: var(--c-patrimoine);
-  --accent-soft: color-mix(in srgb, var(--c-patrimoine) 12%, #fff);
-}
-.phone[data-theme='restaurants'] {
-  --accent: var(--c-restaurants);
-  --accent-soft: color-mix(in srgb, var(--c-restaurants) 12%, #fff);
-}
 
 .phone[data-theme] .phone-header {
   border-bottom-color: color-mix(in srgb, var(--accent) 35%, var(--line-soft));
@@ -2575,6 +2565,23 @@ button.hit.toggle {
   letter-spacing: 0.04em;
   font-size: 0.68rem;
 }
+.menu-group {
+  margin-top: 8px;
+}
+.menu-group:first-child {
+  margin-top: 0;
+}
+.menu-profil {
+  margin-bottom: 4px;
+  align-items: center;
+}
+.menu-profil .avatar {
+  flex-shrink: 0;
+}
+.profil-card .avatar.lg {
+  width: 56px;
+  height: 56px;
+}
 
 .share-recents {
   display: flex;
@@ -2747,7 +2754,9 @@ button.hit.toggle {
   background: transparent;
   color: var(--muted);
 }
-.rdv-cta {
+.enreg-card {
+  border-left: 3px solid var(--section, var(--accent));
+}
   margin: 4px 0 8px;
   min-height: 44px;
 }
