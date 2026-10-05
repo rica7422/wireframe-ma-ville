@@ -2756,7 +2756,6 @@ button.hit.toggle {
 }
 .enreg-card {
   border-left: 3px solid var(--section, var(--accent));
-}
   margin: 4px 0 8px;
   min-height: 44px;
 }
